@@ -69,12 +69,14 @@ class AlibabaDataset(Dataset):
         y: Literal[
             "cpu_util_percent", "mem_util_percent", "disk_io_percent"
         ] = "cpu_util_percent",
+        eval: bool = False,
     ):
         self.filename = filename
         self.train_ratio = train_ratio
         self.train = train
         self.n_labels = n_labels
         self.y_var = y
+        self.eval = eval
         self._load_data()
 
     def _load_data(self):
@@ -83,24 +85,34 @@ class AlibabaDataset(Dataset):
         self.raw_data.loc[:, "y"] = self.raw_data.y.apply(label_transform)
         self.raw_data = self.raw_data.reset_index(drop=True)
 
-        self.data, self.y = split_evenly_by_classes(
-            self.raw_data,
-            class_label="y",
-            train=self.train,
-            train_ratio=self.train_ratio,
-        )
-
-        # print("Class distributions:")
-        # print(self.data.groupby(["y"]).size())
+        if self.train_ratio == 1.0 or self.eval:
+            self.data = self.raw_data
+            self.y = self.data["y"]
+        else:
+            self.data, self.y = split_evenly_by_classes(
+                self.raw_data,
+                class_label="y",
+                train=self.train,
+                train_ratio=self.train_ratio,
+            )
 
         self.x = self.data[self.FEATURE_COLUMNS].reset_index(drop=True)
         self.y = self.y.reset_index(drop=True)
         self.targets = self.data["dist_label"].reset_index(drop=True).to_numpy()
 
     def __len__(self):
+        if self.eval:
+            return len(self.data)
         return len(self.x)
 
     def __getitem__(self, idx):
+        if self.eval:
+            return (
+                self.x.iloc[idx].astype(np.float32).values,
+                self.y[idx],
+                self.data[self.y_var].iloc[idx],
+                self.data["time_stamp"].iloc[idx],
+            )
         return (
             self.x.iloc[idx].astype(np.float32).values,
             self.targets[idx],

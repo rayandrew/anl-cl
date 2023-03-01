@@ -1,16 +1,18 @@
 from argparse import ArgumentParser
 from pathlib import Path
+import json
 
 import gorilla
 
 import torch
 from torch.nn import CrossEntropyLoss
-from torch.optim import SGD
+from torch.optim import SGD, Adam
 
 from avalanche.benchmarks.generators import nc_benchmark
 from avalanche.models import SimpleMLP
 from avalanche.training.plugins import EvaluationPlugin
-from avalanche.training.supervised import Naive, AGEM
+
+from avalanche.training.supervised import Naive, AGEM, LwF, EWC, GSS_greedy, GDumb
 from avalanche.evaluation.metrics import (
     accuracy_metrics,
     loss_metrics,
@@ -23,10 +25,6 @@ from avalanche.logging import InteractiveLogger, TextLogger
 from dataset import AlibabaDataset
 
 import patches
-
-
-def prettify_result(d: dict) -> str:
-    return ""
 
 
 def print_and_log(msg, out_file):
@@ -64,7 +62,10 @@ def main(args):
 
     # model
     model = SimpleMLP(
-        input_size=len(AlibabaDataset.FEATURE_COLUMNS), num_classes=args.n_labels
+        input_size=len(AlibabaDataset.FEATURE_COLUMNS),
+        num_classes=args.n_labels,
+        hidden_layers=3,
+        drop_rate=0.1,
     )
 
     # Loggers
@@ -84,7 +85,8 @@ def main(args):
     test_stream = benchmark.test_stream
 
     # Prepare for training & testing
-    optimizer = SGD(model.parameters(), lr=args.learning_rate, momentum=0.9)
+    # optimizer = SGD(model.parameters(), lr=args.learning_rate, momentum=0.9)
+    optimizer = Adam(model.parameters(), lr=args.learning_rate)
     criterion = CrossEntropyLoss()
     eval_plugin = EvaluationPlugin(
         loss_metrics(minibatch=True, epoch=True, experience=True, stream=True),
@@ -95,30 +97,84 @@ def main(args):
         loggers=loggers,
     )
 
-    # Continual learning strategy
-    # cl_strategy = Naive(
-    #     model,
-    #     optimizer,
-    #     criterion,
-    #     train_mb_size=args.batch_size,
-    #     train_epochs=args.epoch,
-    #     eval_mb_size=args.batch_size,
-    #     evaluator=eval_plugin,
-    #     device=device,
-    # )
-
-    cl_strategy = AGEM(
-        model,
-        optimizer,
-        criterion,
-        patterns_per_exp=args.n_experiences,
-        sample_size=32,
-        train_mb_size=args.batch_size,
-        train_epochs=args.epoch,
-        eval_mb_size=args.batch_size,
-        evaluator=eval_plugin,
-        device=device,
-    )
+    if args.strategy == "naive":
+        cl_strategy = Naive(
+            model,
+            optimizer,
+            criterion,
+            train_mb_size=args.batch_size,
+            train_epochs=args.epoch,
+            eval_mb_size=args.batch_size,
+            evaluator=eval_plugin,
+            device=device,
+        )
+    elif args.strategy == "agem":
+        cl_strategy = AGEM(
+            model,
+            optimizer,
+            criterion,
+            patterns_per_exp=args.n_experiences,
+            sample_size=32,
+            train_mb_size=args.batch_size,
+            train_epochs=args.epoch,
+            eval_mb_size=args.batch_size,
+            evaluator=eval_plugin,
+            device=device,
+        )
+    elif args.strategy == "ewc":
+        cl_strategy = EWC(
+            model,
+            optimizer,
+            criterion,
+            ewc_lambda=0.3,
+            mode="separate",
+            train_mb_size=args.batch_size,
+            train_epochs=args.epoch,
+            eval_mb_size=args.batch_size,
+            evaluator=eval_plugin,
+            device=device,
+        )
+    elif args.strategy == "lwf":
+        cl_strategy = LwF(
+            model,
+            optimizer,
+            criterion,
+            alpha=0.5,
+            temperature=2,
+            train_mb_size=args.batch_size,
+            train_epochs=args.epoch,
+            eval_mb_size=args.batch_size,
+            evaluator=eval_plugin,
+            device=device,
+        )
+    elif args.strategy == "gss":
+        cl_strategy = GSS_greedy(
+            model,
+            optimizer,
+            criterion,
+            input_size=[len(AlibabaDataset.FEATURE_COLUMNS)],
+            mem_strength=30,
+            mem_size=5000,
+            train_mb_size=args.batch_size,
+            train_epochs=args.epoch,
+            eval_mb_size=args.batch_size,
+            evaluator=eval_plugin,
+            device=device,
+        )
+    elif args.strategy == "gdumb":
+        cl_strategy = GDumb(
+            model,
+            optimizer,
+            criterion,
+            mem_size=5000,
+            train_mb_size=args.batch_size,
+            train_epochs=args.epoch,
+            eval_mb_size=args.batch_size,
+            evaluator=eval_plugin,
+            device=device,
+        )
+    else:
+        raise ValueError("Strategy not supported")
 
     # train and test loop
     results = {}
@@ -126,6 +182,8 @@ def main(args):
         cl_strategy.train(exp, num_workers=args.n_workers)
         result = cl_strategy.eval(test_stream)
         results[exp.current_experience] = result
+
+    json.dump(results, open(output_folder / "train_results.json", "w"))
 
     # Saving model
     model_scripted = torch.jit.script(model)  # Export to TorchScript
@@ -139,8 +197,6 @@ def main(args):
         for k in sorted_results:
             print_and_log(f"{k.strip()}: {results[key][k]}", out_file)
         print_and_log("", out_file)
-
-    print(prettify_result(results))
 
 
 if __name__ == "__main__":
@@ -160,5 +216,12 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--epoch", type=int, default=4)
     parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
     parser.add_argument("-b", "--batch_size", type=int, default=8)
+    parser.add_argument(
+        "-s",
+        "--strategy",
+        type=str,
+        choices=["gss", "agem", "naive", "lwf", "ewc", "gdumb"],
+        default="gdumb",
+    )
     args = parser.parse_args()
     main(args)

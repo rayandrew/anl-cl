@@ -48,7 +48,7 @@ class AlibabaDataset(Dataset):
     TRAIN_RATIO = 0.8
 
     FEATURE_COLUMNS = [
-        "time_stamp",
+        # "time_stamp",
         "cpu_avg",
         "cpu_max",
         "mem_avg",
@@ -81,6 +81,7 @@ class AlibabaDataset(Dataset):
 
     def _load_data(self):
         self.raw_data = pd.read_csv(self.filename)
+        self.raw_data = self.raw_data.dropna()
         self.raw_data["y"] = self.raw_data[self.y_var]
         self.raw_data.loc[:, "y"] = self.raw_data.y.apply(label_transform)
         self.raw_data = self.raw_data.reset_index(drop=True)
@@ -101,8 +102,6 @@ class AlibabaDataset(Dataset):
         self.targets = self.data["dist_label"].reset_index(drop=True).to_numpy()
 
     def __len__(self):
-        if self.eval:
-            return len(self.data)
         return len(self.x)
 
     def __getitem__(self, idx):

@@ -9,6 +9,7 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import SGD, Adam
 
 from avalanche.benchmarks.generators import nc_benchmark
+
 from avalanche.models import SimpleMLP
 from avalanche.training.plugins import EvaluationPlugin
 
@@ -22,7 +23,9 @@ from avalanche.logging import InteractiveLogger, TextLogger
 
 # from avalanche.benchmarks.utils import AvalancheDataset
 
+# from model import SimpleMLP
 from dataset import AlibabaDataset
+from utils import process_file, generate_table
 
 import patches
 
@@ -45,10 +48,10 @@ def main(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     raw_train_dataset = AlibabaDataset(
-        filename=args.filename, n_labels=args.n_labels, train=True, y=args.y
+        filename=args.filename, n_labels=args.n_labels, mode="train", y=args.y
     )
     raw_test_dataset = AlibabaDataset(
-        filename=args.filename, n_labels=args.n_labels, train=False, y=args.y
+        filename=args.filename, n_labels=args.n_labels, mode="test", y=args.y
     )
 
     train_dataset = raw_train_dataset
@@ -62,10 +65,12 @@ def main(args):
 
     # model
     model = SimpleMLP(
-        input_size=len(AlibabaDataset.FEATURE_COLUMNS),
+        # input_size=len(AlibabaDataset.FEATURE_COLUMNS),
+        # input_size=AlibabaDataset.get_input_size(),
+        input_size=47,
         num_classes=args.n_labels,
-        hidden_layers=3,
-        drop_rate=0.1,
+        hidden_layers=4,
+        drop_rate=0.3,
     )
 
     # Loggers
@@ -93,7 +98,7 @@ def main(args):
         accuracy_metrics(
             minibatch=True, epoch=True, epoch_running=True, experience=True, stream=True
         ),
-        forgetting_metrics(experience=True, stream=True),
+        # forgetting_metrics(experience=True, stream=True),
         loggers=loggers,
     )
 
@@ -152,7 +157,8 @@ def main(args):
             model,
             optimizer,
             criterion,
-            input_size=[len(AlibabaDataset.FEATURE_COLUMNS)],
+            # input_size=[len(AlibabaDataset.FEATURE_COLUMNS)],
+            input_size=[47],
             mem_strength=30,
             mem_size=5000,
             train_mb_size=args.batch_size,
@@ -198,6 +204,11 @@ def main(args):
             print_and_log(f"{k.strip()}: {results[key][k]}", out_file)
         print_and_log("", out_file)
 
+    summary = {}
+    summary[args.strategy] = process_file(output_folder / "train_results.json")
+    table = generate_table(data=summary)
+    print(table.draw())
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -213,9 +224,9 @@ if __name__ == "__main__":
         choices=["cpu_util_percent", "mem_util_percent", "disk_io_percent"],
         default="cpu_util_percent",
     )
-    parser.add_argument("-e", "--epoch", type=int, default=4)
+    parser.add_argument("-e", "--epoch", type=int, default=8)
     parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
-    parser.add_argument("-b", "--batch_size", type=int, default=8)
+    parser.add_argument("-b", "--batch_size", type=int, default=32)
     parser.add_argument(
         "-s",
         "--strategy",

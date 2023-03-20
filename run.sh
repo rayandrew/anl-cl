@@ -30,6 +30,7 @@ run() {
 
 if [[ "$machine_id" == "m_25" ]]; then
     run $machine_id "disk_io_percent" $model 2
+    # run $machine_id "mem_util_percent" $model 2
 elif [[ "$machine_id" == "m_881" ]]; then
     run $machine_id "mem_util_percent" $model 3
 else

@@ -66,7 +66,8 @@ def plot_inference(
 
     fig, (ax_orig, ax_region, ax_pred) = plt.subplots(3, 1, figsize=(25, 15))
 
-    ax_orig.scatter(tss, y_origs)
+    tss = list(range(len(y_regions)))
+    # ax_orig.scatter(tss, y_origs)
     ax_region.scatter(tss, y_regions)
     ax_pred.scatter(tss, y_preds)
 
@@ -90,7 +91,11 @@ def main(args):
     model.eval()
 
     dataset = AlibabaDataset(
-        filename=args.filename, train=False, n_labels=args.n_labels, eval=True, y=args.y
+        filename=args.filename,
+        # train=False,
+        n_labels=args.n_labels,
+        mode="predict",
+        y=args.y,
     )
 
     diffs = {}
@@ -102,17 +107,18 @@ def main(args):
     for i in range(-args.n_labels, args.n_labels + 1, 1):
         diffs[i] = 0
 
-    for i, (x, y, y_orig, ts) in enumerate(dataset):
-        x = torch.from_numpy(x.reshape(1, -1)).to(device).float()
+    for i, (x, _, y) in enumerate(dataset):
+        # x = torch.from_numpy(x.reshape(1, -1)).to(device).float()
+        x = x.to(device).reshape(1, -1)
 
         y_pred = model(x)
         pred_label = torch.argmax(y_pred, dim=1).item()
-        diff = y - pred_label
+        diff = (y - pred_label).item()
         diffs[diff] += 1
         y_preds.append(pred_label)
         y_regions.append(y)
-        y_origs.append(y_orig)
-        tss.append(ts)
+        # y_origs.append(y_orig)
+        # tss.append(ts)
 
     output_folder = Path(args.output_folder)
     output_folder.mkdir(exist_ok=True, parents=True)

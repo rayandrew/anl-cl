@@ -25,3 +25,13 @@ pip install git+https://github.com/ContinualAI/avalanche.git@0088c3092af918ac2c1
 conda install pandas black matplotlib scikit-learn numpy -c conda-forge
 pip install texttable
 ```
+
+- Running
+
+```bash
+python main.py -f ./data/m_881.csv -m m_881_gdumb -x 3 -s gdumb -o ./out/m_881_mem/gdumb/ -y mem_util_percent
+python eval.py -f ./data/m_881.csv -o out/m_881_mem/gdumb -m ./out/m_881_mem/gdumb/m_881_gdumb.pt -y mem_util_percent --plot
+
+python main.py -f ./data/m_881.csv -m m_881_gss -x 3 -s gss -o ./out/m_881_mem/gss/ -y mem_util_percent
+python eval.py -f ./data/m_881.csv -o out/m_881_mem/gss -m ./out/m_881_mem/gss/m_881_gss.pt -y mem_util_percent --plot
+```

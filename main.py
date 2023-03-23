@@ -24,7 +24,7 @@ from avalanche.logging import InteractiveLogger, TextLogger
 # from avalanche.benchmarks.utils import AvalancheDataset
 
 # from model import SimpleMLP
-from dataset import AlibabaDataset
+from dataset import AlibabaSchedulerDataset, AlibabaMachineDataset 
 from utils import process_file, generate_table
 
 import patches
@@ -47,10 +47,10 @@ def main(args):
     # Config
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    raw_train_dataset = AlibabaDataset(
+    raw_train_dataset = AlibabaSchedulerDataset(
         filename=args.filename, n_labels=args.n_labels, mode="train", y=args.y
     )
-    raw_test_dataset = AlibabaDataset(
+    raw_test_dataset = AlibabaSchedulerDataset(
         filename=args.filename, n_labels=args.n_labels, mode="test", y=args.y
     )
 
@@ -66,8 +66,8 @@ def main(args):
     # model
     model = SimpleMLP(
         # input_size=len(AlibabaDataset.FEATURE_COLUMNS),
-        # input_size=AlibabaDataset.get_input_size(),
-        input_size=47,
+        input_size=raw_train_dataset.get_input_size(),
+        # input_size=47,
         num_classes=args.n_labels,
         hidden_layers=4,
         drop_rate=0.3,
@@ -158,7 +158,8 @@ def main(args):
             optimizer,
             criterion,
             # input_size=[len(AlibabaDataset.FEATURE_COLUMNS)],
-            input_size=[47],
+            input_size=[raw_train_dataset.get_input_size()],
+            # input_size=[47],
             mem_strength=30,
             mem_size=5000,
             train_mb_size=args.batch_size,

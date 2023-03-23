@@ -22,6 +22,7 @@ def preprocess_summary(filename: str | Path):
 
                 if res_metrix_re and len(res_metrix_re.groups()) == 4:
                     g = res_metrix_re.groups()
+                    # print("METRIC", metric)
                     val = float(results_dict[exp][metric])
                     if g[0] == "Top1_Acc_Epoch" and g[1] == "train_phase":
                         res[current_exp]["train_acc"] = val
@@ -29,6 +30,7 @@ def preprocess_summary(filename: str | Path):
                     if g[0] == "Top1_Acc_Exp/eval_phase" and g[1] == "test_stream":
                         if "test_acc" not in res[current_exp]:
                             res[current_exp]["test_acc"] = {}
+                        # print("HERE", metric, val, results_dict[exp][metric])
                         res[current_exp]["test_acc"][int(g[3][-3:]) + 1] = val
 
                     if g[0] == "Top1_Acc_Stream" and g[1] == "eval_phase":
@@ -58,6 +60,8 @@ def process_file(filename: str | Path):
         #### CALCULATING AVG_FORGETTING
         forgetting = 0.0
 
+        print(summary)
+
         if exp > 1:
             # log_summary[j]["test_acc"][i] current test acc on task i at exp j
             # max_test = {}
@@ -69,16 +73,19 @@ def process_file(filename: str | Path):
                 max_val = -99
                 # print(f"F_{i}", j)
                 for l in range(1, i):  # iterate l from 0 to i-1
+                    # print(l, j, summary[l]["test_acc"])
                     # print(l, j, summary[l]["test_acc"][j])
                     max_val = max(max_val, summary[l]["test_acc"][j])
 
-                    # print(f"F_{i}", f"j={j}", f"l={l}", max_val, summary[i]["test_acc"][j])
+                    print(f"F_{i}", f"j={j}", f"l={l}", max_val, summary[i]["test_acc"][j])
 
                 # print(i, j, max_val, summary[i]["test_acc"][j])
                 F_i_j = max_val - summary[i]["test_acc"][j]
                 # print(f"F_{i}_{j}")
                 f_i_j_s.append(F_i_j)
 
+            print("SUM", sum(f_i_j_s))
+            print("LEN", len(f_i_j_s))
             summary[exp]["avg_forgetting"] = sum(f_i_j_s) / len(f_i_j_s)
         else:
             summary[exp]["avg_forgetting"] = 0.0

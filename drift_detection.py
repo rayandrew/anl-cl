@@ -111,7 +111,11 @@ def main(args):
     input_path = Path(args.input)
     orig_data = np.genfromtxt(input_path, delimiter=",")
 
-    output_path = Path(args.output) / input_path.stem
+    output_path = (
+        Path(args.output)
+        / input_path.stem
+        / f"{input_path.stem}_{args.window_size}-{args.threshold}"
+    )
     output_path.mkdir(parents=True, exist_ok=True)
 
     label_index = 8
@@ -130,8 +134,8 @@ def main(args):
     dd.add_method(HDDM_W(), 1)
     dd.add_method(PageHinkley(), 1)
     dd.add_method(KSWIN(), 1)
-    window_size = 75
-    threshold = 300
+    window_size = args.window_size
+    threshold = args.threshold
     change_list = dd.get_voted_drift(window_size=window_size, threshold=threshold)
     change_list = [i + 1000 for i in change_list]
     change_list = sorted(change_list)
@@ -146,7 +150,7 @@ def main(args):
     plot(
         data,
         change_list,
-        output_path / f"plot_{window_size}_{threshold}_{args.y}.png",
+        output_path / f"plot_{input_path.stem}_{window_size}_{threshold}_{args.y}.png",
     )
 
     data = add_dist_label(orig_data, change_list)
@@ -178,6 +182,18 @@ if __name__ == "__main__":
         choices=["cpu", "mem", "disk"],
         default="cpu",
         help="choose the y axis",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=int,
+        default=300,
+        help="threshold for voting",
+    )
+    parser.add_argument(
+        "--window_size",
+        type=int,
+        default=75,
+        help="window size for voting",
     )
 
     args = parser.parse_args()

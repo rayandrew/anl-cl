@@ -62,6 +62,10 @@ class AlibabaDataset(Dataset):
             arr[i][mask] = arr[i - 1][mask]
         return arr
 
+    @abstractmethod
+    def n_experiences(self) -> int:
+        raise NotImplementedError
+
 
 class AlibabaSchedulerDataset(AlibabaDataset):
     FEATURE_COLUMNS = [
@@ -202,6 +206,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         self.mode = mode
         self.seq = seq
         self.seq_len = seq_len
+        self._n_experiences = None
         self._load_data()
 
     def _augment_data(self, data):
@@ -252,13 +257,6 @@ class AlibabaMachineDataset(AlibabaDataset):
                 # new_data.append((x, y, int(dist_label)))
 
         return Xs, Ys
-
-    def input_size(self) -> int:
-        if self.data is None:
-            raise ValueError("Dataset not loaded yet")
-        if len(self.data) == 0:
-            raise ValueError("Dataset is empty")
-        return len(self.data[0])
 
     def _load_data(self):
         assert self.mode in ["train", "test", "predict"]
@@ -316,6 +314,18 @@ class AlibabaMachineDataset(AlibabaDataset):
 
         # print("train size", len(self.data), "targets size", len(self.targets))
         # print("unique", np.unique(self.targets))
+
+    def input_size(self) -> int:
+        if self.data is None:
+            raise ValueError("Dataset not loaded yet")
+        if len(self.data) == 0:
+            raise ValueError("Dataset is empty")
+        return len(self.data[0])
+
+    def n_experiences(self) -> int:
+        if self._n_experiences is None:
+            self._n_experiences = len(np.unique(self.targets))
+        return self._n_experiences
 
     def __len__(self):
         return len(self.data)

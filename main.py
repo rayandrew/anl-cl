@@ -83,7 +83,7 @@ def main(args):
     benchmark = nc_benchmark(
         train_dataset=train_dataset,
         test_dataset=test_dataset,
-        n_experiences=args.n_experiences,
+        n_experiences=raw_train_dataset.n_experiences(),
         shuffle=False,
         task_labels=False,
     )
@@ -119,7 +119,7 @@ def main(args):
             model,
             optimizer,
             criterion,
-            patterns_per_exp=args.n_experiences,
+            patterns_per_exp=raw_train_dataset.n_experiences(),
             sample_size=32,
             train_mb_size=args.batch_size,
             train_epochs=args.epoch,
@@ -215,7 +215,6 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--filename", type=str, required=True)
     parser.add_argument("-o", "--output_folder", type=str, default="out")
     parser.add_argument("-m", "--model_name", type=str, required=True)
-    parser.add_argument("-x", "--n_experiences", type=int, required=True)
     parser.add_argument("-nl", "--n_labels", type=int, default=10)
     parser.add_argument("-w", "--n_workers", type=int, default=4)
     parser.add_argument(

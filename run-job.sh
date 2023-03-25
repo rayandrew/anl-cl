@@ -13,6 +13,7 @@ EXP_DIR=$PWD
 INIT_SCRIPT=$PWD/_env_/1-init-environment.sh
 SLURM_CPUS_PER_TASK=5
 SLURM_GPUS_PER_TASK=1
+ALIBABA_MU="/lcrc/project/FastBayes/rayandrew/machine_usage"
 
 # Initialize environment
 source $INIT_SCRIPT
@@ -23,7 +24,7 @@ source $INIT_SCRIPT
 MACHINE_ID="m_25"
 N_EXP=11
 Y_VAR="disk"
-STRATEGY="gss"
+STRATEGY="gdumb"
 OUT_FOLDER="out_mu_seq"
 SEQ_LEN=5
 EVAL_ONLY=0
@@ -44,7 +45,7 @@ if [[ $OUT_FOLDER == "out_mu" ]]; then
                    --plot
 elif [[ $OUT_FOLDER == "out_mu_seq" ]]; then
     if [[ $EVAL_ONLY == 0 ]]; then
-        python main.py -f "$EXP_DIR/out_preprocess/$MACHINE_ID/$MACHINE_ID.csv" \
+        python main.py -f "$EXP_DIR/preprocessed_data/$MACHINE_ID/${MACHINE_ID}_50-100/${MACHINE_ID}_${Y_VAR}.csv" \
                        -m "${MACHINE_ID}_${STRATEGY}" \
                        -x $N_EXP \
                        -s $STRATEGY \
@@ -52,7 +53,7 @@ elif [[ $OUT_FOLDER == "out_mu_seq" ]]; then
                        -y $Y_VAR \
                        --seq --seq_len $SEQ_LEN
     fi
-    python eval.py -f "$EXP_DIR/out_preprocess/$MACHINE_ID/$MACHINE_ID.csv" \
+    python eval.py -f "$EXP_DIR/preprocessed_data/$MACHINE_ID/${MACHINE_ID}_50-100/${MACHINE_ID}_${Y_VAR}.csv" \
                    -o "$EXP_DIR/$OUT_FOLDER/${MACHINE_ID}_${Y_VAR}/${STRATEGY}" \
                    -m "$EXP_DIR/$OUT_FOLDER/${MACHINE_ID}_${Y_VAR}/${STRATEGY}/${MACHINE_ID}_${STRATEGY}.pt" \
                    -y $Y_VAR \

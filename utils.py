@@ -1,8 +1,22 @@
 import re
 from pathlib import Path
 import json
+from numbers import Number
+import random
+
+import torch
+
+import numpy as np
 
 from texttable import Texttable
+
+
+def set_seed(random_seed: Number) -> None:
+    np.random.seed(random_seed)
+    random.seed(random_seed)
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+
 
 METRIC_REGEX = re.compile(r"(\S+)/(\S+)/(\S+)/(\S+)")
 
@@ -77,7 +91,9 @@ def process_file(filename: str | Path):
                     # print(l, j, summary[l]["test_acc"][j])
                     max_val = max(max_val, summary[l]["test_acc"][j])
 
-                    print(f"F_{i}", f"j={j}", f"l={l}", max_val, summary[i]["test_acc"][j])
+                    print(
+                        f"F_{i}", f"j={j}", f"l={l}", max_val, summary[i]["test_acc"][j]
+                    )
 
                 # print(i, j, max_val, summary[i]["test_acc"][j])
                 F_i_j = max_val - summary[i]["test_acc"][j]
@@ -125,4 +141,4 @@ def generate_table(data: dict):
     return table
 
 
-__all__ = ["generate_table", "process_file", "preprocess_summary"]
+__all__ = ["set_seed", "generate_table", "process_file", "preprocess_summary"]

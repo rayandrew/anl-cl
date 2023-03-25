@@ -21,11 +21,8 @@ from avalanche.evaluation.metrics import (
 )
 from avalanche.logging import InteractiveLogger, TextLogger
 
-# from avalanche.benchmarks.utils import AvalancheDataset
-
-# from model import SimpleMLP
-from dataset import AlibabaSchedulerDataset, AlibabaMachineDataset 
-from utils import process_file, generate_table
+from dataset import AlibabaSchedulerDataset, AlibabaMachineDataset
+from utils import process_file, generate_table, set_seed
 
 import patches
 
@@ -36,6 +33,8 @@ def print_and_log(msg, out_file):
 
 
 def main(args):
+    set_seed(3001)
+
     # Patches
     for patch in gorilla.find_patches([patches]):
         gorilla.apply(patch)
@@ -47,27 +46,29 @@ def main(args):
     # Config
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    raw_train_dataset = AlibabaSchedulerDataset(
-        filename=args.filename, n_labels=args.n_labels, mode="train", y=args.y
+    raw_train_dataset = AlibabaMachineDataset(
+        filename=args.filename,
+        n_labels=args.n_labels,
+        mode="train",
+        y=args.y,
+        seq=args.seq,
+        seq_len=args.seq_len,
     )
-    raw_test_dataset = AlibabaSchedulerDataset(
-        filename=args.filename, n_labels=args.n_labels, mode="test", y=args.y
+    raw_test_dataset = AlibabaMachineDataset(
+        filename=args.filename,
+        n_labels=args.n_labels,
+        mode="test",
+        y=args.y,
+        seq=args.seq,
+        seq_len=args.seq_len,
     )
 
     train_dataset = raw_train_dataset
     test_dataset = raw_test_dataset
 
-    # train_dataset = AvalancheDataset([raw_train_dataset])
-    # train_dataset.targets = raw_train_dataset.targets
-
-    # test_dataset = AvalancheDataset([raw_test_dataset])
-    # test_dataset.targets = raw_test_dataset.targets
-
     # model
     model = SimpleMLP(
-        # input_size=len(AlibabaDataset.FEATURE_COLUMNS),
-        input_size=raw_train_dataset.get_input_size(),
-        # input_size=47,
+        input_size=raw_train_dataset.input_size(),
         num_classes=args.n_labels,
         hidden_layers=4,
         drop_rate=0.3,
@@ -157,9 +158,7 @@ def main(args):
             model,
             optimizer,
             criterion,
-            # input_size=[len(AlibabaDataset.FEATURE_COLUMNS)],
-            input_size=[raw_train_dataset.get_input_size()],
-            # input_size=[47],
+            input_size=[raw_train_dataset.input_size()],
             mem_strength=30,
             mem_size=5000,
             train_mb_size=args.batch_size,
@@ -222,8 +221,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-y",
         type=str,
-        choices=["cpu_util_percent", "mem_util_percent", "disk_io_percent"],
-        default="cpu_util_percent",
+        choices=["cpu", "mem", "disk"],
+        default="cpu",
     )
     parser.add_argument("-e", "--epoch", type=int, default=8)
     parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
@@ -235,5 +234,7 @@ if __name__ == "__main__":
         choices=["gss", "agem", "naive", "lwf", "ewc", "gdumb"],
         default="gdumb",
     )
+    parser.add_argument("--seq", action="store_true")
+    parser.add_argument("--seq_len", type=int, default=3)
     args = parser.parse_args()
     main(args)

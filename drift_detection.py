@@ -157,6 +157,7 @@ def main(args):
     np.savetxt(
         output_path / f"{input_path.stem}_{args.y}.csv",
         data,
+        fmt="%.4e",
         delimiter=",",
     )
 

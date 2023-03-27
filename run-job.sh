@@ -10,7 +10,7 @@
 
 # User Configuration
 EXP_DIR=$PWD
-INIT_SCRIPT=$PWD/_env_/1-init-environment.sh
+INIT_SCRIPT=$PWD/scripts/1-init-environment.sh
 SLURM_CPUS_PER_TASK=5
 SLURM_GPUS_PER_TASK=1
 ALIBABA_MU="/lcrc/project/FastBayes/rayandrew/machine_usage"
@@ -19,8 +19,6 @@ ALIBABA_MU="/lcrc/project/FastBayes/rayandrew/machine_usage"
 source $INIT_SCRIPT
 
 # Run experiment here
-# MACHINE_ID="m_881"
-# N_EXP=3
 MACHINE_ID="m_25"
 N_EXP=11
 Y_VAR="disk"

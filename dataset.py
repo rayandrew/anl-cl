@@ -218,7 +218,8 @@ class AlibabaMachineDataset(AlibabaDataset):
         # such that we can use `train_test_split` to split the data
         # in the future, we should not use these two variables together
         Xs = []
-        Ys = []
+        Dists = []
+        # Ys = []
         # dist_labels = []
 
         label_index = 8
@@ -243,20 +244,22 @@ class AlibabaMachineDataset(AlibabaDataset):
                 x = np.append(x, ys[:-1])
                 y = ys[-1]
                 i += 1
-                dist_label = dist_labels[i]
-                Xs.append((x, dist_label))
-                Ys.append(y)
+                dist_label = int(dist_labels[i])
+                Xs.append((x, y))
+                # Ys.append(y)
+                Dists.append(dist_label)
                 # new_data.append((x, y, int(dist_label)))
         else:
             for i, d in enumerate(data):
                 x = d.flatten()
                 y = labels[i]
-                dist_label = dist_labels[i]
-                Xs.append((x, dist_label))
-                Ys.append(y)
+                dist_label = int(dist_labels[i])
+                Xs.append((x, y))
+                # Ys.append(y)
+                Dists.append(dist_label)
                 # new_data.append((x, y, int(dist_label)))
 
-        return Xs, Ys
+        return Xs, Dists
 
     def _load_data(self):
         assert self.mode in ["train", "test", "predict"]
@@ -267,24 +270,27 @@ class AlibabaMachineDataset(AlibabaDataset):
 
         data = np.genfromtxt(self.filename, delimiter=",")
         data = self._process_nan(data)
-        X_dirty, y = self._augment_data(data)
+        Data, Dists = self._augment_data(data)
 
         if self.mode == "predict":
-            X = [x[0] for x in X_dirty]
-            dist_labels = [x[1] for x in X_dirty]
+            X = [d[0] for d in Data]
+            y = [d[1] for d in Data]
+            # dist_labels = [x[1] for x in X_dirty]
             self.data = X
-            self.targets = dist_labels
+            self.targets = Dists
             self.outputs = y
         else:
-            X_dirty_train, X_dirty_test, y_train, y_test = split_evenly_by_classes(
-                X_dirty, y, train_ratio=self.train_ratio
+            Data_train, Data_test, Dist_train, Dist_test = split_evenly_by_classes(
+                Data, Dists, train_ratio=self.train_ratio
             )
 
-            X_train = [x[0] for x in X_dirty_train]
-            dist_labels_train = [int(x[1]) for x in X_dirty_train]
+            X_train = [d[0] for d in Data_train]
+            y_train = [d[1] for d in Data_train]
+            dist_labels_train = Dist_train
 
-            X_test = [x[0] for x in X_dirty_test]
-            dist_labels_test = [int(x[1]) for x in X_dirty_test]
+            X_test = [d[0] for d in Data_test]
+            y_test = [d[1] for d in Data_train]
+            dist_labels_test = Dist_test 
 
             self.CACHE[(self.filename, self.train_ratio, "train")] = (
                 X_train,

@@ -184,6 +184,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         mode: Literal["train", "test", "predict"] = "train",
         seq: bool = False,
         seq_len: int = 2,
+        univariate: bool = False,
     ):
         """Dataset for Alibaba Machine dataset
 
@@ -199,6 +200,8 @@ class AlibabaMachineDataset(AlibabaDataset):
         assert mode in ["train", "test", "predict"]
         assert y in ["cpu", "mem", "disk"]
         assert seq_len >= 2
+        if univariate:
+            assert seq, "Univariate data must be sequence data"
         self.filename = filename
         self.train_ratio = train_ratio
         self.n_labels = n_labels
@@ -206,6 +209,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         self.mode = mode
         self.seq = seq
         self.seq_len = seq_len
+        self.univariate = univariate
         self._n_experiences = None
         self._load_data()
 
@@ -237,18 +241,27 @@ class AlibabaMachineDataset(AlibabaDataset):
 
         if self.seq:
             i = 0
-            while i + self.seq_len <= data.shape[0]:
-                mat = data[i : i + self.seq_len, :]
-                x = mat.flatten()
-                ys = labels[i : i + self.seq_len]
-                x = np.append(x, ys[:-1])
-                y = ys[-1]
-                i += 1
-                dist_label = int(dist_labels[i])
-                Xs.append((x, y))
-                # Ys.append(y)
-                Dists.append(dist_label)
-                # new_data.append((x, y, int(dist_label)))
+            if self.univariate:
+                # y_{t+1} = f(y_{1..t})
+                while i + self.seq_len <= data.shape[0]:
+                    ys = labels[i : i + self.seq_len]
+                    Xs.append((ys[:-1], ys[-1]))
+                    dist_label = int(dist_labels[i])
+                    Dists.append(dist_label)
+            else:
+                # multivariate
+                while i + self.seq_len <= data.shape[0]:
+                    mat = data[i : i + self.seq_len, :]
+                    x = mat.flatten()
+                    ys = labels[i : i + self.seq_len]
+                    x = np.append(x, ys[:-1])
+                    y = ys[-1]
+                    i += 1
+                    dist_label = int(dist_labels[i])
+                    Xs.append((x, y))
+                    # Ys.append(y)
+                    Dists.append(dist_label)
+                    # new_data.append((x, y, int(dist_label)))
         else:
             for i, d in enumerate(data):
                 x = d.flatten()
@@ -290,7 +303,7 @@ class AlibabaMachineDataset(AlibabaDataset):
 
             X_test = [d[0] for d in Data_test]
             y_test = [d[1] for d in Data_train]
-            dist_labels_test = Dist_test 
+            dist_labels_test = Dist_test
 
             self.CACHE[(self.filename, self.train_ratio, "train")] = (
                 X_train,
@@ -338,6 +351,10 @@ class AlibabaMachineDataset(AlibabaDataset):
 
     def __getitem__(self, index):
         data = self.data[index]
+        # if self.seq and self.univariate:
+        #     # convert this to 0-9
+        #     for i in range(len(data)):
+        #         data[i] = int(min(data[i], 99) / self.n_labels)
         label = np.array(int(min(self.outputs[index], 99) / self.n_labels))
         dist_label = self.targets[index]
         data_tensor = torch.tensor(data, dtype=torch.float32)
@@ -381,15 +398,20 @@ if __name__ == "__main__":
         type=int,
         default=2,
     )
+    parser.add_argument(
+        "--univariate",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     dataset = AlibabaMachineDataset(
         filename=args.data,
         n_labels=args.n_labels,
         y=args.y,
+        mode=args.mode,
         seq=args.seq,
         seq_len=args.seq_len,
-        mode=args.mode,
+        univariate=args.univariate,
     )
     print("INPUT SIZE", dataset.input_size())
     for d in dataset:

@@ -1,132 +1,95 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, Any, Sequence
-from itertools import cycle
-import math
+from typing import Any
 
 import torch
 
 import numpy as np
-import pandas as pd
-from sklearn.metrics import roc_curve, auc
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import seaborn as sns
 
 
 from dataset import AlibabaMachineDataset
 
-TRes = Dict[str, Dict[int, int] | Sequence[int]]
-
-COLORS = cycle(
-    [
-        "aqua",
-        "darkorange",
-        "cornflowerblue",
-        "red",
-        "green",
-        "blue",
-        "yellow",
-        "black",
-        "darkblue",
-        "darkgreen",
-    ]
-)
+from plot_utils import EvalResult, plot_roc_curve, get_y_label
 
 
-def label_binarizer(y: Sequence[int], n_labels: int) -> np.ndarray:
-    y_onehot = np.zeros((len(y), n_labels))
-    for i, label in enumerate(y):
-        y_onehot[i][label] = 1
-    return y_onehot
+def plot_diff(
+    non_seq_res: EvalResult, seq_res: EvalResult, output_folder: Path, args: Any
+):
+    print("Plotting diffs...")
 
+    fig, ax = plt.subplots(figsize=(8, 5))
+    width = 0.4
 
-def plot_auc_roc(non_seq_res: TRes, seq_res: TRes, output_folder: Path, args: Any):
-    def plot_roc_curve(ax, res: TRes, title: str):
-        fpr, tpr, roc_auc = dict(), dict(), dict()
-        y_onehot = label_binarizer(res["y_origs"], args.n_labels)
-        for i in range(args.n_labels):
-            fpr[i], tpr[i], _ = roc_curve(y_onehot[:, i], res["predict_proba"][:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])
-            # check if nan
-            # if math.isnan(roc_auc[i]):
-            #     roc_auc[i] = 0
-            # del fpr[i]
-            # del tpr[i]
-            # del roc_auc[i]
-
-        # calculate micro avg
-        fpr["micro"], tpr["micro"], _ = roc_curve(
-            y_onehot.ravel(), res["predict_proba"].ravel()
-        )
-        roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
-
-        # calculate macro avg
-        all_fpr = np.unique(np.concatenate([fpr[i] for i in range(args.n_labels)]))
-        # all_fpr = np.linspace(0.0, 1.0, 1000)
-        mean_tpr = np.zeros_like(all_fpr)
-        for i in range(args.n_labels):
-            mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
-        mean_tpr /= args.n_labels
-
-        fpr["macro"] = all_fpr
-        tpr["macro"] = mean_tpr
-        roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
-
-        for class_id, color in zip(range(args.n_labels), COLORS):
-            if class_id not in roc_auc:
-                continue
-            ax.plot(
-                fpr[class_id],
-                tpr[class_id],
-                label=f"ROC region #{class_id} (area = {roc_auc[class_id]:.2f})",
-                linestyle="-",
-                color=color,
+    # Add counts above the two bar graphs
+    def autolabel(rects):
+        """Attach a text label above each bar in *rects*, displaying its height."""
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(
+                "{}".format(height),
+                xy=(rect.get_x() + rect.get_width() / 2, height),
+                xytext=(0, 3),  # 3 points vertical offset
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
             )
 
-        ax.plot(
-            fpr["micro"],
-            tpr["micro"],
-            label=f"ROC micro avg (area = {roc_auc['micro']:.2f})",
-            linestyle=":",
-            color="deeppink",
-            linewidth=4,
-        )
-        ax.plot(
-            fpr["macro"],
-            tpr["macro"],
-            label=f"ROC macro avg (area = {roc_auc['macro']:.2f})",
-            linestyle=":",
-            color="navy",
-            linewidth=4,
-        )
+    diffs = np.array(list(non_seq_res.diffs_dict.keys()))
 
-        ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
-        ax.set_xlim([0.0, 1.0])
-        ax.set_ylim([0.0, 1.05])
-        ax.set_xlabel("False Positive Rate")
-        ax.set_ylabel("True Positive Rate")
-        ax.set_title(title)
-        ax.legend(loc="lower right", fontsize="small")
+    ax.bar(
+        diffs - width / 2, non_seq_res.diffs_dict.values(), color="blue", width=width
+    )
+    ax.bar(diffs + width / 2, seq_res.diffs_dict.values(), color="red", width=width)
 
+    # autolabel(rects1)
+    # autolabel(rects2)
+
+    ax.set_xlabel("Diff")
+    ax.set_ylabel("Frequency")
+    ax.set_title("Diff between actual and predicted label")
+    # ax.set_xlim(-args.n_labels, args.n_labels)
+    ax.set_xticks(diffs)
+    ax.set_xticklabels(diffs)
+    ax.legend(["Non-Sequence", "Sequence"])
+
+    fig.suptitle(f"Prediction of {get_y_label(args.y)}")
+
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+
+    fig.tight_layout()
+
+    fig.savefig(output_folder / "diff.png", dpi=100)
+    plt.close(fig)
+
+
+def plot_auc_roc(
+    non_seq_res: EvalResult, seq_res: EvalResult, output_folder: Path, args: Any
+):
     print("Plotting AUC ROC...")
     fig, (ax_non_seq, ax_seq) = plt.subplots(1, 2, figsize=(12, 6))
 
-    plot_roc_curve(ax_non_seq, non_seq_res, "Non Sequential")
+    plot_roc_curve(ax_non_seq, non_seq_res, "Non-Sequential")
     plot_roc_curve(ax_seq, seq_res, "Sequential")
 
     fig.tight_layout()
     fig.savefig(output_folder / "auc_roc.png", dpi=100)
+    plt.close(fig)
 
 
 def plot_prediction(
-    non_seq_res: pd.DataFrame, seq_res: pd.DataFrame, output_folder: Path, args: Any
+    non_seq_res: EvalResult,
+    seq_res: EvalResult,
+    output_folder: Path,
+    changepoints: np.ndarray,
+    args: Any,
 ):
     print("Plotting prediction...")
 
     def format_ax(ax, min_x: int = 0, n_scale: int = 1, format: bool = True):
-        # ax.set_xlabel("Time")
         ax.set_ylabel("Regions")
         if format:
             ax.set_ylim(min_x, args.n_labels)
@@ -136,100 +99,65 @@ def plot_prediction(
 
     fig, (ax_non_seq, ax_seq) = plt.subplots(2, 1, figsize=(16, 7))
 
-    # ax_non_seq.plot(non_seq_res["y_origs"], label="Original", alpha=0.9, linestyle="-")
-    # ax_non_seq.plot(
-    #     non_seq_res["y_preds"],
-    #     label="Predictions",
-    #     alpha=0.5,
-    #     color="maroon",
-    #     linestyle="--",
-    # )
-
-    # x = list(range(len(non_seq_res["y_origs"])))
-    sns.lineplot(
-        data=non_seq_res,
-        x=non_seq_res.index,
-        y="y_origs",
+    ax_non_seq.plot(
+        non_seq_res.y_origs,
         label="Original",
-        ax=ax_non_seq,
         alpha=0.5,
+        # color="#1f77b4",
         linestyle="--",
     )
-    sns.lineplot(
-        data=non_seq_res,
-        x=non_seq_res.index,
-        y="y_preds",
+    ax_non_seq.plot(
+        non_seq_res.y_preds,
         label="Predictions",
-        ax=ax_non_seq,
         alpha=0.5,
+        # color="#ff7f0e",
         linestyle="-",
     )
-
-    # ax_non_seq.scatter(
-    #     x, non_seq_res["y_origs"], label="Original", alpha=0.9, linestyle="-"
-    # )
-    # ax_non_seq.scatter(
-    #     x,
-    #     non_seq_res["y_preds"],
-    #     label="Predictions",
-    #     alpha=0.5,
-    #     color="maroon",
-    # )
     ax_non_seq.set_title("Non Sequential")
     ax_non_seq.legend()
     format_ax(ax_non_seq)
 
-    sns.lineplot(
-        data=seq_res,
-        x=seq_res.index,
-        y="y_origs",
+    ax_seq.plot(
+        seq_res.y_origs,
         label="Original",
-        ax=ax_seq,
         alpha=0.5,
+        # color="#1f77b4",
         linestyle="--",
     )
-    sns.lineplot(
-        data=seq_res,
-        x=seq_res.index,
-        y="y_preds",
+    ax_seq.plot(
+        seq_res.y_preds,
         label="Predictions",
-        ax=ax_seq,
         alpha=0.5,
+        # color="#ff7f0e",
         linestyle="-",
     )
-    # sns.lineplot(x, seq_res["y_origs"], label="Original", ax=ax_seq)
-    # sns.lineplot(x, seq_res["y_preds"], label="Predictions", ax=ax_seq)
-
-    # ax_seq.plot(seq_res["y_origs"], label="Original", alpha=0.9, linestyle="-")
-    # ax_seq.plot(
-    #     seq_res["y_preds"],
-    #     label="Predictions",
-    #     alpha=0.5,
-    #     color="maroon",
-    #     linestyle="--",
-    # )
-    # x = list(range(len(seq_res["y_origs"])))
-    # ax_seq.scatter(x, seq_res["y_origs"], label="Original", alpha=0.9)
-    # ax_seq.scatter(
-    #     x,
-    #     seq_res["y_preds"],
-    #     label="Predictions",
-    #     alpha=0.5,
-    #     color="maroon",
-    # )
     ax_seq.set_title("Sequential")
     ax_seq.legend()
     format_ax(ax_seq)
+
+    if len(changepoints) > 0:
+        for cp in changepoints:
+            ax_non_seq.axvline(x=cp, color="r", linestyle="--", alpha=0.7)
+            ax_seq.axvline(x=cp, color="r", linestyle="--", alpha=0.7)
 
     prefix_label = "[Local]" if args.local else "[Global]"
     fig.suptitle(f"{prefix_label} Sequential vs Non-Sequential ({args.strategy})")
 
     fig.tight_layout()
-    fig.savefig(output_folder / "plot_vs.png", dpi=100)
+    fig.savefig(output_folder / "prediction.png", dpi=100)
+    plt.close(fig)
 
 
 def main(args):
     data_path = Path(args.data)
+    changepoints_path = data_path.parent / f"{data_path.stem}_change.csv"
+
+    changepoints = np.array([])
+    if changepoints_path.exists():
+        # changepoints file contains of two columns: # rows, timestamp
+        changepoints = np.loadtxt(changepoints_path, delimiter=",")
+        changepoints = changepoints.astype(int)[:, 0]  # pick # rows
+
     output_folder = Path(args.output_folder) / data_path.stem / args.strategy
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -306,11 +234,6 @@ def main(args):
         non_seq_res["y_origs"] += y.tolist()
         non_seq_res["y_preds"] += pred_label.tolist()
         non_seq_res["predict_proba"] += y_pred.tolist()
-        # print(y_pred.tolist())
-        # print(non_seq_res["predict_proba"])
-        # print(np.array(non_seq_res["predict_proba"]))
-        # return
-        # break
 
     print("Predicting using sequential model...")
     for i, (x, _dist, y) in enumerate(seq_data):
@@ -330,23 +253,18 @@ def main(args):
     non_seq_res["predict_proba"] = np.array(non_seq_res["predict_proba"])
     seq_res["predict_proba"] = np.array(seq_res["predict_proba"])
 
-    df_non_seq = pd.DataFrame(
-        {
-            "y_origs": non_seq_res["y_origs"],
-            "y_preds": non_seq_res["y_preds"],
-            "diffs": non_seq_res["diffs"],
-        }
-    )
-    df_seq = pd.DataFrame(
-        {
-            "y_origs": seq_res["y_origs"],
-            "y_preds": seq_res["y_preds"],
-            "diffs": seq_res["diffs"],
-        }
-    )
+    non_seq_eval_res = EvalResult(**non_seq_res)
+    seq_eval_res = EvalResult(**seq_res)
 
-    plot_prediction(df_non_seq, df_seq, output_folder, args=args)
-    plot_auc_roc(non_seq_res, seq_res, output_folder, args=args)
+    plot_prediction(
+        non_seq_eval_res,
+        seq_eval_res,
+        output_folder,
+        changepoints=changepoints,
+        args=args,
+    )
+    plot_auc_roc(non_seq_eval_res, seq_eval_res, output_folder, args=args)
+    plot_diff(non_seq_eval_res, seq_eval_res, output_folder, args=args)
 
 
 if __name__ == "__main__":
@@ -374,6 +292,15 @@ if __name__ == "__main__":
     parser.add_argument("--non_seq", help="Path to non-sequential model", type=str)
     parser.add_argument("--seq_len", type=int, default=5)
     parser.add_argument("--local", action="store_true")
+    parser.add_argument(
+        "--type",
+        type=str,
+        choices=[
+            "seq-non-seq",
+            "local-global",
+        ],
+        default="test",
+    )
 
     args = parser.parse_args()
     main(args)

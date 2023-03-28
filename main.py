@@ -53,6 +53,7 @@ def main(args):
         y=args.y,
         seq=args.seq,
         seq_len=args.seq_len,
+        univariate=args.univariate,
     )
     raw_test_dataset = AlibabaMachineDataset(
         filename=args.filename,
@@ -61,6 +62,7 @@ def main(args):
         y=args.y,
         seq=args.seq,
         seq_len=args.seq_len,
+        univariate=args.univariate,
     )
 
     train_dataset = raw_train_dataset
@@ -235,5 +237,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--seq", action="store_true")
     parser.add_argument("--seq_len", type=int, default=3)
+    parser.add_argument("--univariate", action="store_true")
     args = parser.parse_args()
     main(args)

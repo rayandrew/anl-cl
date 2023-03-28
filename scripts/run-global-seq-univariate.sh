@@ -24,7 +24,7 @@ source $INIT_SCRIPT
 # MACHINE_ID="m_25"
 # Y_VAR="disk"
 # STRATEGY="gdumb"
-EXP_OUT_DIR="$EXP_DIR/out/global/seq"
+EXP_OUT_DIR="$EXP_DIR/out/global/seq/univariate"
 SEQ_LEN=5
 EVAL_ONLY=0
 
@@ -60,7 +60,7 @@ run() {
     fi
     
     if [[ $eval_only == 0 && ! -f "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done" ]]; then
-        echo ">>> Train machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
+        echo ">>> Train SEQUENTIAL UNIVARIATE model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
         echo
         python main.py \
             -f "$EXP_DIR/preprocessed_data/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv" \
@@ -68,15 +68,15 @@ run() {
             -s $strategy \
             -o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/" \
             -y $y_var \
-            --seq --seq_len $seq_len
+            --seq --seq_len $seq_len --univariate
         touch "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done"
         echo
     else
-        echo ">>> Model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy already exists, skipping training"
+        echo ">>> SEQUENTIAL UNIVARIATE model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy already exists, skipping training"
         echo 
     fi
 
-    echo ">>> Evaluate machine_id=$machine_id, y_var=$y_var, strategy=$strategy"  
+    echo ">>> Evaluate SEQUENTIAL UNIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"  
     echo
     python eval.py \
         -f "$EXP_DIR/preprocessed_data/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv" \
@@ -84,25 +84,20 @@ run() {
         -m "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt" \
         -y $y_var \
         --plot \
-        --seq --seq_len $seq_len
+        --seq --seq_len $seq_len --univariate
 }
 
 # run "m_25" "cpu" "ewc" $SEQ_LEN $EVAL_ONLY
 
-STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
+# STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
+STRATEGIES=("naive" "ewc" "gss")
 
-# for machine_id in $(ls $ALIBABA_MU); do
-for machine_id in "m_25" "m_881"; do
-    for y_var in "cpu" "mem" "disk"; do
-        for strategy in "${STRATEGIES[@]}"; do
-            # echo ">>> Running machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
+## for machine_id in $(ls $ALIBABA_MU); do
+for strategy in "${STRATEGIES[@]}"; do
+    for machine_id in "m_25" "m_881"; do
+        for y_var in "cpu" "mem" "disk"; do
+            echo ">>> Running SEQUENTIAL UNIVARIATE pipeline for machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
             run $machine_id $y_var $strategy $SEQ_LEN $EVAL_ONLY
         done
     done
 done
-
-
-# for strategy in "${STRATEGIES[@]}"; do
-#     ./run.sh $machine_id $strategy
-# done
- 

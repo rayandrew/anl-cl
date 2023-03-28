@@ -29,6 +29,7 @@ if [[ $LOCAL == 1 ]]; then
     data_id="local"
 fi
 
+# python plot_seq_non_seq.py ./preprocessed_data/m_25/m_25_75-300/m_25_disk.csv -y disk -o ./out_plot/seq-non-seq -s gss -nl 10 --seq ./out/global/seq/m_25_disk/gss/m_25_gss.pt --non_seq ./out/global/non-seq/m_25_disk/gss/m_25_gss.pt 
 run() {
     local machine_id=$1
     local y_var=$2
@@ -39,21 +40,21 @@ run() {
         -o "$EXP_DIR/out_plot/seq-non-seq" \
         -s "$strategy" \
         -nl "$N_LABELS" \
-        --seq "$EXP_DIR/out/$data_id/seq/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt" \
+        --seq "$EXP_DIR/out/$data_id/seq/multivariate/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt" \
         --non_seq "$EXP_DIR/out/$data_id/non-seq/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt"
 }
 
-# python plot_seq_non_seq.py ./preprocessed_data/m_25/m_25_75-300/m_25_disk.csv -y disk -o ./out_plot/seq-non-seq -s gss -nl 10 --seq ./out/global/seq/m_25_disk/gss/m_25_gss.pt --non_seq ./out/global/non-seq/m_25_disk/gss/m_25_gss.pt 
 
-STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
+run "m_25" "cpu" "gdumb" $SEQ_LEN 
 
-# run "m_25" "cpu" "gdumb" $SEQ_LEN 
-
-for machine_id in "m_25" "m_881"; do
-    for y_var in "cpu" "mem" "disk"; do
-        for strategy in "${STRATEGIES[@]}"; do
-            echo ">>> Plotting seq vs non-seq for machine=$machine_id y=$y_var strategy=$strategy"
-            run $machine_id $y_var $strategy $SEQ_LEN
-        done
-    done
-done
+# STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
+# 
+# 
+# for machine_id in "m_25" "m_881"; do
+#     for y_var in "cpu" "mem" "disk"; do
+#         for strategy in "${STRATEGIES[@]}"; do
+#             echo ">>> Plotting seq vs non-seq for machine=$machine_id y=$y_var strategy=$strategy"
+#             run $machine_id $y_var $strategy $SEQ_LEN
+#         done
+#     done
+# done

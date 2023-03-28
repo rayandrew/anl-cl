@@ -161,6 +161,19 @@ def main(args):
         delimiter=",",
     )
 
+    changes = np.zeros((len(change_list), 2))
+    changes[:, 0] = change_list
+
+    for i in range(len(change_list)):
+        changes[i, 1] = orig_data[change_list[i] - 1000, 1]  # get timestamp
+
+    np.savetxt(
+        output_path / f"{input_path.stem}_{args.y}_change.csv",
+        changes,
+        fmt="%d",
+        delimiter=",",
+    )
+
     # print(data[0:10, :])
     # print(data[-10:, :])
 

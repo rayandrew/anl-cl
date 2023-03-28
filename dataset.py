@@ -223,8 +223,6 @@ class AlibabaMachineDataset(AlibabaDataset):
         # in the future, we should not use these two variables together
         Xs = []
         Dists = []
-        # Ys = []
-        # dist_labels = []
 
         label_index = 8
         if self.y_var == "cpu":
@@ -232,23 +230,38 @@ class AlibabaMachineDataset(AlibabaDataset):
         elif self.y_var == "mem":
             label_index = 3
 
+        # filter -1 and 101
+        lower_bound = 0
+        upper_bound = 100
+        bad_mask = (
+            np.isnan(data[:, label_index])
+            | ~np.isfinite(data[:, label_index])
+            | (data[:, label_index] < lower_bound)
+            | (data[:, label_index] > upper_bound)
+        )
+        data = data[~bad_mask]
+
         dist_labels = data[:, -1]
-        # print(dist_labels, np.unique(dist_labels))
         labels = data[:, label_index]
+        labels = labels.astype(int)
+        # normalize labels
+        labels = np.maximum(labels, 0)
+        labels = np.minimum(labels, 99)
+        labels = labels // self.n_labels
+
         data = np.delete(data, label_index, axis=1)
         data = data[:, 2:-1]  # remove machine id + timestamp + dist_label
-        # print(dist_labels, np.unique(dist_labels))
 
         if self.seq:
             i = 0
             if self.univariate:
-                # y_{t+1} = f(y_{1..t})
                 while i + self.seq_len <= data.shape[0]:
                     ys = labels[i : i + self.seq_len]
                     Xs.append((ys[:-1], ys[-1]))
+                    dists = dist_labels[i : i + self.seq_len]
+                    dist = int(dists[-1])
+                    Dists.append(dist)
                     i += 1
-                    dist_label = int(dist_labels[i])
-                    Dists.append(dist_label)
             else:
                 # multivariate
                 while i + self.seq_len <= data.shape[0]:
@@ -257,28 +270,33 @@ class AlibabaMachineDataset(AlibabaDataset):
                     ys = labels[i : i + self.seq_len]
                     x = np.append(x, ys[:-1])
                     y = ys[-1]
-                    i += 1
-                    dist_label = int(dist_labels[i])
+                    dists = dist_labels[i : i + self.seq_len]
+                    dist = int(dists[-1])
                     Xs.append((x, y))
-                    # Ys.append(y)
-                    Dists.append(dist_label)
-                    # new_data.append((x, y, int(dist_label)))
+                    Dists.append(dist)
+                    i += 1
         else:
             for i, d in enumerate(data):
                 x = d.flatten()
                 y = labels[i]
-                dist_label = int(dist_labels[i])
+                dist = int(dist_labels[i])
                 Xs.append((x, y))
-                # Ys.append(y)
-                Dists.append(dist_label)
-                # new_data.append((x, y, int(dist_label)))
+                Dists.append(dist)
 
         return Xs, Dists
 
     def _load_data(self):
         assert self.mode in ["train", "test", "predict"]
 
-        key = (self.filename, self.train_ratio, self.mode)
+        additional_key = "non-seq"
+        if self.seq:
+            additional_key = "seq"
+            if self.univariate:
+                additional_key += "_uni"
+            else:
+                additional_key += "_mult"
+
+        key = (self.filename, self.train_ratio, self.mode, additional_key)
         if key in self.CACHE:
             self.data, self.targets, self.outputs = self.CACHE[key]
 
@@ -289,7 +307,6 @@ class AlibabaMachineDataset(AlibabaDataset):
         if self.mode == "predict":
             X = [d[0] for d in Data]
             y = [d[1] for d in Data]
-            # dist_labels = [x[1] for x in X_dirty]
             self.data = X
             self.targets = Dists
             self.outputs = y
@@ -321,19 +338,10 @@ class AlibabaMachineDataset(AlibabaDataset):
                 self.data = X_train
                 self.targets = dist_labels_train
                 self.outputs = y_train
-                # self.data = [x[0] for x in X_train]  # data (X)
-                # self.targets = [x[1] for x in X_train]  # dist label
-                # self.outputs = y_train
             elif self.mode == "test":
                 self.data = X_test
                 self.targets = dist_labels_test
                 self.outputs = y_test
-                # self.data = [x[0] for x in X_test]
-                # self.targets = [x[1] for x in X_test]
-                # self.outputs = y_test
-
-        # print("train size", len(self.data), "targets size", len(self.targets))
-        # print("unique", np.unique(self.targets))
 
     def input_size(self) -> int:
         if self.data is None:
@@ -352,14 +360,9 @@ class AlibabaMachineDataset(AlibabaDataset):
 
     def __getitem__(self, index):
         data = self.data[index]
-        # if self.seq and self.univariate:
-        #     # convert this to 0-9
-        #     for i in range(len(data)):
-        #         data[i] = int(min(data[i], 99) / self.n_labels)
-        label = np.array(int(min(self.outputs[index], 99) / self.n_labels))
         dist_label = self.targets[index]
         data_tensor = torch.tensor(data, dtype=torch.float32)
-        label_tensor = torch.from_numpy(label)
+        label_tensor = torch.from_numpy(np.array(self.outputs[index]))
         dist_label_tensor = torch.from_numpy(np.array(dist_label))
         return data_tensor, dist_label_tensor, label_tensor
 
@@ -415,6 +418,18 @@ if __name__ == "__main__":
         univariate=args.univariate,
     )
     print("INPUT SIZE", dataset.input_size())
+    print("N EXPERIENCES", dataset.n_experiences())
+    print("TARGETS", np.unique(dataset.targets))
+    print("OUTPUTS", np.unique(dataset.outputs))
+    print("LENGTH", len(dataset))
     for d in dataset:
         print(d)
         break
+
+    # print(dataset[3911])
+    # print(dataset[3912])
+    # print(dataset[3913])
+    # print(dataset[3914])
+    # print(dataset[3915])
+    # print(dataset[3916])
+    # print(dataset[3917])

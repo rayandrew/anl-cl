@@ -246,6 +246,7 @@ class AlibabaMachineDataset(AlibabaDataset):
                 while i + self.seq_len <= data.shape[0]:
                     ys = labels[i : i + self.seq_len]
                     Xs.append((ys[:-1], ys[-1]))
+                    i += 1
                     dist_label = int(dist_labels[i])
                     Dists.append(dist_label)
             else:

@@ -8,6 +8,7 @@ import matplotlib.ticker as ticker
 
 from utils import process_file, generate_table
 
+
 def plot(machine_id: str, summary: dict, n_exp: int, output_path: str | Path):
     plt.style.use("seaborn-talk")
 
@@ -41,7 +42,7 @@ def plot(machine_id: str, summary: dict, n_exp: int, output_path: str | Path):
         frameon=True,
     )
     fig.tight_layout()
-    fig.savefig(output_path / "avg_acc.png", dpi=300)
+    fig.savefig(output_path / "avg_acc.png", dpi=100)
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
@@ -71,7 +72,7 @@ def plot(machine_id: str, summary: dict, n_exp: int, output_path: str | Path):
     )
     # ax.legend(frameon=True)
     fig.tight_layout()
-    fig.savefig(output_path / "avg_forgetting.png", dpi=300)
+    fig.savefig(output_path / "avg_forgetting.png", dpi=100)
 
 
 def print_table(machine_id: str, summary: dict, output_path: str | Path):
@@ -98,7 +99,7 @@ def main(args):
             json.dump(res, f)
 
         machine_id = file.parent.parent.stem
-        plot(machine_id, res, args.n_experiences, path)
+        # plot(machine_id, res, args.n_experiences, path)
         print_table(machine_id, res, path)
 
         return res
@@ -110,7 +111,7 @@ def main(args):
     res[machine_id] = summary
     with open(file.parent / "summary.json", "w") as f:
         json.dump(summary, f)
-    plot(machine_id, res, args.n_experiences, file.parent)
+    # plot(machine_id, res, args.n_experiences, file.parent)
     print_table(machine_id, res, file.parent)
     return res
 

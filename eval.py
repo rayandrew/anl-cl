@@ -8,17 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 from dataset import AlibabaSchedulerDataset, AlibabaMachineDataset
-
-
-def get_y_label(y_var: Literal["cpu", "mem", "disk"]):
-    if y_var == "cpu":
-        return "CPU Utilization"
-    elif y_var == "mem":
-        return "Memory Utilization"
-    elif y_var == "disk":
-        return "Disk IO Utilization"
-    else:
-        raise ValueError(f"Unknown y_var: {y_var}")
+from plot_utils import get_y_label
 
 
 def plot_diff(

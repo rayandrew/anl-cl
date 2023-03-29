@@ -61,6 +61,7 @@ def process_file(filename: str | Path):
     avg_forgettings = []
 
     for exp in summary:
+        # print(exp)
         avg_acc = 0.0
         n = 0
         for test_acc_exp, test_acc_val in summary[exp]["test_acc"].items():
@@ -74,7 +75,7 @@ def process_file(filename: str | Path):
         #### CALCULATING AVG_FORGETTING
         forgetting = 0.0
 
-        print(summary)
+        # print(summary)
 
         if exp > 1:
             # log_summary[j]["test_acc"][i] current test acc on task i at exp j
@@ -91,17 +92,17 @@ def process_file(filename: str | Path):
                     # print(l, j, summary[l]["test_acc"][j])
                     max_val = max(max_val, summary[l]["test_acc"][j])
 
-                    print(
-                        f"F_{i}", f"j={j}", f"l={l}", max_val, summary[i]["test_acc"][j]
-                    )
+                    # print(
+                    #     f"F_{i}", f"j={j}", f"l={l}", max_val, summary[i]["test_acc"][j]
+                    # )
 
                 # print(i, j, max_val, summary[i]["test_acc"][j])
                 F_i_j = max_val - summary[i]["test_acc"][j]
                 # print(f"F_{i}_{j}")
                 f_i_j_s.append(F_i_j)
 
-            print("SUM", sum(f_i_j_s))
-            print("LEN", len(f_i_j_s))
+            # print("SUM", sum(f_i_j_s))
+            # print("LEN", len(f_i_j_s))
             summary[exp]["avg_forgetting"] = sum(f_i_j_s) / len(f_i_j_s)
         else:
             summary[exp]["avg_forgetting"] = 0.0

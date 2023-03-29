@@ -1,156 +1,91 @@
 from argparse import ArgumentParser
 from pathlib import Path
+import json
 from typing import Any
 
 import torch
 
 import numpy as np
 
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-
-
 from dataset import AlibabaMachineDataset
+from plot_utils import (
+    EvalResult,
+    TrainResult,
+    plot_diff,
+    plot_prediction,
+    plot_auc_roc,
+    plot_avg_acc,
+    plot_avg_forgetting,
+)
+from parse_v2 import compute_perf
 
-from plot_utils import EvalResult, plot_roc_curve, get_y_label
 
-
-def plot_diff(
-    non_seq_res: EvalResult, seq_res: EvalResult, output_folder: Path, args: Any
-):
-    print("Plotting diffs...")
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-    width = 0.4
-
-    # Add counts above the two bar graphs
-    def autolabel(rects):
-        """Attach a text label above each bar in *rects*, displaying its height."""
-        for rect in rects:
-            height = rect.get_height()
-            ax.annotate(
-                "{}".format(height),
-                xy=(rect.get_x() + rect.get_width() / 2, height),
-                xytext=(0, 3),  # 3 points vertical offset
-                textcoords="offset points",
-                ha="center",
-                va="bottom",
-            )
-
-    diffs = np.array(list(non_seq_res.diffs_dict.keys()))
-
-    ax.bar(
-        diffs - width / 2, non_seq_res.diffs_dict.values(), color="blue", width=width
+def predict_seq(model_path: Path, data_path: Path, device: torch.device, args: Any):
+    raw_data = AlibabaMachineDataset(
+        filename=data_path,
+        n_labels=args.n_labels,
+        mode="predict",
+        y=args.y,
+        seq=True,
+        seq_len=args.seq_len,
     )
-    ax.bar(diffs + width / 2, seq_res.diffs_dict.values(), color="red", width=width)
-
-    # autolabel(rects1)
-    # autolabel(rects2)
-
-    ax.set_xlabel("Diff")
-    ax.set_ylabel("Frequency")
-    ax.set_title("Diff between actual and predicted label")
-    # ax.set_xlim(-args.n_labels, args.n_labels)
-    ax.set_xticks(diffs)
-    ax.set_xticklabels(diffs)
-    ax.legend(["Non-Sequence", "Sequence"])
-
-    fig.suptitle(f"Prediction of {get_y_label(args.y)}")
-
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
-
-    fig.tight_layout()
-
-    fig.savefig(output_folder / "diff.png", dpi=100)
-    plt.close(fig)
-
-
-def plot_auc_roc(
-    non_seq_res: EvalResult, seq_res: EvalResult, output_folder: Path, args: Any
-):
-    print("Plotting AUC ROC...")
-    fig, (ax_non_seq, ax_seq) = plt.subplots(1, 2, figsize=(12, 6))
-
-    plot_roc_curve(ax_non_seq, non_seq_res, "Non-Sequential")
-    plot_roc_curve(ax_seq, seq_res, "Sequential")
-
-    fig.tight_layout()
-    fig.savefig(output_folder / "auc_roc.png", dpi=100)
-    plt.close(fig)
-
-
-def plot_prediction(
-    non_seq_res: EvalResult,
-    seq_res: EvalResult,
-    output_folder: Path,
-    changepoints: np.ndarray,
-    args: Any,
-):
-    print("Plotting prediction...")
-
-    def format_ax(ax, min_x: int = 0, n_scale: int = 1, format: bool = True):
-        ax.set_ylabel("Regions")
-        if format:
-            ax.set_ylim(min_x, args.n_labels)
-            ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(n_scale))
-            ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-
-    fig, (ax_non_seq, ax_seq) = plt.subplots(2, 1, figsize=(16, 7))
-
-    ax_non_seq.plot(
-        non_seq_res.y_origs,
-        label="Original",
-        alpha=0.5,
-        # color="#1f77b4",
-        linestyle="--",
+    data = torch.utils.data.DataLoader(
+        raw_data,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_worker,
     )
-    ax_non_seq.plot(
-        non_seq_res.y_preds,
-        label="Predictions",
-        alpha=0.5,
-        # color="#ff7f0e",
-        linestyle="-",
-    )
-    ax_non_seq.set_title("Non Sequential")
-    ax_non_seq.legend()
-    format_ax(ax_non_seq)
 
-    ax_seq.plot(
-        seq_res.y_origs,
-        label="Original",
-        alpha=0.5,
-        # color="#1f77b4",
-        linestyle="--",
-    )
-    ax_seq.plot(
-        seq_res.y_preds,
-        label="Predictions",
-        alpha=0.5,
-        # color="#ff7f0e",
-        linestyle="-",
-    )
-    ax_seq.set_title("Sequential")
-    ax_seq.legend()
-    format_ax(ax_seq)
+    model = torch.jit.load(model_path)
+    model.to(device)
+    model.eval()
 
-    if len(changepoints) > 0:
-        for cp in changepoints:
-            ax_non_seq.axvline(x=cp, color="r", linestyle="--", alpha=0.7)
-            ax_seq.axvline(x=cp, color="r", linestyle="--", alpha=0.7)
+    res = {
+        "diffs_dict": {},
+        "diffs": [],
+        "y_origs": [],
+        "y_preds": [],
+        "predict_proba": [],
+        "train_results": None,
+    }
 
-    prefix_label = "[Local]" if args.local else "[Global]"
-    fig.suptitle(f"{prefix_label} Sequential vs Non-Sequential ({args.strategy})")
+    for i in range(-args.n_labels, args.n_labels + 1, 1):
+        res["diffs_dict"][i] = 0
 
-    fig.tight_layout()
-    fig.savefig(output_folder / "prediction.png", dpi=100)
-    plt.close(fig)
+    print("Predicting using non-sequential model...")
+    for i, (x, _dist, y) in enumerate(data):
+        x = x.to(device)
+        y = y.to(device)
+        y_pred = model(x)
+        pred_label = torch.argmax(y_pred, dim=1)
+        diffs = y - pred_label
+        for diff in diffs:
+            res["diffs_dict"][diff.item()] += 1
+        res["diffs"] += diffs.tolist()
+        res["y_origs"] += y.tolist()
+        res["y_preds"] += pred_label.tolist()
+        res["predict_proba"] += y_pred.tolist()
+
+    res["predict_proba"] = np.array(res["predict_proba"])
+
+    res = EvalResult(**res, name="Non-Sequential")
+
+    train_res_path = model_path.parent / f"train_results.json"
+
+    if train_res_path.exists():
+        with open(train_res_path, "r") as f:
+            train_res = json.load(f)
+            train_results = compute_perf(train_res)
+            res.train_results = TrainResult(**train_results)
+
+    return res
 
 
 def main(args):
     data_path = Path(args.data)
     changepoints_path = data_path.parent / f"{data_path.stem}_change.csv"
+    seq_path = Path(args.seq)
+    non_seq_path = Path(args.non_seq)
 
     changepoints = np.array([])
     if changepoints_path.exists():
@@ -193,11 +128,11 @@ def main(args):
         num_workers=args.num_worker,
     )
 
-    seq_model = torch.jit.load(args.seq)
+    seq_model = torch.jit.load(seq_path)
     seq_model.to(device)
     seq_model.eval()
 
-    non_seq_model = torch.jit.load(args.non_seq)
+    non_seq_model = torch.jit.load(non_seq_path)
     non_seq_model.to(device)
     non_seq_model.eval()
 
@@ -207,6 +142,7 @@ def main(args):
         "y_origs": [],
         "y_preds": [],
         "predict_proba": [],
+        "train_results": None,
     }
 
     seq_res = {
@@ -215,6 +151,7 @@ def main(args):
         "y_origs": [],
         "y_preds": [],
         "predict_proba": [],
+        "train_results": None,
     }
 
     for i in range(-args.n_labels, args.n_labels + 1, 1):
@@ -253,18 +190,49 @@ def main(args):
     non_seq_res["predict_proba"] = np.array(non_seq_res["predict_proba"])
     seq_res["predict_proba"] = np.array(seq_res["predict_proba"])
 
-    non_seq_eval_res = EvalResult(**non_seq_res)
-    seq_eval_res = EvalResult(**seq_res)
+    non_seq_eval_res = EvalResult(**non_seq_res, name="Non-Sequential")
+    seq_eval_res = EvalResult(**seq_res, name="Sequential")
 
+    non_seq_train_res_path = non_seq_path.parent / f"train_results.json"
+
+    if non_seq_train_res_path.exists():
+        with open(non_seq_train_res_path, "r") as f:
+            non_seq_train_res = json.load(f)
+            non_seq_train_results = compute_perf(non_seq_train_res)
+            non_seq_eval_res.train_results = TrainResult(**non_seq_train_results)
+
+    seq_train_res_path = seq_path.parent / f"train_results.json"
+    if seq_train_res_path.exists():
+        with open(seq_train_res_path, "r") as f:
+            seq_train_res = json.load(f)
+            seq_train_results = compute_perf(seq_train_res)
+            seq_eval_res.train_results = TrainResult(**seq_train_results)
+
+    plot_title = f"Sequential vs Non-Sequential (y={args.y}, strategy={args.strategy})"
+    results = [non_seq_eval_res, seq_eval_res]
     plot_prediction(
-        non_seq_eval_res,
-        seq_eval_res,
+        results,
         output_folder,
         changepoints=changepoints,
         args=args,
+        title=plot_title,
     )
-    plot_auc_roc(non_seq_eval_res, seq_eval_res, output_folder, args=args)
-    plot_diff(non_seq_eval_res, seq_eval_res, output_folder, args=args)
+    plot_auc_roc(results, output_folder, args=args, title=plot_title)
+    plot_diff(results, output_folder, args=args, title=plot_title)
+    plot_avg_acc(
+        results,
+        output_folder,
+        n_exp=raw_non_seq_data.n_experiences(),
+        args=args,
+        title=plot_title,
+    )
+    plot_avg_forgetting(
+        results,
+        output_folder,
+        n_exp=raw_non_seq_data.n_experiences(),
+        args=args,
+        title=plot_title,
+    )
 
 
 if __name__ == "__main__":

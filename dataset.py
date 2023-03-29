@@ -10,7 +10,6 @@ from torch.utils.data import Dataset
 
 from sklearn.model_selection import train_test_split
 import numpy as np
-import pandas as pd
 import numpy.typing as npt
 
 
@@ -19,7 +18,7 @@ def split_evenly_by_classes(
     y: Sequence[Number],
     train_ratio: float,
     shuffle: bool = True,
-) -> Tuple[pd.Series, pd.Series]:
+):
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,

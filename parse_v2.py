@@ -89,14 +89,20 @@ def compute_performance(end_task_acc_arr):
 
 def compute_perf(results: dict):
     avg_acc = []
+    raw_acc = []
 
     for t, data in results.items():
         accuracy_sum = 0
+        raw_acc_temp = []
         for i in range(0, int(t) + 1):
             accuracy_sum += data[
                 f"Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp{i:03d}"
             ]
+            raw_acc_temp.append(
+                data[f"Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp{i:03d}"]
+            )
         avg_acc.append(accuracy_sum / (int(t) + 1))
+        raw_acc.append(raw_acc_temp)
 
     # initialize a dictionary to store the forgetting values for each task
     forgetting = {}
@@ -138,9 +144,10 @@ def compute_perf(results: dict):
     # Save the results
     parsed_results = {
         "avg_acc": avg_acc,
-        "avg_forgetting": forgetting,
+        "avg_forgetting": list(forgetting.values()),
         "ovr_avg_acc": overall_avg_acc,
         "ovr_avg_forgetting": overall_avg_forgetting,
+        "raw_acc": raw_acc,
     }
 
     return parsed_results
@@ -153,6 +160,8 @@ def main(args):
     train_results_file.close()
 
     parsed_results = compute_perf(results)
+
+    print(parsed_results)
 
     # num_tasks = len(results)  # Get the number of tasks
 

@@ -13,6 +13,30 @@ import matplotlib.ticker as ticker
 from parse_v2 import compute_perf
 
 
+MARKERS = ["D", "P", "s", "v", "o", "*", "X"]
+CYCLE_MARKERS = cycle(MARKERS)
+CYCLER_MARKERS = cycler(marker=MARKERS)
+
+
+COLORS = [
+    "blue",
+    "orange",
+    "green",
+    "black",
+    "maroon",
+    "purple",
+    "brown",
+    "pink",
+    "gray",
+    "olive",
+    "cyan",
+    "magenta",
+    # "yellow",
+]
+CYCLE_COLORS = cycle(COLORS[: len(MARKERS)])
+CYCLER_COLORS = cycler(color=COLORS[: len(MARKERS)])
+
+
 def label_binarizer(y: Sequence[int], n_labels: int) -> np.ndarray:
     y_onehot = np.zeros((len(y), n_labels))
     for i, label in enumerate(y):
@@ -37,6 +61,7 @@ class TrainResult:
     avg_forgetting: Sequence[Sequence[float]] = field(default_factory=list)
     ovr_avg_acc: Optional[float] = None
     ovr_avg_forgetting: Optional[float] = None
+    raw_acc: Sequence[Sequence[float]] = field(default_factory=list)
 
 
 @dataclass
@@ -78,11 +103,6 @@ def auc_roc(result: EvalResult, n_labels: int = 10):
     roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
 
     return fpr, tpr, roc_auc
-
-
-COLORS = ["blue", "orange", "green", "black", "maroon", "purple", "brown"]
-CYCLE_COLORS = cycle(COLORS)
-CYCLER_COLORS = cycler(color=COLORS)
 
 
 def plot_roc_curve(ax, res: EvalResult, title: str, n_labels: int = 10):
@@ -137,7 +157,6 @@ def plot_diff(
     n_results = len(results)
 
     fig, ax = plt.subplots(figsize=(4 * n_results, 5))
-    width = 0.4
 
     # Add counts above the two bar graphs
     def autolabel(rects):
@@ -155,11 +174,14 @@ def plot_diff(
 
     diffs = np.array(list(results[0].diffs_dict.keys()))
 
+    bar_width = 1.0 / (n_results + 1)
+
     for i, res in enumerate(results):
+        offset = i * bar_width - (n_results - 1) / 2 * bar_width
         ax.bar(
-            diffs + width * (i - n_results / 2),
+            diffs + offset,
             res.diffs_dict.values(),
-            width=width,
+            width=bar_width,
             label=res.name,
         )
         # autolabel(rect)
@@ -180,7 +202,7 @@ def plot_diff(
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
     ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
 
-    fig.tight_layout()
+    # fig.tight_layout()
 
     fig.savefig(output_folder / "diff.png", dpi=100)
     plt.close(fig)
@@ -270,11 +292,6 @@ def plot_auc_roc(
     fig.tight_layout()
     fig.savefig(output_folder / "auc_roc.png", dpi=100)
     plt.close(fig)
-
-
-MARKERS = ["D", "P", "s", "v", "o", "*", "X"]
-CYCLE_MARKERS = cycle(MARKERS)
-CYCLER_MARKERS = cycler(marker=MARKERS)
 
 
 def plot_avg_acc(
@@ -367,6 +384,124 @@ def plot_avg_forgetting(
     plt.close(fig)
 
 
+def plot_end_acc(
+    results: Sequence[EvalResult],
+    output_folder: Path,
+    n_exp: int,
+    args: Any,
+    title: Optional[str] = None,
+):
+    assert len(results) >= 2
+    print("Plotting end acc...")
+
+    results = [
+        res
+        for res in results
+        if res.train_results is not None and len(res.train_results.raw_acc) > 0
+    ]
+    n_results = len(results)
+
+    fig, ax = plt.subplots(figsize=(4 * n_results, 5))
+
+    x = np.arange(0, n_exp)
+    bar_width = 1.0 / (n_results + 1)
+    legends = []
+
+    for i, res in enumerate(results):
+        offset = i * bar_width - (n_results - 1) / 2 * bar_width
+        # offset = (i - n_results / 2) * bar_width
+        raw_acc = np.array(res.train_results.raw_acc)
+        end_acc = raw_acc[-1]
+        avg_end_acc = np.mean(end_acc)
+        ax.bar(
+            x + offset,
+            np.clip(end_acc, 0, 1) * 100,
+            width=bar_width,
+            label=res.name,
+            # label=f"{res.name} (avg={avg_end_acc * 100:.2f})",
+        )
+        legends.append(f"{res.name} (avg={avg_end_acc * 100:.2f}%)")
+        # autolabel(rect)
+
+    ax.set_xlabel("Distribution Shift Window (Task)")
+    ax.set_ylabel("Accuracy (%)")
+    # ax.set_title("End Accuracy of Each Task")
+    ax.set_xlim(-1, n_exp)
+    ax.set_xticks(x)
+    ax.set_xticklabels(x)
+    ax.legend(legends)
+
+    suptitle = "End Accuracy"
+    if title:
+        suptitle += f" of {title}"
+    ax.set_title(suptitle)
+
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+
+    fig.tight_layout()
+
+    fig.savefig(output_folder / "end_acc.png", dpi=100)
+    plt.close(fig)
+
+
+def plot_end_forgetting(
+    results: Sequence[EvalResult],
+    output_folder: Path,
+    n_exp: int,
+    args: Any,
+    title: Optional[str] = None,
+):
+    assert len(results) >= 2
+    print("Plotting end forgetting...")
+
+    results = [
+        res
+        for res in results
+        if res.train_results is not None and len(res.train_results.avg_forgetting) > 0
+    ]
+    n_results = len(results)
+
+    fig, ax = plt.subplots(figsize=(4 * n_results, 5))
+    width = 0.4
+
+    x = np.arange(1, n_exp + 1)
+
+    for i, res in enumerate(results):
+        ax.bar(
+            # put x at the center of the bar
+            x + width * (i - n_results / 2),
+            # x + width * (i - 1) / n_results,
+            # # x - width / 2 + width * (i - n_results / 2),
+            # # x + width * (i - n_results / 2),
+            np.clip(np.array(res.train_results.avg_forgetting[-1]), 0, 1) * 100,
+            width=width,
+            label=f"{res.name} (forgetting={res.train_results.ovr_avg_forgetting * 100:.2f})",
+        )
+        # autolabel(rect)
+
+    ax.set_xlabel("Distribution Shift Window (Task)")
+    ax.set_ylabel("Forgetting (%)")
+    ax.set_title("End Forgetting of Each Task")
+    ax.set_xlim(-1, n_exp + 1)
+    ax.set_xticks(x)
+    ax.set_xticklabels(x)
+    ax.legend([res.name for res in results])
+
+    suptitle = "End Forgetting"
+    if title:
+        suptitle += f" of {title}"
+    fig.suptitle(suptitle)
+
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+
+    fig.tight_layout()
+
+    fig.savefig(output_folder / "end_forgetting.png", dpi=100)
+    plt.close(fig)
+
+
 __all__ = [
     "label_binarizer",
     "TrainResult",
@@ -381,4 +516,6 @@ __all__ = [
     "plot_auc_roc",
     "plot_avg_acc",
     "plot_avg_forgetting",
+    "plot_end_acc",
+    "plot_end_forgetting",
 ]

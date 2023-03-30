@@ -48,7 +48,7 @@ run() {
         return
     fi
 
-    python plot_seq_uni_multi.py "$EXP_DIR/preprocessed_data/$machine_id/${machine_id}_75-300/${machine_id}_${y_var}.csv" \
+    python plot_seq_uni_multi.py "$EXP_DIR/preprocessed_data/$data_id/$machine_id/${machine_id}_75-300/${machine_id}_${y_var}.csv" \
         -y $y_var \
         -o "$EXP_DIR/out_plot/global/seq-uni-multi" \
         -s "$strategy" \
@@ -59,14 +59,18 @@ run() {
 }
 
 
-# run "m_25" "cpu" "gdumb" $SEQ_LEN
+# run "m_881" "cpu" "gss" $SEQ_LEN
 
 STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
 
 for machine_id in "m_25" "m_881"; do
     for y_var in "cpu" "mem" "disk"; do
         for strategy in "${STRATEGIES[@]}"; do
-            echo ">>> Plotting univariate vs multivariate for machine=$machine_id y=$y_var strategy=$strategy"
+            if [[ $LOCAL == 1 ]]; then
+                echo ">>> Plotting [LOCAL DATA] univariate vs multivariate for machine=$machine_id y=$y_var strategy=$strategy"
+            else
+                echo ">>> Plotting univariate vs multivariate for machine=$machine_id y=$y_var strategy=$strategy"
+            fi
             run $machine_id $y_var $strategy $SEQ_LEN 
         done
     done

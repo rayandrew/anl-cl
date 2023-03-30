@@ -112,19 +112,30 @@ def main(args):
     orig_data = np.genfromtxt(input_path, delimiter=",")
 
     output_path = (
-        Path(args.output)
+        Path(args.output).joinpath("local" if args.local else "global")
         / input_path.stem
         / f"{input_path.stem}_{args.window_size}-{args.threshold}"
     )
     output_path.mkdir(parents=True, exist_ok=True)
 
-    label_index = 8
-    if args.y == "cpu":
-        label_index = 2
-    elif args.y == "mem":
-        label_index = 3
+    data = orig_data
 
-    data = orig_data[:, label_index]
+    if args.local:
+        label_index = 9
+        if args.y == "cpu":
+            label_index = 7
+        elif args.y == "mem":
+            label_index = 8
+        orig_data = orig_data[1:]
+        data = data[1:]
+    else:
+        label_index = 8
+        if args.y == "cpu":
+            label_index = 2
+        elif args.y == "mem":
+            label_index = 3
+
+    data = data[:, label_index]
 
     dd = DriftDetection(data, verbose=False)
     dd.add_method(ADWIN(), 1)
@@ -208,6 +219,10 @@ if __name__ == "__main__":
         type=int,
         default=75,
         help="window size for voting",
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
     )
 
     args = parser.parse_args()

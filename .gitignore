@@ -166,3 +166,4 @@ best-out
 stdout
 out_*
 preprocessed_data
+preprocessed_local_data

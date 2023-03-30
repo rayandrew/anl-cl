@@ -31,7 +31,7 @@ EVAL_ONLY=0
 # DATA PREPROCESSING OPTIONS
 WINDOW_SIZE=75
 THRESHOLD=300 # for voting
-PREPROCESS_DATA_DIR="$EXP_DIR/preprocessed_data"
+PREPROCESS_DATA_DIR="$EXP_DIR/preprocessed_data/global"
 
 mkdir -p $PREPROCESS_DATA_DIR
 mkdir -p $EXP_OUT_DIR
@@ -63,7 +63,7 @@ run() {
         echo ">>> Train SEQUENTIAL UNIVARIATE model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
         echo
         python main.py \
-            -f "$EXP_DIR/preprocessed_data/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv" \
+            -f "$data_file" \
             -m "${machine_id}_${strategy}" \
             -s $strategy \
             -o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/" \
@@ -79,7 +79,7 @@ run() {
     echo ">>> Evaluate SEQUENTIAL UNIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"  
     echo
     python eval.py \
-        -f "$EXP_DIR/preprocessed_data/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv" \
+        -f "$data_file" \
         -o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}" \
         -m "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt" \
         -y $y_var \
@@ -87,17 +87,17 @@ run() {
         --seq --seq_len $seq_len --univariate
 }
 
-# run "m_25" "cpu" "ewc" $SEQ_LEN $EVAL_ONLY
+run "m_881" "mem" "gss" $SEQ_LEN $EVAL_ONLY
 
-# STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
-STRATEGIES=("naive" "ewc" "gss")
+# # STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
+# STRATEGIES=("naive" "ewc" "gss")
 
-## for machine_id in $(ls $ALIBABA_MU); do
-for strategy in "${STRATEGIES[@]}"; do
-    for machine_id in "m_25" "m_881"; do
-        for y_var in "cpu" "mem" "disk"; do
-            echo ">>> Running SEQUENTIAL UNIVARIATE pipeline for machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
-            run $machine_id $y_var $strategy $SEQ_LEN $EVAL_ONLY
-        done
-    done
-done
+# ## for machine_id in $(ls $ALIBABA_MU); do
+# for strategy in "${STRATEGIES[@]}"; do
+#     for machine_id in "m_25" "m_881"; do
+#         for y_var in "cpu" "mem" "disk"; do
+#             echo ">>> Running SEQUENTIAL UNIVARIATE pipeline for machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
+#             run $machine_id $y_var $strategy $SEQ_LEN $EVAL_ONLY
+#         done
+#     done
+# done

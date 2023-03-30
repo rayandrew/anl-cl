@@ -202,8 +202,9 @@ def plot_diff(
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
     ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
 
-    # fig.tight_layout()
+    fig.tight_layout()
 
+    print(f"Saving diff plot to {output_folder / 'diff.png'}")
     fig.savefig(output_folder / "diff.png", dpi=100)
     plt.close(fig)
 
@@ -261,6 +262,7 @@ def plot_prediction(
     fig.suptitle(suptitle)
 
     fig.tight_layout()
+    print(f"Saving prediction plot to {output_folder / 'prediction.png'}")
     fig.savefig(output_folder / "prediction.png", dpi=100)
     plt.close(fig)
 
@@ -290,6 +292,7 @@ def plot_auc_roc(
     fig.suptitle(suptitle)
 
     fig.tight_layout()
+    print(f"Saving auc-roc plot to {output_folder / 'auc_roc.png'}")
     fig.savefig(output_folder / "auc_roc.png", dpi=100)
     plt.close(fig)
 
@@ -335,6 +338,7 @@ def plot_avg_acc(
     fig.suptitle(suptitle)
 
     fig.tight_layout()
+    print(f"Saving average accuracy plot to {output_folder / 'avg_acc.png'}")
     fig.savefig(output_folder / "avg_acc.png", dpi=100)
     plt.close(fig)
 
@@ -360,7 +364,7 @@ def plot_avg_forgetting(
             continue
         ax.plot(
             x,
-            res.train_results.avg_acc,
+            res.train_results.avg_forgetting,
             label=res.name,
             alpha=0.5,
             linestyle="-",
@@ -380,6 +384,7 @@ def plot_avg_forgetting(
     fig.suptitle(suptitle)
 
     fig.tight_layout()
+    print(f"Saving average forgetting plot to {output_folder / 'avg_forgetting.png'}")
     fig.savefig(output_folder / "avg_forgetting.png", dpi=100)
     plt.close(fig)
 
@@ -440,7 +445,7 @@ def plot_end_acc(
     ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
 
     fig.tight_layout()
-
+    print(f"Saving end accuracy plot to {output_folder / 'end_acc.png'}")
     fig.savefig(output_folder / "end_acc.png", dpi=100)
     plt.close(fig)
 
@@ -498,6 +503,7 @@ def plot_end_forgetting(
 
     fig.tight_layout()
 
+    print(f"Saving end forgetting plot to {output_folder / 'end_forgetting.png'}")
     fig.savefig(output_folder / "end_forgetting.png", dpi=100)
     plt.close(fig)
 

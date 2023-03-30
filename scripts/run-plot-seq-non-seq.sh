@@ -23,8 +23,8 @@ source $INIT_SCRIPT
 LOCAL=0
 SEQ_LEN=5
 N_LABELS=10
-# SEQ_TYPE="multivariate"
-SEQ_TYPE="univariate"
+SEQ_TYPE="multivariate"
+# SEQ_TYPE="univariate"
 
 data_id="global"
 if [[ $LOCAL == 1 ]]; then
@@ -53,9 +53,9 @@ run() {
     fi
 
     if [[ $seq_type == "univariate" ]]; then
-        python plot_seq_non_seq.py "$EXP_DIR/preprocessed_data/$machine_id/${machine_id}_75-300/${machine_id}_${y_var}.csv" \
+        python plot_seq_non_seq.py "$EXP_DIR/preprocessed_data/$data_id/$machine_id/${machine_id}_75-300/${machine_id}_${y_var}.csv" \
             -y $y_var \
-            -o "$EXP_DIR/out_plot/global/${seq_type}-seq-non-seq" \
+            -o "$EXP_DIR/out_plot/$data_id/${seq_type}-seq-non-seq" \
             -s "$strategy" \
             -nl "$N_LABELS" \
             --seq "$seq_model_path" \
@@ -65,9 +65,9 @@ run() {
             return
     fi
 
-    python plot_seq_non_seq.py "$EXP_DIR/preprocessed_data/$machine_id/${machine_id}_75-300/${machine_id}_${y_var}.csv" \
+    python plot_seq_non_seq.py "$EXP_DIR/preprocessed_data/$data_id/$machine_id/${machine_id}_75-300/${machine_id}_${y_var}.csv" \
         -y $y_var \
-        -o "$EXP_DIR/out_plot/global/${seq_type}-seq-non-seq" \
+        -o "$EXP_DIR/out_plot/$data_id/${seq_type}-seq-non-seq" \
         -s "$strategy" \
         -nl "$N_LABELS" \
         --seq "$seq_model_path" \
@@ -76,7 +76,7 @@ run() {
 }
 
 
-# run "m_25" "cpu" "gdumb" $SEQ_LEN $SEQ_TYPE
+# run "m_881" "cpu" "gss" $SEQ_LEN $SEQ_TYPE
 
 STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
 

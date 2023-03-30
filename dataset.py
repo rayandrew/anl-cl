@@ -87,18 +87,41 @@ class AlibabaSchedulerDataset(AlibabaDataset):
         train_ratio: float = AlibabaDataset.TRAIN_RATIO,
         y: Literal["cpu", "mem", "disk"] = "cpu",
         mode: Literal["train", "test", "predict"] = "train",
+        seq: bool = False,
+        seq_len: int = 2,
+        univariate: bool = False,
     ):
+        """Dataset for Alibaba Machine Scheduler
+
+        Args:
+            filename (Union[str, Path]): path to the dataset
+            n_labels (int): number of labels to use
+            train_ratio (float, optional): ratio of training data. Defaults to AlibabaDataset.TRAIN_RATIO.
+            y (Literal["cpu", "mem", "disk"], optional): which variable to predict. Defaults to "cpu".
+            mode (Literal["train", "test", "predict"], optional): which mode to use. Defaults to "train".
+            seq (bool, optional): whether to use sequence data. Defaults to False.
+            seq_len (int, optional): length of sequence. Defaults to 2.
+            univariate (bool, optional): whether to use univariate data. Defaults to False.
+        """
+        assert mode in ["train", "test", "predict"]
+        assert y in ["cpu", "mem", "disk"]
+        assert seq_len >= 2
+        if univariate:
+            assert seq, "Univariate data must be sequence data"
         self.filename = filename
         self.train_ratio = train_ratio
         self.n_labels = n_labels
         self.y_var = y
         self.mode = mode
-        self.seq_len = 1
+        self.seq = seq
+        self.seq_len = seq_len
+        self.univariate = univariate
+        self._n_experiences = None
         self._load_data()
 
     def _augment_data(self, data):
-        data = data[1:]
-        data = data[:, 1:]
+        data = data[1:]  # skip header
+        data = data[:, 1:]  # skip timestamp
         ts = data[:, 0]
         new_data = []
         label_index = -2
@@ -134,7 +157,7 @@ class AlibabaSchedulerDataset(AlibabaDataset):
 
     def input_size(self) -> int:
         if self.data is None:
-            raise ValueError("Dataset not loaded yet")
+            raise ValueError("Dataset is not loaded yet")
         if len(self.data) == 0:
             raise ValueError("Dataset is empty")
         return len(self.data[0][0])

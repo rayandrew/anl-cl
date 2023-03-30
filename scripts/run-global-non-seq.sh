@@ -24,8 +24,7 @@ source $INIT_SCRIPT
 # MACHINE_ID="m_25"
 # Y_VAR="disk"
 # STRATEGY="gdumb"
-EXP_OUT_DIR="$EXP_DIR/out/global/seq/multivariate"
-SEQ_LEN=5
+EXP_OUT_DIR="$EXP_DIR/out/global/non-seq"
 EVAL_ONLY=0
 
 # DATA PREPROCESSING OPTIONS
@@ -40,10 +39,9 @@ run() {
     local machine_id=$1
     local y_var=$2
     local strategy=$3
-    local seq_len=$4
-    local eval_only=$5
+    local eval_only=$4
 
-    local data_file="$PREPROCESS_DATA_DIR/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv"
+    local data_file="$PREPROCESS_DATA_DIR/global/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv"
     if [[ ! -f $data_file ]]; then
         echo ">>> Preprocessing data for machine_id=$machine_id, y_var=$y_var"
         echo
@@ -60,44 +58,41 @@ run() {
     fi
     
     if [[ $eval_only == 0 && ! -f "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done" ]]; then
-        echo ">>> Train SEQUENTIAL MULTIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
+        echo ">>> Train machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
         echo
         python main.py \
             -f "$data_file" \
             -m "${machine_id}_${strategy}" \
             -s $strategy \
             -o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/" \
-            -y $y_var \
-            --seq --seq_len $seq_len
+            -y $y_var
         touch "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done"
         echo
     else
-        echo ">>> SEQUENTIAL MULTIVARIATE model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy already exists, skipping training"
+        echo ">>> Model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy already exists, skipping training"
         echo 
     fi
 
-    echo ">>> Evaluate SEQUENTIAL MULTIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"  
+    echo ">>> Evaluate machine_id=$machine_id, y_var=$y_var, strategy=$strategy"  
     echo
     python eval.py \
         -f "$data_file" \
         -o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}" \
         -m "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt" \
         -y $y_var \
-        --plot \
-        --seq --seq_len $seq_len
+        --plot
 }
 
-run "m_881" "mem" "gss" $SEQ_LEN $EVAL_ONLY
+run "m_881" "cpu" "gss" $EVAL_ONLY
 
 # STRATEGIES=("naive" "ewc" "gss" "lwf" "agem" "gdumb")
-# STRATEGIES=("naive" "ewc" "gss")
 
-# ## for machine_id in $(ls $ALIBABA_MU); do
-# for strategy in "${STRATEGIES[@]}"; do
-#     for machine_id in "m_25" "m_881"; do
-#         for y_var in "cpu" "mem" "disk"; do
-#             echo ">>> Running SEQUENTIAL MULTIVARIATE pipeline for machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
-#             run $machine_id $y_var $strategy $SEQ_LEN $EVAL_ONLY
+# # for machine_id in $(ls $ALIBABA_MU); do
+# for machine_id in "m_25" "m_881"; do
+#     for y_var in "cpu" "mem" "disk"; do
+#         for strategy in "${STRATEGIES[@]}"; do
+#             echo ">>> Running machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
+#             run $machine_id $y_var $strategy $EVAL_ONLY
 #         done
 #     done
 # done

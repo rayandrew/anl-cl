@@ -1,19 +1,16 @@
 import argparse
 import time
+from collections import deque
 from pathlib import Path
 from typing import Sequence
-from collections import deque
 
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
+from skmultiflow.drift_detection import DDM, KSWIN, PageHinkley
 from skmultiflow.drift_detection.adwin import ADWIN
-from skmultiflow.drift_detection import DDM
 from skmultiflow.drift_detection.eddm import EDDM
 from skmultiflow.drift_detection.hddm_a import HDDM_A
 from skmultiflow.drift_detection.hddm_w import HDDM_W
-from skmultiflow.drift_detection import PageHinkley
-from skmultiflow.drift_detection import KSWIN
 
 
 class DriftDetection:
@@ -112,7 +109,9 @@ def main(args):
     orig_data = np.genfromtxt(input_path, delimiter=",")
 
     output_path = (
-        Path(args.output).joinpath("local" if args.local else "global")
+        Path(args.output).joinpath(
+            "local" if args.local else "global"
+        )
         / input_path.stem
         / f"{input_path.stem}_{args.window_size}-{args.threshold}"
     )
@@ -147,7 +146,9 @@ def main(args):
     dd.add_method(KSWIN(), 1)
     window_size = args.window_size
     threshold = args.threshold
-    change_list = dd.get_voted_drift(window_size=window_size, threshold=threshold)
+    change_list = dd.get_voted_drift(
+        window_size=window_size, threshold=threshold
+    )
     change_list = [i + 1000 for i in change_list]
     change_list = sorted(change_list)
     # rec_time = int(time.time())
@@ -161,7 +162,8 @@ def main(args):
     plot(
         data,
         change_list,
-        output_path / f"plot_{input_path.stem}_{window_size}_{threshold}_{args.y}.png",
+        output_path
+        / f"plot_{input_path.stem}_{window_size}_{threshold}_{args.y}.png",
     )
 
     data = add_dist_label(orig_data, change_list)
@@ -176,7 +178,9 @@ def main(args):
     changes[:, 0] = change_list
 
     for i in range(len(change_list)):
-        changes[i, 1] = orig_data[change_list[i] - 1000, 1]  # get timestamp
+        changes[i, 1] = orig_data[
+            change_list[i] - 1000, 1
+        ]  # get timestamp
 
     np.savetxt(
         output_path / f"{input_path.stem}_{args.y}_change.csv",
@@ -190,7 +194,9 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="[Preprocess] Drift Detection")
+    parser = argparse.ArgumentParser(
+        description="[Preprocess] Drift Detection"
+    )
     parser.add_argument(
         "input",
         type=str,
@@ -227,3 +233,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
+
+__all__ = ["DriftDetection", "add_dist_label"]

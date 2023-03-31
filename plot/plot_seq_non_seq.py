@@ -1,6 +1,6 @@
+import json
 from argparse import ArgumentParser
 from pathlib import Path
-import json
 from typing import Any
 
 import torch
@@ -8,18 +8,18 @@ import torch
 import numpy as np
 
 from dataset import AlibabaMachineDataset
-from plot_utils import (
+from utils.parse_v2 import compute_perf
+from utils.plot import (
     EvalResult,
     TrainResult,
-    plot_diff,
-    plot_prediction,
     plot_auc_roc,
     plot_avg_acc,
     plot_avg_forgetting,
+    plot_diff,
     plot_end_acc,
     plot_end_forgetting,
+    plot_prediction,
 )
-from parse_v2 import compute_perf
 
 
 def predict(
@@ -27,15 +27,18 @@ def predict(
     data_path: Path,
     device: torch.device,
     args: Any,
+    is_seq: bool,
     univariate: bool = False,
 ):
+    if univariate:
+        assert is_seq, "Univariate data must be sequential"
 
     raw_data = AlibabaMachineDataset(
         filename=data_path,
         n_labels=args.n_labels,
         mode="predict",
         y=args.y,
-        seq=True,
+        seq=is_seq,
         seq_len=args.seq_len,
         univariate=univariate,
     )
@@ -63,9 +66,9 @@ def predict(
         res["diffs_dict"][i] = 0
 
     print(
-        "Predicting using univariate model..."
-        if univariate
-        else "Predicting using multivariate model..."
+        "Predicting using sequential model..."
+        if is_seq
+        else "Predicting using non-sequential model..."
     )
     for i, (x, _dist, y) in enumerate(data):
         x = x.to(device)
@@ -82,7 +85,9 @@ def predict(
 
     res["predict_proba"] = np.array(res["predict_proba"])
 
-    res = EvalResult(**res, name="Univariate" if univariate else "Multivariate")
+    res = EvalResult(
+        **res, name="Sequential" if is_seq else "Non-Sequential"
+    )
 
     train_res_path = model_path.parent / f"train_results.json"
 
@@ -97,9 +102,11 @@ def predict(
 
 def main(args):
     data_path = Path(args.data)
-    changepoints_path = data_path.parent / f"{data_path.stem}_change.csv"
-    univariate_path = Path(args.univariate)
-    multivariate_path = Path(args.multivariate)
+    changepoints_path = (
+        data_path.parent / f"{data_path.stem}_change.csv"
+    )
+    seq_path = Path(args.seq)
+    non_seq_path = Path(args.non_seq)
 
     changepoints = np.array([])
     if changepoints_path.exists():
@@ -107,25 +114,42 @@ def main(args):
         changepoints = np.loadtxt(changepoints_path, delimiter=",")
         changepoints = changepoints.astype(int)[:, 0]  # pick # rows
 
-    output_folder = Path(args.output_folder) / data_path.stem / args.strategy
+    output_folder = (
+        Path(args.output_folder) / data_path.stem / args.strategy
+    )
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    print("Using univariate sequential data...")
-    uni_eval_res, n_exp = predict(
-        univariate_path, data_path, device, args, univariate=True
+    device = torch.device(
+        "cuda:0" if torch.cuda.is_available() else "cpu"
     )
 
-    print("Using multivariate sequential data...")
-    multi_eval_res, _ = predict(
-        multivariate_path, data_path, device, args, univariate=False
+    print("Using non-sequential data...")
+    non_seq_eval_res, n_exp = predict(
+        non_seq_path,
+        data_path,
+        device,
+        args,
+        is_seq=False,
+        univariate=False,
+    )
+
+    print("Using sequential data...")
+    seq_eval_res, _ = predict(
+        seq_path,
+        data_path,
+        device,
+        args,
+        is_seq=True,
+        univariate=args.univariate,
     )
 
     plot_title_prefix = "[Local]" if args.local else "[Global]"
 
-    plot_title = f"{plot_title_prefix} Univariate vs Multivariate (y={args.y}, strategy={args.strategy})"
-    results = [uni_eval_res, multi_eval_res]
+    if args.univariate:
+        plot_title_prefix += "[Univariate]"
+
+    plot_title = f"{plot_title_prefix} Sequential vs Non-Sequential (y={args.y}, strategy={args.strategy})"
+    results = [non_seq_eval_res, seq_eval_res]
     plot_prediction(
         results,
         output_folder,
@@ -170,7 +194,9 @@ if __name__ == "__main__":
     parser.add_argument("data", help="Data file")
     parser.add_argument("--num_worker", type=int, default=4)
     parser.add_argument("--batch_size", type=int, default=24)
-    parser.add_argument("-o", "--output_folder", type=str, default="out")
+    parser.add_argument(
+        "-o", "--output_folder", type=str, default="out"
+    )
     parser.add_argument("-nl", "--n_labels", type=int, default=10)
     parser.add_argument(
         "-y",
@@ -186,10 +212,15 @@ if __name__ == "__main__":
         choices=["gss", "agem", "naive", "lwf", "ewc", "gdumb"],
         default="naive",
     )
-    parser.add_argument("--univariate", help="Path to univariate model", type=str)
-    parser.add_argument("--multivariate", help="Path to multivariate model", type=str)
+    parser.add_argument(
+        "--seq", help="Path to sequential model", type=str
+    )
+    parser.add_argument(
+        "--non_seq", help="Path to non-sequential model", type=str
+    )
     parser.add_argument("--seq_len", type=int, default=5)
     parser.add_argument("--local", action="store_true")
+    parser.add_argument("--univariate", action="store_true")
 
     args = parser.parse_args()
     main(args)

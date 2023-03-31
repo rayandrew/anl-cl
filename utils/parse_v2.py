@@ -1,15 +1,11 @@
-from argparse import ArgumentParser
 import json
+from argparse import ArgumentParser
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import sem
 import scipy.stats as stats
+from scipy.stats import sem
 
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-
-from utils import preprocess_summary, process_file
 
 # https://github.com/RaptorMai/online-continual-learning/blob/6175ca034e56435acd82b8f17ff59f920f0bc45e/experiment/metrics.py#L5
 def compute_performance(end_task_acc_arr):
@@ -26,8 +22,13 @@ def compute_performance(end_task_acc_arr):
 
     # compute average test accuracy and CI
     end_acc = end_task_acc_arr[:, -1, :]  # shape: (num_run, num_task)
-    avg_acc_per_run = np.mean(end_acc, axis=1)  # mean of end task accuracies per run
-    avg_end_acc = (np.mean(avg_acc_per_run), t_coef * sem(avg_acc_per_run))
+    avg_acc_per_run = np.mean(
+        end_acc, axis=1
+    )  # mean of end task accuracies per run
+    avg_end_acc = (
+        np.mean(avg_acc_per_run),
+        t_coef * sem(avg_acc_per_run),
+    )
 
     # compute forgetting
     best_acc = np.max(end_task_acc_arr, axis=1)
@@ -37,7 +38,11 @@ def compute_performance(end_task_acc_arr):
 
     # compute ACC
     acc_per_run = np.mean(
-        (np.sum(np.tril(end_task_acc_arr), axis=2) / (np.arange(n_tasks) + 1)), axis=1
+        (
+            np.sum(np.tril(end_task_acc_arr), axis=2)
+            / (np.arange(n_tasks) + 1)
+        ),
+        axis=1,
     )
     avg_acc = (np.mean(acc_per_run), t_coef * sem(acc_per_run))
 
@@ -54,9 +59,9 @@ def compute_performance(end_task_acc_arr):
     avg_bwtp = (np.mean(bwtp_per_run), t_coef * sem(bwtp_per_run))
 
     # compute FWT
-    fwt_per_run = np.sum(np.triu(end_task_acc_arr, 1), axis=(1, 2)) / (
-        n_tasks * (n_tasks - 1) / 2
-    )
+    fwt_per_run = np.sum(
+        np.triu(end_task_acc_arr, 1), axis=(1, 2)
+    ) / (n_tasks * (n_tasks - 1) / 2)
     avg_fwt = (np.mean(fwt_per_run), t_coef * sem(fwt_per_run))
     return avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt
 
@@ -99,7 +104,9 @@ def compute_perf(results: dict):
                 f"Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp{i:03d}"
             ]
             raw_acc_temp.append(
-                data[f"Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp{i:03d}"]
+                data[
+                    f"Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp{i:03d}"
+                ]
             )
         avg_acc.append(accuracy_sum / (int(t) + 1))
         raw_acc.append(raw_acc_temp)
@@ -139,7 +146,9 @@ def compute_perf(results: dict):
             forgetting[task] = (1 / (int(task))) * forgetting[task]
 
     overall_avg_acc = sum(avg_acc) / len(avg_acc)
-    overall_avg_forgetting = sum(forgetting.values()) / len(forgetting)
+    overall_avg_forgetting = sum(forgetting.values()) / len(
+        forgetting
+    )
 
     # Save the results
     parsed_results = {
@@ -160,30 +169,14 @@ def main(args):
     train_results_file.close()
 
     parsed_results = compute_perf(results)
-
     print(parsed_results)
 
-    # num_tasks = len(results)  # Get the number of tasks
-
-    # print(preprocess_summary(train_results_path)[1])
-    # old_parser = process_file(train_results_path)
-
-    # for task, forgetting_i in forgetting.items():
-    #     print(
-    #         f"Task {task}: f={forgetting_i} a={avg_acc[int(task)]} "
-    #         f"of={old_parser['avg_forgettings'][int(task)]} "
-    #         f"oa={old_parser['avg_accs'][int(task)]} "
-    #     )
-    # print("Overall average accuracy = {:.4f}".format(overall_avg_acc))
-    # print("Overall average forgetting = {:.4f}".format(overall_avg_forgetting))
-
-    return parsed_results
-
-
-__all__ = ["compute_performance", "compute_perf"]
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("path", type=str)
     args = parser.parse_args()
     main(args)
+
+
+__all__ = ["compute_performance", "compute_perf"]

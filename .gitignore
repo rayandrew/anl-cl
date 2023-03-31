@@ -165,5 +165,9 @@ best-out
 *.pt
 stdout
 out_*
-preprocessed_data
-preprocessed_local_data
+
+# data folder
+data/*
+
+# exception to the rule
+!data/.gitkeep 

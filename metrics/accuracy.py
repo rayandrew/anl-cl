@@ -4,12 +4,11 @@ from typing import List
 import torch
 from torch import Tensor
 
-
 from avalanche.evaluation import GenericPluginMetric, PluginMetric
 from avalanche.evaluation.metrics.accuracy import (
     Accuracy,
-    TaskAwareAccuracy,
     AccuracyPluginMetric,
+    TaskAwareAccuracy,
 )
 
 
@@ -42,7 +41,9 @@ class AccuracyWithTolerance(Accuracy):
         predicted_y = torch.as_tensor(predicted_y)
 
         if len(true_y) != len(predicted_y):
-            raise ValueError("Size mismatch for true_y and predicted_y tensors")
+            raise ValueError(
+                "Size mismatch for true_y and predicted_y tensors"
+            )
 
         # Check if logits or labels
         if len(predicted_y.shape) > 1:
@@ -56,17 +57,23 @@ class AccuracyWithTolerance(Accuracy):
         # Compute the accuracy if the difference between the true and predicted labels is less or equal than the tolerance
         diffs = torch.abs(true_y - predicted_y)
         diffs = torch.where(
-            diffs <= self._tolerance, torch.tensor(1.0), torch.tensor(0.0)
+            diffs <= self._tolerance,
+            torch.tensor(1.0),
+            torch.tensor(0.0),
         )
 
         true_positives = float(torch.sum(diffs))
         total_patterns = len(true_y)
-        self._mean_accuracy.update(true_positives / total_patterns, total_patterns)
+        self._mean_accuracy.update(
+            true_positives / total_patterns, total_patterns
+        )
 
 
 class TaskAwareAccuracyWithTolerance(TaskAwareAccuracy):
     def __init__(self, tolerance: int = 0):
-        self._mean_accuracy = defaultdict(lambda: AccuracyWithTolerance(tolerance))
+        self._mean_accuracy = defaultdict(
+            lambda: AccuracyWithTolerance(tolerance)
+        )
 
 
 class AccuracyPluginMetricWithTolerance(AccuracyPluginMetric):
@@ -75,7 +82,12 @@ class AccuracyPluginMetricWithTolerance(AccuracyPluginMetric):
     """
 
     def __init__(
-        self, reset_at, emit_at, mode, tolerance: int = 0, split_by_task=False
+        self,
+        reset_at,
+        emit_at,
+        mode,
+        tolerance: int = 0,
+        split_by_task=False,
     ):
         """Creates the Accuracy plugin
 
@@ -90,13 +102,18 @@ class AccuracyPluginMetricWithTolerance(AccuracyPluginMetric):
         else:
             self._accuracy = Accuracy(tolerance=tolerance)
         super(AccuracyPluginMetric, self).__init__(
-            self._accuracy, reset_at=reset_at, emit_at=emit_at, mode=mode
+            self._accuracy,
+            reset_at=reset_at,
+            emit_at=emit_at,
+            mode=mode,
         )
 
     def update(self, strategy):
         if isinstance(self._accuracy, AccuracyWithTolerance):
             self._accuracy.update(strategy.mb_output, strategy.mb_y)
-        elif isinstance(self._accuracy, TaskAwareAccuracyWithTolerance):
+        elif isinstance(
+            self._accuracy, TaskAwareAccuracyWithTolerance
+        ):
             self._accuracy.update(
                 strategy.mb_output, strategy.mb_y, strategy.mb_task_id
             )
@@ -104,7 +121,9 @@ class AccuracyPluginMetricWithTolerance(AccuracyPluginMetric):
             assert False, "should never get here."
 
 
-class MinibatchAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
+class MinibatchAccuracyWithTolerance(
+    AccuracyPluginMetricWithTolerance
+):
     """
     The minibatch plugin accuracy metric.
     This metric only works at training time.
@@ -152,7 +171,9 @@ class EpochAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
         return "Top1_Acc_Epoch_Tol"
 
 
-class RunningEpochAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
+class RunningEpochAccuracyWithTolerance(
+    AccuracyPluginMetricWithTolerance
+):
     """
     The average accuracy with tolerance across all minibatches up to the current
     epoch iteration.
@@ -169,14 +190,19 @@ class RunningEpochAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
         """
 
         super(RunningEpochAccuracyWithTolerance, self).__init__(
-            tolerance=tolerance, reset_at="epoch", emit_at="iteration", mode="train"
+            tolerance=tolerance,
+            reset_at="epoch",
+            emit_at="iteration",
+            mode="train",
         )
 
     def __str__(self):
         return "Top1_RunningAcc_Epoch_Tol"
 
 
-class ExperienceAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
+class ExperienceAccuracyWithTolerance(
+    AccuracyPluginMetricWithTolerance
+):
     """
     At the end of each experience, this plugin metric reports
     the average accuracy with tolerance over all patterns seen in that experience.
@@ -210,14 +236,19 @@ class StreamAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
         Creates an instance of StreamAccuracy metric
         """
         super(StreamAccuracyWithTolerance, self).__init__(
-            tolerance=tolerance, reset_at="stream", emit_at="stream", mode="eval"
+            tolerance=tolerance,
+            reset_at="stream",
+            emit_at="stream",
+            mode="eval",
         )
 
     def __str__(self):
         return "Top1_Acc_Stream_Tol"
 
 
-class TrainedExperienceAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
+class TrainedExperienceAccuracyWithTolerance(
+    AccuracyPluginMetricWithTolerance
+):
     """
     At the end of each experience, this plugin metric reports the average
     accuracy with tolerance for only the experiences that the model has been trained on so far.
@@ -231,22 +262,32 @@ class TrainedExperienceAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
         constructing AccuracyPluginMetric
         """
         super(TrainedExperienceAccuracyWithTolerance, self).__init__(
-            tolerance=tolerance, reset_at="stream", emit_at="stream", mode="eval"
+            tolerance=tolerance,
+            reset_at="stream",
+            emit_at="stream",
+            mode="eval",
         )
         self._current_experience = 0
 
     def after_training_exp(self, strategy) -> None:
-        self._current_experience = strategy.experience.current_experience
+        self._current_experience = (
+            strategy.experience.current_experience
+        )
         # Reset average after learning from a new experience
         AccuracyPluginMetricWithTolerance.reset(self, strategy)
-        return AccuracyPluginMetricWithTolerance.after_training_exp(self, strategy)
+        return AccuracyPluginMetricWithTolerance.after_training_exp(
+            self, strategy
+        )
 
     def update(self, strategy):
         """
         Only update the accuracy with results from experiences that have been
         trained on
         """
-        if strategy.experience.current_experience <= self._current_experience:
+        if (
+            strategy.experience.current_experience
+            <= self._current_experience
+        ):
             AccuracyPluginMetricWithTolerance.update(self, strategy)
 
     def __str__(self):
@@ -286,22 +327,36 @@ def accuracy_metrics_with_tolerance(
 
     metrics = []
     if minibatch:
-        metrics.append(MinibatchAccuracyWithTolerance(tolerance=tolerance))
+        metrics.append(
+            MinibatchAccuracyWithTolerance(tolerance=tolerance)
+        )
 
     if epoch:
-        metrics.append(EpochAccuracyWithTolerance(tolerance=tolerance))
+        metrics.append(
+            EpochAccuracyWithTolerance(tolerance=tolerance)
+        )
 
     if epoch_running:
-        metrics.append(RunningEpochAccuracyWithTolerance(tolerance=tolerance))
+        metrics.append(
+            RunningEpochAccuracyWithTolerance(tolerance=tolerance)
+        )
 
     if experience:
-        metrics.append(ExperienceAccuracyWithTolerance(tolerance=tolerance))
+        metrics.append(
+            ExperienceAccuracyWithTolerance(tolerance=tolerance)
+        )
 
     if stream:
-        metrics.append(StreamAccuracyWithTolerance(tolerance=tolerance))
+        metrics.append(
+            StreamAccuracyWithTolerance(tolerance=tolerance)
+        )
 
     if trained_experience:
-        metrics.append(TrainedExperienceAccuracyWithTolerance(tolerance=tolerance))
+        metrics.append(
+            TrainedExperienceAccuracyWithTolerance(
+                tolerance=tolerance
+            )
+        )
 
     return metrics
 

@@ -1,18 +1,9 @@
-import pandas as pd
-import math
-from pathlib import Path
 from argparse import ArgumentParser
+from pathlib import Path
 
-# import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 
-
-def custom_round(x, base: float = 10):
-    return int(base * round(float(x) / base))
-
-
-def ceil_up(x, base: float = 10):
-    return math.ceil(x / base) * base
+from utils.general import custom_round
 
 
 def main(args):
@@ -24,8 +15,12 @@ def main(args):
 
     bi = pd.read_csv(bi_path)
     bi = bi[bi["cpu_avg"].notna() & bi["cpu_max"].notna()]
-    bi["start_time_ins"] = bi["start_time_ins"].apply(lambda x: custom_round(x, 10))
-    bi["end_time_ins"] = bi["end_time_ins"].apply(lambda x: custom_round(x, 10))
+    bi["start_time_ins"] = bi["start_time_ins"].apply(
+        lambda x: custom_round(x, 10)
+    )
+    bi["end_time_ins"] = bi["end_time_ins"].apply(
+        lambda x: custom_round(x, 10)
+    )
     bi = bi.sort_values("start_time_ins")
 
     mu = pd.read_csv(
@@ -44,7 +39,11 @@ def main(args):
     )
 
     mrg = pd.merge_asof(
-        mu, bi, left_on="time_stamp", right_on="start_time_ins", direction="backward"
+        mu,
+        bi,
+        left_on="time_stamp",
+        right_on="start_time_ins",
+        direction="backward",
     ).query("time_stamp <= end_time_ins")
 
     grouped = (

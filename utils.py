@@ -1,21 +1,10 @@
 import re
 from pathlib import Path
 import json
-from numbers import Number
-import random
-
-import torch
 
 import numpy as np
 
 from texttable import Texttable
-
-
-def set_seed(random_seed: Number) -> None:
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
 
 
 METRIC_REGEX = re.compile(r"(\S+)/(\S+)/(\S+)/(\S+)")
@@ -38,16 +27,27 @@ def preprocess_summary(filename: str | Path):
                     g = res_metrix_re.groups()
                     # print("METRIC", metric)
                     val = float(results_dict[exp][metric])
-                    if g[0] == "Top1_Acc_Epoch" and g[1] == "train_phase":
+                    if (
+                        g[0] == "Top1_Acc_Epoch"
+                        and g[1] == "train_phase"
+                    ):
                         res[current_exp]["train_acc"] = val
 
-                    if g[0] == "Top1_Acc_Exp/eval_phase" and g[1] == "test_stream":
+                    if (
+                        g[0] == "Top1_Acc_Exp/eval_phase"
+                        and g[1] == "test_stream"
+                    ):
                         if "test_acc" not in res[current_exp]:
                             res[current_exp]["test_acc"] = {}
                         # print("HERE", metric, val, results_dict[exp][metric])
-                        res[current_exp]["test_acc"][int(g[3][-3:]) + 1] = val
+                        res[current_exp]["test_acc"][
+                            int(g[3][-3:]) + 1
+                        ] = val
 
-                    if g[0] == "Top1_Acc_Stream" and g[1] == "eval_phase":
+                    if (
+                        g[0] == "Top1_Acc_Stream"
+                        and g[1] == "eval_phase"
+                    ):
                         res[current_exp]["avg_test_acc_avl"] = val
 
     return results_dict, res
@@ -64,7 +64,9 @@ def process_file(filename: str | Path):
         # print(exp)
         avg_acc = 0.0
         n = 0
-        for test_acc_exp, test_acc_val in summary[exp]["test_acc"].items():
+        for test_acc_exp, test_acc_val in summary[exp][
+            "test_acc"
+        ].items():
             if test_acc_exp <= exp:
                 avg_acc += test_acc_val
                 n += 1
@@ -103,7 +105,9 @@ def process_file(filename: str | Path):
 
             # print("SUM", sum(f_i_j_s))
             # print("LEN", len(f_i_j_s))
-            summary[exp]["avg_forgetting"] = sum(f_i_j_s) / len(f_i_j_s)
+            summary[exp]["avg_forgetting"] = sum(f_i_j_s) / len(
+                f_i_j_s
+            )
         else:
             summary[exp]["avg_forgetting"] = 0.0
 
@@ -128,7 +132,13 @@ def generate_table(data: dict):
         for exp in data[strategy]["log"]:
             table.add_rows(
                 [
-                    ["Method", "Task #", "Train Acc", "Avg Test Acc", "Avg Forgetting"],
+                    [
+                        "Method",
+                        "Task #",
+                        "Train Acc",
+                        "Avg Test Acc",
+                        "Avg Forgetting",
+                    ],
                     [
                         strategy,
                         exp,
@@ -142,4 +152,8 @@ def generate_table(data: dict):
     return table
 
 
-__all__ = ["set_seed", "generate_table", "process_file", "preprocess_summary"]
+__all__ = [
+    "generate_table",
+    "process_file",
+    "preprocess_summary",
+]

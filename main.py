@@ -1,30 +1,33 @@
+import json
 from argparse import ArgumentParser
 from pathlib import Path
-import json
-
-import gorilla
 
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import SGD, Adam
 
 from avalanche.benchmarks.generators import nc_benchmark
-
-from avalanche.models import SimpleMLP
-from avalanche.training.plugins import EvaluationPlugin
-
-from avalanche.training.supervised import Naive, AGEM, LwF, EWC, GSS_greedy, GDumb
 from avalanche.evaluation.metrics import (
     accuracy_metrics,
     loss_metrics,
-    forgetting_metrics,
 )
 from avalanche.logging import InteractiveLogger, TextLogger
+from avalanche.models import SimpleMLP
+from avalanche.training.plugins import EvaluationPlugin
+from avalanche.training.supervised import (
+    AGEM,
+    EWC,
+    GDumb,
+    GSS_greedy,
+    LwF,
+    Naive,
+)
 
-from dataset import AlibabaSchedulerDataset, AlibabaMachineDataset
-from utils import process_file, generate_table, set_seed
+import gorilla
 
 import patches
+from dataset import AlibabaMachineDataset, AlibabaSchedulerDataset
+from utils import generate_table, process_file, set_seed
 
 
 def print_and_log(msg, out_file):
@@ -44,9 +47,17 @@ def main(args):
     output_folder.mkdir(exist_ok=True, parents=True)
 
     # Config
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        "cuda:0" if torch.cuda.is_available() else "cpu"
+    )
 
-    raw_train_dataset = AlibabaMachineDataset(
+    ChoosenDataset = (
+        AlibabaSchedulerDataset
+        if args.local
+        else AlibabaMachineDataset
+    )
+
+    raw_train_dataset = ChoosenDataset(
         filename=args.filename,
         n_labels=args.n_labels,
         mode="train",
@@ -55,7 +66,7 @@ def main(args):
         seq_len=args.seq_len,
         univariate=args.univariate,
     )
-    raw_test_dataset = AlibabaMachineDataset(
+    raw_test_dataset = ChoosenDataset(
         filename=args.filename,
         n_labels=args.n_labels,
         mode="test",
@@ -97,9 +108,15 @@ def main(args):
     optimizer = Adam(model.parameters(), lr=args.learning_rate)
     criterion = CrossEntropyLoss()
     eval_plugin = EvaluationPlugin(
-        loss_metrics(minibatch=True, epoch=True, experience=True, stream=True),
+        loss_metrics(
+            minibatch=True, epoch=True, experience=True, stream=True
+        ),
         accuracy_metrics(
-            minibatch=True, epoch=True, epoch_running=True, experience=True, stream=True
+            minibatch=True,
+            epoch=True,
+            epoch_running=True,
+            experience=True,
+            stream=True,
         ),
         # forgetting_metrics(experience=True, stream=True),
         loggers=loggers,
@@ -191,23 +208,31 @@ def main(args):
         result = cl_strategy.eval(test_stream)
         results[exp.current_experience] = result
 
-    json.dump(results, open(output_folder / "train_results.json", "w"))
+    json.dump(
+        results, open(output_folder / "train_results.json", "w")
+    )
 
     # Saving model
     model_scripted = torch.jit.script(model)  # Export to TorchScript
-    model_scripted.save(output_folder / f"{args.model_name}.pt")  # Save
+    model_scripted.save(
+        output_folder / f"{args.model_name}.pt"
+    )  # Save
 
     # print results
     out_file = open(output_folder / "train_results.txt", "w")
     for key in results:
         print_and_log(f"Experience #{key}", out_file)
-        sorted_results = sorted(results[key].keys(), key=lambda x: x.lower().strip())
+        sorted_results = sorted(
+            results[key].keys(), key=lambda x: x.lower().strip()
+        )
         for k in sorted_results:
             print_and_log(f"{k.strip()}: {results[key][k]}", out_file)
         print_and_log("", out_file)
 
     summary = {}
-    summary[args.strategy] = process_file(output_folder / "train_results.json")
+    summary[args.strategy] = process_file(
+        output_folder / "train_results.json"
+    )
     table = generate_table(data=summary)
     print(table.draw())
 
@@ -215,7 +240,9 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--filename", type=str, required=True)
-    parser.add_argument("-o", "--output_folder", type=str, default="out")
+    parser.add_argument(
+        "-o", "--output_folder", type=str, default="out"
+    )
     parser.add_argument("-m", "--model_name", type=str, required=True)
     parser.add_argument("-nl", "--n_labels", type=int, default=10)
     parser.add_argument("-w", "--n_workers", type=int, default=4)
@@ -226,7 +253,9 @@ if __name__ == "__main__":
         default="cpu",
     )
     parser.add_argument("-e", "--epoch", type=int, default=8)
-    parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
+    parser.add_argument(
+        "-lr", "--learning_rate", type=float, default=0.001
+    )
     parser.add_argument("-b", "--batch_size", type=int, default=32)
     parser.add_argument(
         "-s",

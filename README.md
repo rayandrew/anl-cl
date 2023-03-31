@@ -4,7 +4,7 @@
 
 - CUDA
 
-```
+```bash
 # run this in Chameleon node
 sudo apt-get remove --purge '^nvidia-.*'
 sudo apt-get remove --purge '^libnvidia-.*'
@@ -12,12 +12,10 @@ sudo apt-get remove --purge '^cuda-.*'
 sudo apt-get install linux-headers-$(uname -r)
 ```
 
-Next, we need to download the latest/specific version of CUDA (11.7)
-https://developer.nvidia.com/cuda-11-7-0-download-archive
-
+Next, we need to download the latest version of CUDA that is supported by PyTorch (at the time of this project: [11.7][https://developer.nvidia.com/cuda-11-7-0-download-archive])
 - Dependencies
 
-```
+```bash
 conda create -n cl python=3.10 pip
 conda activate cl
 conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
@@ -25,9 +23,11 @@ pip install git+https://github.com/ContinualAI/avalanche.git@0088c3092af918ac2c1
 conda install pandas black matplotlib scikit-learn scikit-multiflow numpy seaborn -c conda-forge
 pip install texttable
 
+# for development only
+pip install black isort
 ```
 
-- Running
+## Running
 
 ```bash
 python main.py -f ./data/m_881.csv -m m_881_gdumb -x 3 -s gdumb -o ./out/m_881_mem/gdumb/ -y mem_util_percent

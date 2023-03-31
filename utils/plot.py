@@ -1,17 +1,13 @@
-from typing import Sequence, Dict, Literal, Any, Optional
 from dataclasses import dataclass, field
 from itertools import cycle
 from pathlib import Path
-
-import numpy as np
-from sklearn.metrics import roc_curve, auc
-from cycler import cycler
+from typing import Any, Dict, Literal, Optional, Sequence
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-
-from parse_v2 import compute_perf
-
+import numpy as np
+from cycler import cycler
+from sklearn.metrics import auc, roc_curve
 
 MARKERS = ["D", "P", "s", "v", "o", "*", "X"]
 CYCLE_MARKERS = cycle(MARKERS)
@@ -58,7 +54,9 @@ def get_y_label(y_var: Literal["cpu", "mem", "disk"]):
 @dataclass
 class TrainResult:
     avg_acc: Sequence[Sequence[float]] = field(default_factory=list)
-    avg_forgetting: Sequence[Sequence[float]] = field(default_factory=list)
+    avg_forgetting: Sequence[Sequence[float]] = field(
+        default_factory=list
+    )
     ovr_avg_acc: Optional[float] = None
     ovr_avg_forgetting: Optional[float] = None
     raw_acc: Sequence[Sequence[float]] = field(default_factory=list)
@@ -81,7 +79,9 @@ def auc_roc(result: EvalResult, n_labels: int = 10):
     y_onehot = label_binarizer(result.y_origs, n_labels)
 
     for i in range(n_labels):
-        fpr[i], tpr[i], _ = roc_curve(y_onehot[:, i], result.predict_proba[:, i])
+        fpr[i], tpr[i], _ = roc_curve(
+            y_onehot[:, i], result.predict_proba[:, i]
+        )
         roc_auc[i] = auc(fpr[i], tpr[i])
 
     # calculate micro avg
@@ -91,7 +91,9 @@ def auc_roc(result: EvalResult, n_labels: int = 10):
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
     # calculate macro avg
-    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_labels)]))
+    all_fpr = np.unique(
+        np.concatenate([fpr[i] for i in range(n_labels)])
+    )
     # all_fpr = np.linspace(0.0, 1.0, 1000)
     mean_tpr = np.zeros_like(all_fpr)
     for i in range(n_labels):
@@ -105,7 +107,9 @@ def auc_roc(result: EvalResult, n_labels: int = 10):
     return fpr, tpr, roc_auc
 
 
-def plot_roc_curve(ax, res: EvalResult, title: str, n_labels: int = 10):
+def plot_roc_curve(
+    ax, res: EvalResult, title: str, n_labels: int = 10
+):
     fpr, tpr, roc_auc = auc_roc(res, n_labels)
 
     for class_id, color in zip(range(n_labels), CYCLE_COLORS):
@@ -219,12 +223,16 @@ def plot_prediction(
     assert len(results) >= 1
     print("Plotting prediction...")
 
-    def format_ax(ax, min_x: int = 0, n_scale: int = 1, format: bool = True):
+    def format_ax(
+        ax, min_x: int = 0, n_scale: int = 1, format: bool = True
+    ):
         ax.set_ylabel("Regions")
         if format:
             ax.set_ylim(min_x, args.n_labels)
             ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(n_scale))
+            ax.yaxis.set_major_locator(
+                ticker.MultipleLocator(n_scale)
+            )
             ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
 
     n_results = len(results)
@@ -262,7 +270,9 @@ def plot_prediction(
     fig.suptitle(suptitle)
 
     fig.tight_layout()
-    print(f"Saving prediction plot to {output_folder / 'prediction.png'}")
+    print(
+        f"Saving prediction plot to {output_folder / 'prediction.png'}"
+    )
     fig.savefig(output_folder / "prediction.png", dpi=100)
     plt.close(fig)
 
@@ -314,7 +324,10 @@ def plot_avg_acc(
     ax.set_prop_cycle(CYCLER_COLORS + CYCLER_MARKERS)
 
     for res in results:
-        if res.train_results is None or res.train_results.avg_forgetting is None:
+        if (
+            res.train_results is None
+            or res.train_results.avg_forgetting is None
+        ):
             continue
         ax.plot(
             x,
@@ -329,7 +342,9 @@ def plot_avg_acc(
     ax.legend()
     ax.set_ylabel("Accuracy (%)")
     ax.set_xlabel("Distribution Shift Window (Task)")
-    ax.yaxis.set_major_formatter(ticker.PercentFormatter(1, symbol="", decimals=0))
+    ax.yaxis.set_major_formatter(
+        ticker.PercentFormatter(1, symbol="", decimals=0)
+    )
 
     suptitle = f"Average accuracy"
     if title:
@@ -338,7 +353,9 @@ def plot_avg_acc(
     fig.suptitle(suptitle)
 
     fig.tight_layout()
-    print(f"Saving average accuracy plot to {output_folder / 'avg_acc.png'}")
+    print(
+        f"Saving average accuracy plot to {output_folder / 'avg_acc.png'}"
+    )
     fig.savefig(output_folder / "avg_acc.png", dpi=100)
     plt.close(fig)
 
@@ -360,7 +377,10 @@ def plot_avg_forgetting(
     ax.set_prop_cycle(CYCLER_COLORS + CYCLER_MARKERS)
 
     for res in results:
-        if res.train_results is None or res.train_results.avg_forgetting is None:
+        if (
+            res.train_results is None
+            or res.train_results.avg_forgetting is None
+        ):
             continue
         ax.plot(
             x,
@@ -375,7 +395,9 @@ def plot_avg_forgetting(
     ax.legend()
     ax.set_ylabel("Forgetting (%)")
     ax.set_xlabel("Distribution Shift Window (Task)")
-    ax.yaxis.set_major_formatter(ticker.PercentFormatter(1, symbol="", decimals=0))
+    ax.yaxis.set_major_formatter(
+        ticker.PercentFormatter(1, symbol="", decimals=0)
+    )
 
     suptitle = f"Average forgetting"
     if title:
@@ -384,7 +406,9 @@ def plot_avg_forgetting(
     fig.suptitle(suptitle)
 
     fig.tight_layout()
-    print(f"Saving average forgetting plot to {output_folder / 'avg_forgetting.png'}")
+    print(
+        f"Saving average forgetting plot to {output_folder / 'avg_forgetting.png'}"
+    )
     fig.savefig(output_folder / "avg_forgetting.png", dpi=100)
     plt.close(fig)
 
@@ -402,7 +426,8 @@ def plot_end_acc(
     results = [
         res
         for res in results
-        if res.train_results is not None and len(res.train_results.raw_acc) > 0
+        if res.train_results is not None
+        and len(res.train_results.raw_acc) > 0
     ]
     n_results = len(results)
 
@@ -445,7 +470,9 @@ def plot_end_acc(
     ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
 
     fig.tight_layout()
-    print(f"Saving end accuracy plot to {output_folder / 'end_acc.png'}")
+    print(
+        f"Saving end accuracy plot to {output_folder / 'end_acc.png'}"
+    )
     fig.savefig(output_folder / "end_acc.png", dpi=100)
     plt.close(fig)
 
@@ -463,7 +490,8 @@ def plot_end_forgetting(
     results = [
         res
         for res in results
-        if res.train_results is not None and len(res.train_results.avg_forgetting) > 0
+        if res.train_results is not None
+        and len(res.train_results.avg_forgetting) > 0
     ]
     n_results = len(results)
 
@@ -479,7 +507,10 @@ def plot_end_forgetting(
             # x + width * (i - 1) / n_results,
             # # x - width / 2 + width * (i - n_results / 2),
             # # x + width * (i - n_results / 2),
-            np.clip(np.array(res.train_results.avg_forgetting[-1]), 0, 1) * 100,
+            np.clip(
+                np.array(res.train_results.avg_forgetting[-1]), 0, 1
+            )
+            * 100,
             width=width,
             label=f"{res.name} (forgetting={res.train_results.ovr_avg_forgetting * 100:.2f})",
         )
@@ -503,7 +534,9 @@ def plot_end_forgetting(
 
     fig.tight_layout()
 
-    print(f"Saving end forgetting plot to {output_folder / 'end_forgetting.png'}")
+    print(
+        f"Saving end forgetting plot to {output_folder / 'end_forgetting.png'}"
+    )
     fig.savefig(output_folder / "end_forgetting.png", dpi=100)
     plt.close(fig)
 

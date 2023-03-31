@@ -1,197 +1,13 @@
-from abc import ABC, abstractmethod
-import math
 from pathlib import Path
-from typing import Union, Tuple, Literal, Sequence
-import random
-from numbers import Number
+from typing import Literal, Union
 
 import torch
-from torch.utils.data import Dataset
 
-from sklearn.model_selection import train_test_split
 import numpy as np
-import numpy.typing as npt
 
+from utils.general import split_evenly_by_classes
 
-def split_evenly_by_classes(
-    X: Sequence[Tuple[npt.ArrayLike, Number, Number]],
-    y: Sequence[Number],
-    train_ratio: float,
-    shuffle: bool = True,
-):
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=1 - train_ratio,
-        stratify=y,
-        shuffle=shuffle,
-    )
-
-    return X_train, X_test, y_train, y_test
-
-
-def label_transform(x: float | int, n_labels: int = 10) -> int:
-    # we know that the range spans between 0.0 and 100.0
-    # we can divide them equally right away based on `n_labels`
-
-    if x <= 0.0:  # edge cases
-        return 0
-
-    if x >= 100.0:
-        return n_labels - 1
-
-    divider = 100.0 / n_labels
-
-    return min(math.ceil(x / divider) - 1, n_labels - 1)
-
-
-class AlibabaDataset(Dataset):
-    TRAIN_RATIO = 0.8
-
-    @abstractmethod
-    def input_size(self) -> int:
-        raise NotImplementedError
-
-    def _process_nan(self, arr, fill=0):
-        # change to previous row
-        mask = np.isnan(arr[0])
-        arr[0][mask] = fill
-        for i in range(1, len(arr)):
-            mask = np.isnan(arr[i])
-            arr[i][mask] = arr[i - 1][mask]
-        return arr
-
-    @abstractmethod
-    def n_experiences(self) -> int:
-        raise NotImplementedError
-
-
-class AlibabaSchedulerDataset(AlibabaDataset):
-    FEATURE_COLUMNS = [
-        # "time_stamp",
-        "cpu_avg",
-        "cpu_max",
-        "mem_avg",
-        "mem_max",
-        "plan_cpu",
-        "plan_mem",
-        # "cpu_util_percent",
-        # "mem_util_percent",
-        # "disk_io_percent"
-    ]
-
-    def __init__(
-        self,
-        filename: Union[str, Path],
-        n_labels: int,
-        train_ratio: float = AlibabaDataset.TRAIN_RATIO,
-        y: Literal["cpu", "mem", "disk"] = "cpu",
-        mode: Literal["train", "test", "predict"] = "train",
-        seq: bool = False,
-        seq_len: int = 2,
-        univariate: bool = False,
-    ):
-        """Dataset for Alibaba Machine Scheduler
-
-        Args:
-            filename (Union[str, Path]): path to the dataset
-            n_labels (int): number of labels to use
-            train_ratio (float, optional): ratio of training data. Defaults to AlibabaDataset.TRAIN_RATIO.
-            y (Literal["cpu", "mem", "disk"], optional): which variable to predict. Defaults to "cpu".
-            mode (Literal["train", "test", "predict"], optional): which mode to use. Defaults to "train".
-            seq (bool, optional): whether to use sequence data. Defaults to False.
-            seq_len (int, optional): length of sequence. Defaults to 2.
-            univariate (bool, optional): whether to use univariate data. Defaults to False.
-        """
-        assert mode in ["train", "test", "predict"]
-        assert y in ["cpu", "mem", "disk"]
-        assert seq_len >= 2
-        if univariate:
-            assert seq, "Univariate data must be sequence data"
-        self.filename = filename
-        self.train_ratio = train_ratio
-        self.n_labels = n_labels
-        self.y_var = y
-        self.mode = mode
-        self.seq = seq
-        self.seq_len = seq_len
-        self.univariate = univariate
-        self._n_experiences = None
-        self._load_data()
-
-    def _augment_data(self, data):
-        data = data[1:]  # skip header
-        data = data[:, 1:]  # skip timestamp
-        ts = data[:, 0]
-        new_data = []
-        label_index = -2
-        if self.y_var == "cpu":
-            label_index = -4
-        elif self.y_var == "mem":
-            label_index = -3
-
-        if self.seq_len > 1:
-            i = 0
-            while i + self.seq_len <= data.shape[0]:
-                mat = data[i : i + self.seq_len, :]
-                item = mat.flatten()
-                data = item[:-3]
-                label = item[label_index]
-                dist_label = item[-1]
-                i += 1
-                new_data.append((data, label, int(dist_label), ts[i]))
-        else:
-            for i, data in enumerate(data):
-                item = data.flatten()
-                data = item[:-3]
-                label = item[label_index]
-                dist_label = item[-1]
-                new_data.append((data, label, int(dist_label), ts[i]))
-        return new_data
-
-    def _prepare_targets(self, data):
-        targets = []
-        for i in range(len(data)):
-            targets.append(int(data[i][2]))
-        return targets
-
-    def input_size(self) -> int:
-        if self.data is None:
-            raise ValueError("Dataset is not loaded yet")
-        if len(self.data) == 0:
-            raise ValueError("Dataset is empty")
-        return len(self.data[0][0])
-
-    def _load_data(self):
-        data = np.genfromtxt(self.filename, delimiter=",")
-        data = self._process_nan(data)
-        new_data = self._augment_data(data)
-
-        train_size = int(len(new_data) * self.train_ratio)
-        assert self.mode in ["train", "test", "predict"]
-        if self.mode == "train":
-            self.data = new_data[:train_size]
-            random.shuffle(self.data)
-            self.targets = self._prepare_targets(self.data)
-        elif self.mode == "test":
-            self.data = new_data[train_size:]
-            random.shuffle(self.data)
-            self.targets = self._prepare_targets(self.data)
-        else:
-            self.data = new_data
-            self.targets = self._prepare_targets(self.data)
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, index):
-        data = self.data[index][0]
-        label = np.array(int(min(self.data[index][1], 99) / 10))
-        dist_label = self.data[index][2]
-        data_tensor = torch.tensor(data, dtype=torch.float32)
-        label_tensor = torch.from_numpy(label)
-        dist_label_tensor = torch.from_numpy(np.array(dist_label))
-        return data_tensor, dist_label_tensor, label_tensor
+from .base import AlibabaDataset
 
 
 class AlibabaMachineDataset(AlibabaDataset):
@@ -272,7 +88,9 @@ class AlibabaMachineDataset(AlibabaDataset):
         labels = labels // self.n_labels
 
         data = np.delete(data, label_index, axis=1)
-        data = data[:, 2:-1]  # remove machine id + timestamp + dist_label
+        data = data[
+            :, 2:-1
+        ]  # remove machine id + timestamp + dist_label
 
         if self.seq:
             i = 0
@@ -318,7 +136,12 @@ class AlibabaMachineDataset(AlibabaDataset):
             else:
                 additional_key += "_mult"
 
-        key = (self.filename, self.train_ratio, self.mode, additional_key)
+        key = (
+            self.filename,
+            self.train_ratio,
+            self.mode,
+            additional_key,
+        )
         if key in self.CACHE:
             self.data, self.targets, self.outputs = self.CACHE[key]
 
@@ -333,7 +156,12 @@ class AlibabaMachineDataset(AlibabaDataset):
             self.targets = Dists
             self.outputs = y
         else:
-            Data_train, Data_test, Dist_train, Dist_test = split_evenly_by_classes(
+            (
+                Data_train,
+                Data_test,
+                Dist_train,
+                Dist_test,
+            ) = split_evenly_by_classes(
                 Data, Dists, train_ratio=self.train_ratio
             )
 
@@ -389,7 +217,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         return data_tensor, dist_label_tensor, label_tensor
 
 
-__all__ = ["AlibabaSchedulerDataset", "AlibabaMachineDataset"]
+__all__ = ["AlibabaMachineDataset"]
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -397,7 +225,10 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     # parser.add_argument("-d", "--data", type=str, default="data/mu_dist/m_25.csv")
     parser.add_argument(
-        "-d", "--data", type=str, default="out_preprocess/m_25/m_25.csv"
+        "-d",
+        "--data",
+        type=str,
+        default="out_preprocess/m_25/m_25.csv",
     )
     parser.add_argument("-n", "--n_labels", type=int, default=10)
     parser.add_argument(

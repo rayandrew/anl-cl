@@ -22,6 +22,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvi
 pip install git+https://github.com/ContinualAI/avalanche.git@0088c3092af918ac2c16d3f945be8dd62415a01c
 conda install pandas black matplotlib scikit-learn scikit-multiflow numpy seaborn -c conda-forge
 pip install texttable
+pip install sacred # for configuration management
 
 # for development only
 pip install black isort

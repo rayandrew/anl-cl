@@ -1,5 +1,4 @@
 import argparse
-import time
 from collections import deque
 from pathlib import Path
 from typing import Sequence
@@ -38,7 +37,7 @@ class DriftDetection:
         for i in range(0, len(self.data_stream), window_size):
             pos_sum = 0
             weight_sum = 0
-            for method_index, method in enumerate(self.methods):
+            for method_index in range(len(self.methods)):
                 while len(self.drifts[method_index]) != 0:
                     pos = self.drifts[method_index][0]
                     if pos >= (i + 1) * window_size:
@@ -54,7 +53,7 @@ class DriftDetection:
                 self.vote_drifts.append(mean_pos)
 
     def get_voted_drift(self, window_size, threshold):
-        for method_idx, item in enumerate(self.drifts):
+        for method_idx in range(len(self.drifts)):
             self.drifts[method_idx] = deque()
         self._get_drift_point()
         self._vote_drift(window_size, threshold)
@@ -86,17 +85,17 @@ def plot(stream_window, change, path):
     plt.savefig(f"{path}")
 
 
-def add_dist_label(data, dist: Sequence[int]):
+def add_dist_label(data, dist: Sequence[int], start_from=0):
     distributions = np.zeros((len(data[:, 0]), 1))
 
     print(dist)
     print(f"Dist from 0 to {dist[0]}: 0")
-    distributions[: dist[0]] = 0
+    distributions[: dist[0]] = start_from
     for i in range(len(dist) - 2):
         print(f"Dist from {dist[i]} to {dist[i+1]}: {i+1}")
-        distributions[dist[i] : dist[i + 1]] = i + 1
+        distributions[dist[i] : dist[i + 1]] = i + 1 + start_from
     print(f"Dist from {dist[i]} to {dist[-1]}: {len(dist) - 1}")
-    distributions[dist[-1] :] = len(dist) - 1
+    distributions[dist[-1] :] = len(dist) - 1 + start_from
 
     print(np.unique(distributions, return_counts=True))
 
@@ -109,9 +108,10 @@ def main(args):
     orig_data = np.genfromtxt(input_path, delimiter=",")
 
     output_path = (
-        Path(args.output).joinpath(
-            "local" if args.local else "global"
-        )
+        Path(args.output)
+        # .joinpath(
+        #     "local" if args.local else "global"
+        # )
         / input_path.stem
         / f"{input_path.stem}_{args.window_size}-{args.threshold}"
     )
@@ -166,7 +166,7 @@ def main(args):
         / f"plot_{input_path.stem}_{window_size}_{threshold}_{args.y}.png",
     )
 
-    data = add_dist_label(orig_data, change_list)
+    data = add_dist_label(orig_data, change_list, start_from=0)
     np.savetxt(
         output_path / f"{input_path.stem}_{args.y}.csv",
         data,

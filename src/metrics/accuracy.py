@@ -4,7 +4,7 @@ from typing import List
 import torch
 from torch import Tensor
 
-from avalanche.evaluation import GenericPluginMetric, PluginMetric
+from avalanche.evaluation import PluginMetric
 from avalanche.evaluation.metrics.accuracy import (
     Accuracy,
     AccuracyPluginMetric,
@@ -20,7 +20,7 @@ class AccuracyWithTolerance(Accuracy):
                tolerance = 0 means that the predicted label must be the same with the true label (similar to usual accuracy).
         """
         super().__init__()
-        self._tolerance = tolerance
+        self.tolerance = tolerance
 
     @torch.no_grad()
     def update(
@@ -54,10 +54,10 @@ class AccuracyWithTolerance(Accuracy):
             # Logits -> transform to labels
             true_y = torch.max(true_y, 1)[1]
 
-        # Compute the accuracy if the difference between the true and predicted labels is less or equal than the tolerance
+        # Compute the accuracy if the absolute difference between the true and predicted labels is less or equal than the tolerance
         diffs = torch.abs(true_y - predicted_y)
         diffs = torch.where(
-            diffs <= self._tolerance,
+            diffs <= self.tolerance,
             torch.tensor(1.0),
             torch.tensor(0.0),
         )
@@ -71,9 +71,28 @@ class AccuracyWithTolerance(Accuracy):
 
 class TaskAwareAccuracyWithTolerance(TaskAwareAccuracy):
     def __init__(self, tolerance: int = 0):
+        self.tolerance = tolerance
         self._mean_accuracy = defaultdict(
-            lambda: AccuracyWithTolerance(tolerance)
+            lambda: AccuracyWithTolerance(self.tolerance)
         )
+
+    def reset(self, task_label=None) -> None:
+        """
+        Resets the metric.
+        task label is ignored if `self.split_by_task=False`.
+
+        :param task_label: if None, reset the entire dictionary.
+            Otherwise, reset the value associated to `task_label`.
+
+        :return: None.
+        """
+        assert task_label is None or isinstance(task_label, int)
+        if task_label is None:
+            self._mean_accuracy = defaultdict(
+                lambda: AccuracyWithTolerance(self.tolerance)
+            )
+        else:
+            self._mean_accuracy[task_label].reset()
 
 
 class AccuracyPluginMetricWithTolerance(AccuracyPluginMetric):
@@ -97,10 +116,15 @@ class AccuracyPluginMetricWithTolerance(AccuracyPluginMetric):
         :param split_by_task: whether to compute task-aware accuracy or not.
         """
         self.split_by_task = split_by_task
+        self.tolerance = tolerance
         if self.split_by_task:
-            self._accuracy = TaskAwareAccuracy(tolerance=tolerance)
+            self._accuracy = TaskAwareAccuracyWithTolerance(
+                tolerance=self.tolerance
+            )
         else:
-            self._accuracy = Accuracy(tolerance=tolerance)
+            self._accuracy = AccuracyWithTolerance(
+                tolerance=self.tolerance
+            )
         super(AccuracyPluginMetric, self).__init__(
             self._accuracy,
             reset_at=reset_at,
@@ -133,15 +157,18 @@ class MinibatchAccuracyWithTolerance(
     It reports the result after each iteration.
 
     If a more coarse-grained logging is needed, consider using
-    :class:`EpochAccuracyWithToleranec` instead.
+    :class:`EpochAccuracyWithTolerance` instead.
     """
 
-    def __init__(self):
+    def __init__(self, tolerance: int = 0):
         """
         Creates an instance of the MinibatchAccuracyWithTolerance metric.
         """
         super(MinibatchAccuracyWithTolerance, self).__init__(
-            reset_at="iteration", emit_at="iteration", mode="train"
+            tolerance=tolerance,
+            reset_at="iteration",
+            emit_at="iteration",
+            mode="train",
         )
 
     def __str__(self):
@@ -158,13 +185,16 @@ class EpochAccuracyWithTolerance(AccuracyPluginMetricWithTolerance):
     the overall number of patterns encountered in that epoch.
     """
 
-    def __init__(self):
+    def __init__(self, tolerance: int = 0):
         """
         Creates an instance of the EpochAccuracyWithTolerance metric.
         """
 
         super(EpochAccuracyWithTolerance, self).__init__(
-            reset_at="epoch", emit_at="epoch", mode="train"
+            tolerance=tolerance,
+            reset_at="epoch",
+            emit_at="epoch",
+            mode="train",
         )
 
     def __str__(self):
@@ -308,6 +338,7 @@ def accuracy_metrics_with_tolerance(
     Helper method that can be used to obtain the desired set of
     plugin metrics.
 
+    :param tolerance: The tolerance to use for the accuracy metric.
     :param minibatch: If True, will return a metric able to log
         the minibatch accuracy at training time.
     :param epoch: If True, will return a metric able to log

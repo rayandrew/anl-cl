@@ -1,11 +1,8 @@
+import json
 import re
 from pathlib import Path
-import json
-
-import numpy as np
 
 from texttable import Texttable
-
 
 METRIC_REGEX = re.compile(r"(\S+)/(\S+)/(\S+)/(\S+)")
 
@@ -28,13 +25,13 @@ def preprocess_summary(filename: str | Path):
                     # print("METRIC", metric)
                     val = float(results_dict[exp][metric])
                     if (
-                        g[0] == "Top1_Acc_Epoch"
+                        g[0] == "Top1_Acc_Epoch_Tol"
                         and g[1] == "train_phase"
                     ):
                         res[current_exp]["train_acc"] = val
 
                     if (
-                        g[0] == "Top1_Acc_Exp/eval_phase"
+                        g[0] == "Top1_Acc_Exp_Tol/eval_phase"
                         and g[1] == "test_stream"
                     ):
                         if "test_acc" not in res[current_exp]:
@@ -45,7 +42,7 @@ def preprocess_summary(filename: str | Path):
                         ] = val
 
                     if (
-                        g[0] == "Top1_Acc_Stream"
+                        g[0] == "Top1_Acc_Stream_Tol"
                         and g[1] == "eval_phase"
                     ):
                         res[current_exp]["avg_test_acc_avl"] = val

@@ -1,20 +1,15 @@
 import math
-import random
 from numbers import Number
 from typing import Sequence, Tuple
 
-import torch
-
-import numpy as np
 import numpy.typing as npt
 from sklearn.model_selection import train_test_split
 
 
 def set_seed(random_seed: Number) -> None:
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
+    from avalanche.training.determinism.rng_manager import RNGManager
+
+    RNGManager.set_random_seeds(random_seed)
 
 
 def split_evenly_by_classes(

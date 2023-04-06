@@ -1,14 +1,14 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Dict, Sequence, Literal
+from typing import Dict, Literal, Sequence
 
 import torch
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from dataset import AlibabaSchedulerDataset, AlibabaMachineDataset
-from plot_utils import get_y_label
+from src.dataset import AlibabaMachineDataset
+from src.utils.plot import get_y_label
 
 
 def plot_diff(
@@ -44,12 +44,18 @@ def plot_inference(
     output_folder: Path,
 ):
     def format_ax(
-        ax, min_x: int = 0, max_x: int = 10, n_scale: int = 1, format: bool = True
+        ax,
+        min_x: int = 0,
+        max_x: int = 10,
+        n_scale: int = 1,
+        format: bool = True,
     ):
         ax.set_xlabel("Time")
         if format:
             ax.set_ylim(min_x, max_x)
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(n_scale))
+            ax.yaxis.set_major_locator(
+                ticker.MultipleLocator(n_scale)
+            )
             ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
 
     fig, (ax_region, ax_pred) = plt.subplots(2, 1, figsize=(25, 10))
@@ -76,7 +82,9 @@ def plot_inference(
 
 
 def main(args):
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        "cuda:0" if torch.cuda.is_available() else "cpu"
+    )
     model = torch.jit.load(args.model_path)
     model.to(device)
     model.eval()
@@ -118,7 +126,9 @@ def main(args):
     output_folder.mkdir(exist_ok=True, parents=True)
 
     if args.plot:
-        plot_diff(y_var=args.y, diffs=diffs, output_folder=output_folder)
+        plot_diff(
+            y_var=args.y, diffs=diffs, output_folder=output_folder
+        )
         plot_inference(
             args,
             y_origs=y_origs,
@@ -134,7 +144,9 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-f", "--filename", type=str, required=True)
     parser.add_argument("-m", "--model_path", type=str, required=True)
-    parser.add_argument("-o", "--output_folder", type=str, default="out")
+    parser.add_argument(
+        "-o", "--output_folder", type=str, default="out"
+    )
     parser.add_argument("-nl", "--n_labels", type=int, default=10)
     parser.add_argument(
         "-y",

@@ -82,7 +82,7 @@ class CustomGSS_greedyPlugin:
             zip(temp_x_tensors, temp_d_tensors, temp_y_tensors)
         )  # added
         memory = make_classification_dataset(
-            memory, targets=temp_y_tensors
+            memory, targets=temp_d_tensors
         )
 
         strategy.dataloader = ReplayDataLoader(

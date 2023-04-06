@@ -30,11 +30,11 @@ known_avalanche = ['avalanche']
 known_doit = ['doit']
 
 [tool.mypy]
-files = ["perf_modelling", "*.py"]
+files = ["src", "*.py"]
 ignore_missing_imports = true
 exclude = []
 
 [tool.pyright]
-include = ["perf_modelling", "*.py"]
+include = ["src", "*.py"]
 exclude = ["**/node_modules", "**/__pycache__"]
 ignore = []

@@ -7,9 +7,9 @@ import torch
 
 import numpy as np
 
-from dataset import AlibabaMachineDataset
-from utils.parse_v2 import compute_perf
-from utils.plot import (
+from src.dataset import AlibabaMachineDataset
+from src.utils.parse_v2 import compute_perf
+from src.utils.plot import (
     EvalResult,
     TrainResult,
     plot_auc_roc,

@@ -1,15 +1,20 @@
-from argparse import ArgumentParser
-import json
-from pathlib import Path
 import itertools
+import json
+from argparse import ArgumentParser
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from utils import process_file, generate_table
+from utils import generate_table, process_file
 
 
-def plot(machine_id: str, summary: dict, n_exp: int, output_path: str | Path):
+def plot(
+    machine_id: str,
+    summary: dict,
+    n_exp: int,
+    output_path: str | Path,
+):
     plt.style.use("seaborn-talk")
 
     marker = itertools.cycle(("D", "P", "s", "v", "o", "*", "X"))
@@ -31,7 +36,9 @@ def plot(machine_id: str, summary: dict, n_exp: int, output_path: str | Path):
     ax.set_xlabel("Distribution Shift Window (Task)")
     ax.set_ylabel("Accuracy (%)")
     ax.set_title(f"Machine {machine_id} Average Accuracy")
-    ax.yaxis.set_major_formatter(ticker.PercentFormatter(1, symbol="", decimals=0))
+    ax.yaxis.set_major_formatter(
+        ticker.PercentFormatter(1, symbol="", decimals=0)
+    )
     # ax.legend(frameon=True)
     handles, labels = ax.get_legend_handles_labels()
     # order = [2, 0, 3, 5, 4, 6, 1]
@@ -60,7 +67,9 @@ def plot(machine_id: str, summary: dict, n_exp: int, output_path: str | Path):
     ax.set_xlabel("Distribution Shift Window (Task)")
     ax.set_ylabel("Forgetting (%)")
     ax.set_title(f"Machine {machine_id} Average Forgetting")
-    ax.yaxis.set_major_formatter(ticker.PercentFormatter(1, symbol="", decimals=0))
+    ax.yaxis.set_major_formatter(
+        ticker.PercentFormatter(1, symbol="", decimals=0)
+    )
     ax.set_xlim([0.7, float(n_exp) + 0.3])
     handles, labels = ax.get_legend_handles_labels()
     # order = [2, 0, 5, 1, 4, 6, 3]
@@ -75,7 +84,9 @@ def plot(machine_id: str, summary: dict, n_exp: int, output_path: str | Path):
     fig.savefig(output_path / "avg_forgetting.png", dpi=100)
 
 
-def print_table(machine_id: str, summary: dict, output_path: str | Path):
+def print_table(
+    machine_id: str, summary: dict, output_path: str | Path
+):
     table = generate_table(data=summary)
 
     print(table.draw())
@@ -119,6 +130,8 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("path", type=str)
-    parser.add_argument("-x", "--n_experiences", type=int, required=True)
+    parser.add_argument(
+        "-x", "--n_experiences", type=int, required=True
+    )
     args = parser.parse_args()
     main(args)

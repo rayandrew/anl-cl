@@ -4,12 +4,15 @@ from pathlib import Path
 
 import torch
 from torch.nn import CrossEntropyLoss
-from torch.optim import SGD, Adam
+from torch.optim import Adam
 
 from avalanche.benchmarks.generators import nc_benchmark
-from avalanche.evaluation.metrics import (
-    accuracy_metrics,
+from avalanche.evaluation.metrics import (  # disk_usage_metrics,
+    cpu_usage_metrics,
+    gpu_usage_metrics,
     loss_metrics,
+    ram_usage_metrics,
+    timing_metrics,
 )
 from avalanche.logging import InteractiveLogger, TextLogger
 from avalanche.models import SimpleMLP
@@ -25,9 +28,20 @@ from avalanche.training.supervised import (
 
 import gorilla
 
-import patches
-from dataset import AlibabaMachineDataset, AlibabaSchedulerDataset
-from utils import generate_table, process_file, set_seed
+import src.patches as patches
+from src.dataset import AlibabaMachineDataset, AlibabaSchedulerDataset
+from src.metrics import (  # forward_transfer_metrics_with_tolerance,
+    accuracy_metrics_with_tolerance,
+    bwt_metrics_with_tolerance,
+    class_accuracy_metrics_with_tolerance,
+    class_diff_metrics,
+    forgetting_metrics_with_tolerance,
+)
+from src.utils.general import set_seed
+from src.utils.summary import (  # generate_task_table,
+    generate_summary,
+    generate_summary_table,
+)
 
 
 def print_and_log(msg, out_file):
@@ -111,14 +125,56 @@ def main(args):
         loss_metrics(
             minibatch=True, epoch=True, experience=True, stream=True
         ),
-        accuracy_metrics(
+        accuracy_metrics_with_tolerance(
+            tolerance=1,
             minibatch=True,
             epoch=True,
             epoch_running=True,
             experience=True,
             stream=True,
         ),
-        # forgetting_metrics(experience=True, stream=True),
+        forgetting_metrics_with_tolerance(
+            tolerance=1, experience=True, stream=True
+        ),
+        bwt_metrics_with_tolerance(
+            tolerance=1, experience=True, stream=True
+        ),
+        class_accuracy_metrics_with_tolerance(
+            tolerance=1, experience=True, stream=True
+        ),
+        class_diff_metrics(stream=True),
+        # forward_transfer_metrics_with_tolerance(
+        #     tolerance=1, experience=True, stream=True
+        # ),
+        timing_metrics(
+            minibatch=True,
+            epoch=True,
+            epoch_running=True,
+            experience=True,
+            stream=True,
+        ),
+        cpu_usage_metrics(
+            minibatch=True,
+            epoch=True,
+            epoch_running=True,
+            experience=True,
+            stream=True,
+        ),
+        gpu_usage_metrics(
+            gpu_id=0,
+            every=0.5,
+            minibatch=True,
+            epoch=True,
+            experience=True,
+            stream=True,
+        ),
+        ram_usage_metrics(
+            every=1,
+            minibatch=False,
+            epoch=True,
+            experience=True,
+            stream=True,
+        ),
         loggers=loggers,
     )
 
@@ -132,6 +188,7 @@ def main(args):
             eval_mb_size=args.batch_size,
             evaluator=eval_plugin,
             device=device,
+            eval_every=0,  # at the end of each experience
         )
     elif args.strategy == "agem":
         cl_strategy = AGEM(
@@ -145,6 +202,7 @@ def main(args):
             eval_mb_size=args.batch_size,
             evaluator=eval_plugin,
             device=device,
+            eval_every=0,  # at the end of each experience
         )
     elif args.strategy == "ewc":
         cl_strategy = EWC(
@@ -158,6 +216,7 @@ def main(args):
             eval_mb_size=args.batch_size,
             evaluator=eval_plugin,
             device=device,
+            eval_every=0,  # at the end of each experience
         )
     elif args.strategy == "lwf":
         cl_strategy = LwF(
@@ -171,6 +230,7 @@ def main(args):
             eval_mb_size=args.batch_size,
             evaluator=eval_plugin,
             device=device,
+            eval_every=0,  # at the end of each experience
         )
     elif args.strategy == "gss":
         cl_strategy = GSS_greedy(
@@ -185,6 +245,7 @@ def main(args):
             eval_mb_size=args.batch_size,
             evaluator=eval_plugin,
             device=device,
+            eval_every=0,  # at the end of each experience
         )
     elif args.strategy == "gdumb":
         cl_strategy = GDumb(
@@ -197,6 +258,7 @@ def main(args):
             eval_mb_size=args.batch_size,
             evaluator=eval_plugin,
             device=device,
+            eval_every=0,  # at the end of each experience
         )
     else:
         raise ValueError("Strategy not supported")
@@ -229,11 +291,9 @@ def main(args):
             print_and_log(f"{k.strip()}: {results[key][k]}", out_file)
         print_and_log("", out_file)
 
-    summary = {}
-    summary[args.strategy] = process_file(
-        output_folder / "train_results.json"
-    )
-    table = generate_table(data=summary)
+    summary = generate_summary(output_folder / "train_results.json")
+    print(summary)
+    table = generate_summary_table(summary)
     print(table.draw())
 
 
@@ -253,6 +313,7 @@ if __name__ == "__main__":
         default="cpu",
     )
     parser.add_argument("-e", "--epoch", type=int, default=8)
+    # parser.add_argument("-e", "--epoch", type=int, default=1)
     parser.add_argument(
         "-lr", "--learning_rate", type=float, default=0.001
     )

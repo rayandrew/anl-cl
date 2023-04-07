@@ -5,7 +5,7 @@ import torch
 
 import numpy as np
 
-from utils.general import split_evenly_by_classes
+from src.utils.general import split_evenly_by_classes
 
 from .base import AlibabaDataset
 

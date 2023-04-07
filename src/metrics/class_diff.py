@@ -115,16 +115,16 @@ class ClassPredictionDiff(Metric[Dict[int, Dict[int, int]]]):
             self._class_diffs[t][int(diff.item())] += 1
 
     def result(self) -> Dict[int, Dict[int, int]]:
-        running_class_accuracies = OrderedDict()
+        running_class_diffs = OrderedDict()
         for task_label in sorted(self._class_diffs.keys()):
             task_dict = self._class_diffs[task_label]
-            running_class_accuracies[task_label] = OrderedDict()
+            running_class_diffs[task_label] = OrderedDict()
             for class_id in sorted(task_dict.keys()):
-                running_class_accuracies[task_label][
+                running_class_diffs[task_label][
                     class_id
                 ] = task_dict[class_id]
 
-        return running_class_accuracies
+        return running_class_diffs
 
     def reset(self) -> None:
         """

@@ -171,3 +171,5 @@ data/*
 
 # exception to the rule
 !data/.gitkeep 
+temp
+temp-out

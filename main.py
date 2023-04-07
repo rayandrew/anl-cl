@@ -62,9 +62,10 @@ def main(args):
 
     # Config
     device = torch.device(
-        "cuda:0" if torch.cuda.is_available() else "cpu"
+        f"cuda:{args.cuda}"
+        if torch.cuda.is_available() and args.cuda >= 0
+        else "cpu"
     )
-
     ChoosenDataset = (
         AlibabaSchedulerDataset
         if args.local
@@ -266,7 +267,11 @@ def main(args):
     # train and test loop
     results = {}
     for exp in train_stream:
-        cl_strategy.train(exp, num_workers=args.n_workers)
+        cl_strategy.train(
+            exp,
+            num_workers=args.n_workers,
+            eval_streams=[test_stream],
+        )
         result = cl_strategy.eval(test_stream)
         results[exp.current_experience] = result
 
@@ -299,6 +304,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
+    parser.add_argument(
+        "--cuda",
+        type=int,
+        default=0,
+        help="Select zero-indexed cuda device. -1 to use CPU.",
+    )
     parser.add_argument("-f", "--filename", type=str, required=True)
     parser.add_argument(
         "-o", "--output_folder", type=str, default="out"

@@ -7,7 +7,7 @@ from avalanche.training.templates import SupervisedTemplate
 
 import gorilla
 
-from utils.patch import patch_filter
+from src.utils.patch import patch_filter
 
 
 @gorilla.patches(

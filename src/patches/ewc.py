@@ -9,7 +9,7 @@ from avalanche.training.utils import zerolike_params_dict
 
 import gorilla
 
-from utils.patch import patch_filter
+from src.utils.patch import patch_filter
 
 
 @gorilla.patches(

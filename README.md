@@ -18,14 +18,17 @@ Next, we need to download the latest version of CUDA that is supported by PyTorc
 ```bash
 conda create -n cl python=3.10 pip
 conda activate cl
-conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
+mamba install -c conda-forge mamba
+mamba install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 pip install git+https://github.com/ContinualAI/avalanche.git@0088c3092af918ac2c16d3f945be8dd62415a01c
-conda install pandas black matplotlib scikit-learn scikit-multiflow numpy seaborn -c conda-forge
+mamba install pandas black matplotlib scikit-learn scikit-multiflow numpy seaborn -c conda-forge
 pip install texttable
 pip install sacred # for configuration management
 
 # for development only
 pip install black isort
+
+mamba install -c conda-forge dvc
 ```
 
 ## Running

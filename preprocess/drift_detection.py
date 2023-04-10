@@ -183,7 +183,7 @@ def main(args):
         ]  # get timestamp
 
     np.savetxt(
-        output_path / f"{input_path.stem}_{args.y}_change.csv",
+        output_path / f"{input_path.stem}_{args.y}_cp.csv",
         changes,
         fmt="%d",
         delimiter=",",

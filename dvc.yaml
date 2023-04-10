@@ -1,0 +1,24 @@
+# vars:
+#   - machine_id: 881
+#   - type: global
+#   - y: disk
+
+stages:
+  drift-detection:
+    cmd: >-
+      python preprocess/drift_detection.py ${dataset.raw_path}
+      -o "data/${dataset.type}"
+      -y "${y}"
+      --window_size ${drift.window_size}
+      --threshold ${drift.threshold}
+    deps:
+    -  ${dataset.raw_path}
+    params:
+    - machine_id
+    - y
+    - dataset 
+    - drift
+    outs:
+    # - data/${data.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}
+    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
+    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv

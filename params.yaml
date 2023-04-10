@@ -1,0 +1,10 @@
+dataset:
+  _target_: src.dataset.AlibabaMachineDataset
+  type: machine
+  raw_path: /lcrc/project/FastBayes/rayandrew/machine_usage/m_881.csv
+machine_id: 881
+'y': disk
+base_path: /lcrc/project/FastBayes/rayandrew/sched-cl
+drift:
+  window_size: 75
+  threshold: 300

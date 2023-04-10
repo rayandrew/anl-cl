@@ -1,0 +1,12 @@
+defaults:
+  - dataset: alibaba_machine
+ - _self_
+  # - train/model: resnet
+  # - train/optimizer: sgd
+
+machine_id: 881
+y: disk
+base_path: /lcrc/project/FastBayes/rayandrew/sched-cl # needed this in the SLURM
+drift:
+  window_size: 75
+  threshold: 300

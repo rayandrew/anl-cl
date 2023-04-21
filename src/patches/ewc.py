@@ -12,11 +12,11 @@ import gorilla
 from src.utils.patch import patch_filter
 
 
-@gorilla.patches(
-    EWCPlugin,
-    gorilla.Settings(allow_hit=True),
-    filter=patch_filter,
-)
+# @gorilla.patches(
+#     EWCPlugin,
+#     gorilla.Settings(allow_hit=True),
+#     filter=patch_filter,
+# )
 class CustomEWCPlugin:
     def compute_importances(
         self: EWCPlugin,

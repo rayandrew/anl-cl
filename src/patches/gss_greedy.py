@@ -10,11 +10,11 @@ import gorilla
 from src.utils.patch import patch_filter
 
 
-@gorilla.patches(
-    GSS_greedyPlugin,
-    gorilla.Settings(allow_hit=True),
-    filter=patch_filter,
-)
+# @gorilla.patches(
+#     GSS_greedyPlugin,
+#     gorilla.Settings(allow_hit=True),
+#     filter=patch_filter,
+# )
 class CustomGSS_greedyPlugin:
     def __init__(
         self: GSS_greedyPlugin,

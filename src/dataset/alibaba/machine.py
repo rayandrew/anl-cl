@@ -3,6 +3,8 @@ from typing import Literal, Union
 
 import torch
 
+from avalanche.benchmarks.utils import make_classification_dataset
+
 import numpy as np
 
 from src.utils.general import split_evenly_by_classes
@@ -19,7 +21,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         n_labels: int,
         train_ratio: float = AlibabaDataset.TRAIN_RATIO,
         y: Literal["cpu", "mem", "disk"] = "cpu",
-        mode: Literal["train", "test", "predict"] = "train",
+        subset: Literal["training", "testing", "all"] = "training",
         seq: bool = False,
         seq_len: int = 2,
         univariate: bool = False,
@@ -31,11 +33,11 @@ class AlibabaMachineDataset(AlibabaDataset):
             n_labels (int): Number of labels to use
             train_ratio (float, optional): Ratio of training data. Defaults to AlibabaDataset.TRAIN_RATIO.
             y (Literal["cpu", "mem", "disk"], optional): Variable to predict. Defaults to "cpu".
-            mode (Literal["train", "test", "predict"], optional): Mode of the dataset. Defaults to "train".
+            subset (Literal["training", "testing", "all"], optional): Subset of the dataset. Defaults to "all".
             seq (bool, optional): Whether to use sequence data. Defaults to False.
             seq_len (int, optional): Sequence length for sequence data. Defaults to 2.
         """
-        assert mode in ["train", "test", "predict"]
+        assert subset in ["training", "testing", "all"]
         assert y in ["cpu", "mem", "disk"]
         assert seq_len >= 2
         if univariate:
@@ -44,7 +46,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         self.train_ratio = train_ratio
         self.n_labels = n_labels
         self.y_var = y
-        self.mode = mode
+        self.subset = subset
         self.seq = seq
         self.seq_len = seq_len
         self.univariate = univariate
@@ -126,7 +128,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         return Xs, Dists
 
     def _load_data(self):
-        assert self.mode in ["train", "test", "predict"]
+        assert self.subset in ["training", "testing", "all"]
 
         additional_key = "non-seq"
         if self.seq:
@@ -139,7 +141,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         key = (
             self.filename,
             self.train_ratio,
-            self.mode,
+            self.subset,
             additional_key,
         )
         if key in self.CACHE:
@@ -149,7 +151,7 @@ class AlibabaMachineDataset(AlibabaDataset):
         data = self._process_nan(data)
         Data, Dists = self._augment_data(data)
 
-        if self.mode == "predict":
+        if self.subset == "all":
             X = [d[0] for d in Data]
             y = [d[1] for d in Data]
             self.data = X
@@ -184,11 +186,11 @@ class AlibabaMachineDataset(AlibabaDataset):
                 y_test,
             )
 
-            if self.mode == "train":
+            if self.subset == "training":
                 self.data = X_train
                 self.targets = dist_labels_train
                 self.outputs = y_train
-            elif self.mode == "test":
+            elif self.subset == "testing":
                 self.data = X_test
                 self.targets = dist_labels_test
                 self.outputs = y_test
@@ -214,10 +216,84 @@ class AlibabaMachineDataset(AlibabaDataset):
         data_tensor = torch.tensor(data, dtype=torch.float32)
         label_tensor = torch.from_numpy(np.array(self.outputs[index]))
         dist_label_tensor = torch.from_numpy(np.array(dist_label))
-        return data_tensor, dist_label_tensor, label_tensor
+        return data_tensor, label_tensor, dist_label_tensor
 
 
-__all__ = ["AlibabaMachineDataset"]
+def alibaba_machine_collate(batch):
+    tensors, targets, t_labels = [], [], []
+    for x, region, dist_label, _ in batch:
+        tensors += [x]
+        targets += [torch.tensor(region)]
+        t_labels += [torch.tensor(dist_label)]
+    tensors = [item.t() for item in tensors]
+    tensors = torch.nn.utils.rnn.pad_sequence(
+        tensors, batch_first=True, padding_value=0.0
+    )
+    targets = torch.stack(targets)
+    t_labels = torch.stack(t_labels)
+    return tensors, targets, t_labels
+
+
+# TODO: remove this later
+def AlibabaMachineDatasetF(
+    filename: str,
+    n_labels: int = 10,
+    subset="train",
+    y: Literal["cpu", "mem", "disk"] = "cpu",
+    seq: bool = False,
+    seq_len: int = 5,
+    univariate: bool = False,
+):
+    dataset = AlibabaMachineDataset(
+        filename=filename,
+        n_labels=n_labels,
+        subset=subset,
+        y=y,
+        seq=False,
+        seq_len=seq_len,
+        univariate=univariate,
+    )
+    return dataset, dataset.n_experiences(), dataset.input_size()
+
+
+# TODO: simplify this later
+def AlibabaMachineSequence(
+    filename: str,
+    n_labels: int = 10,
+    subset="train",
+    y: Literal["cpu", "mem", "disk"] = "cpu",
+    seq: bool = False,
+    seq_len: int = 5,
+    univariate: bool = False,
+):
+    dataset = AlibabaMachineDataset(
+        filename=filename,
+        n_labels=n_labels,
+        subset=subset,
+        y=y,
+        seq=False,
+        seq_len=seq_len,
+        univariate=univariate,
+    )
+    # return dataset, dataset.n_experiences(), dataset.input_size()
+
+    dist_labels = [datapoint[2] for datapoint in dataset]
+    return (
+        make_classification_dataset(
+            dataset,
+            collate_fn=alibaba_machine_collate,
+            # targets=dist_labels,
+        ),
+        dataset.n_experiences(),
+        dataset.input_size(),
+    )
+
+
+__all__ = [
+    "AlibabaMachineDataset",
+    "AlibabaMachineSequence",
+    "AlibabaMachineDatasetF",
+]
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -233,7 +309,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--n_labels", type=int, default=10)
     parser.add_argument(
         "-m",
-        "--mode",
+        "--subset",
         type=str,
         choices=["train", "test", "predict"],
         default="train",
@@ -265,7 +341,7 @@ if __name__ == "__main__":
         filename=args.data,
         n_labels=args.n_labels,
         y=args.y,
-        mode=args.mode,
+        subset=args.subset,
         seq=args.seq,
         seq_len=args.seq_len,
         univariate=args.univariate,

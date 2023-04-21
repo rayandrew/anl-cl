@@ -29,7 +29,7 @@ class AlibabaSchedulerDataset(AlibabaDataset):
         n_labels: int,
         train_ratio: float = AlibabaDataset.TRAIN_RATIO,
         y: Literal["cpu", "mem", "disk"] = "cpu",
-        mode: Literal["train", "test", "predict"] = "train",
+        subset: Literal["training", "testing", "all"] = "training",
         seq: bool = False,
         seq_len: int = 2,
         univariate: bool = False,
@@ -41,12 +41,12 @@ class AlibabaSchedulerDataset(AlibabaDataset):
             n_labels (int): number of labels to use
             train_ratio (float, optional): ratio of training data. Defaults to AlibabaDataset.TRAIN_RATIO.
             y (Literal["cpu", "mem", "disk"], optional): which variable to predict. Defaults to "cpu".
-            mode (Literal["train", "test", "predict"], optional): which mode to use. Defaults to "train".
+            subset (Literal["training", "testing", "all"], optional): which subset to use. Defaults to "train".
             seq (bool, optional): whether to use sequence data. Defaults to False.
             seq_len (int, optional): length of sequence. Defaults to 2.
             univariate (bool, optional): whether to use univariate data. Defaults to False.
         """
-        assert mode in ["train", "test", "predict"]
+        assert subset in ["training", "testing", "all"]
         assert y in ["cpu", "mem", "disk"]
         assert seq_len >= 2
         if univariate:
@@ -55,7 +55,7 @@ class AlibabaSchedulerDataset(AlibabaDataset):
         self.train_ratio = train_ratio
         self.n_labels = n_labels
         self.y_var = y
-        self.mode = mode
+        self.subset = subset
         self.seq = seq
         self.seq_len = seq_len
         self.univariate = univariate
@@ -111,12 +111,12 @@ class AlibabaSchedulerDataset(AlibabaDataset):
         new_data = self._augment_data(data)
 
         train_size = int(len(new_data) * self.train_ratio)
-        assert self.mode in ["train", "test", "predict"]
-        if self.mode == "train":
+        assert self.subset in ["training", "testing", "all"]
+        if self.subset == "train":
             self.data = new_data[:train_size]
             random.shuffle(self.data)
             self.targets = self._prepare_targets(self.data)
-        elif self.mode == "test":
+        elif self.subset == "test":
             self.data = new_data[train_size:]
             random.shuffle(self.data)
             self.targets = self._prepare_targets(self.data)

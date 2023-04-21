@@ -6,7 +6,7 @@
 stages:
   drift-detection:
     cmd: >-
-      python preprocess/drift_detection.py ${dataset.raw_path}
+      python -m src.preprocess.drift_detection ${dataset.raw_path}
       -o "data/${dataset.type}"
       -y "${y}"
       --window_size ${drift.window_size}
@@ -22,3 +22,24 @@ stages:
     # - data/${data.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}
     - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
     - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv
+  training:
+    cmd: >-
+      python main.py
+    deps:
+    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
+    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv
+    params:
+    - machine_id
+    - y
+    - dataset 
+    - drift
+    - sequential
+    - seq_len
+    - n_labels
+    - lr
+    - batch_size
+    - epoch
+    - strategy 
+    - tolerance
+    - univariate
+  

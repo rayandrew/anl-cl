@@ -28,7 +28,10 @@ pip install sacred # for configuration management
 # for development only
 pip install black isort
 
+mamba install -c conda-forge hydra-core
 mamba install -c conda-forge dvc
+# mamba install -c conda-forge neptune neptune-sacred
+pip install -U "neptune[sacred]"
 ```
 
 ## Running

@@ -93,7 +93,7 @@ def main(args):
         filename=args.filename,
         # train=False,
         n_labels=args.n_labels,
-        mode="predict",
+        subset="all",
         y=args.y,
         seq=args.seq,
         seq_len=args.seq_len,

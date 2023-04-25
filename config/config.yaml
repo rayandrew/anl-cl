@@ -13,6 +13,8 @@ filename: data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_si
 drift:
   window_size: 125
   threshold: 5
+  ruptures_penalty: 25
+  google_method: "online_cp"
   # window_size: 75
   # threshold: 300
 cuda: 0

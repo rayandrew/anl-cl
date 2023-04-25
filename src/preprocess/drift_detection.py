@@ -156,11 +156,11 @@ def main(cfg: DictConfig):
     threshold = cfg.drift.threshold
 
     change_list = []
-    print(
-        f"Start detecting drifts with window_size {window_size} and threshold {threshold}"
-    )
     dd = DriftDetection(data, verbose=False)
     if "alibaba" in cfg.dataset.name:
+        print(
+        f"Start detecting drifts with window_size {window_size} and threshold {threshold}"
+        )
         dd.add_method(ADWIN(), 1)
         dd.add_method(DDM(), 1)
         dd.add_method(EDDM(), 1)
@@ -169,49 +169,93 @@ def main(cfg: DictConfig):
         dd.add_method(PageHinkley(), 1)
         dd.add_method(KSWIN(), 1)
     elif "google" in cfg.dataset.name:
-        # Ruptures model. It performs really well!
-        # model = rpt.Pelt(model="rbf").fit(data)
+        # can put this in dvc
+        method = cfg.drift.google_method
 
-        # # get the change point locations higher penalty = less change points. The model won't want to predict wrong.
-        # change_list = model.predict(pen=15)
-        # print the change point locations
+        if "ruptures" in method:
+            # Ruptures model. It performs really well!
+            model = rpt.Pelt(model="rbf").fit(data)
 
-        # Number of rows
-        detector = Detector(data_end.shape[0])
-        # Number of cols
-        observation_likelihood = StudentTMulti(data_end.shape[1])
-        
+            # get the change point locations higher penalty = less change points. The model won't want to predict wrong.
+            change_list = model.predict(pen=cfg.drift.ruptures_penalty)
+        ## CAUTION! Takes a long time
+        elif "online_cp" in method:
 
-        R_mat = np.zeros((data_end.shape[0], data_end.shape[0]))
-        R_mat_cumfreq = np.zeros((data_end.shape[0], data_end.shape[0]))
-        R_mat.fill(np.nan)
+            # print the change point locations
 
-        CP = np.array([])
-        for t, x in enumerate(data_end[:, :]):
-            # ## Attempt1: Normalize end_time because if not, value will be too big and matrix will be singular.
-            # x[0] = x[0]-data_end[0][0]
+            ## data_end = Nx2 Matrix, with columns end time and cpu usage.
+            # Number of rows
+            detector = Detector(data_end.shape[0])
+            # Number of cols
+            observation_likelihood = StudentTMulti(data_end.shape[1])
+            
 
-            ## Attemp2: Use 1...N instead of end_time because end_time has regular 5 minutes interval anyways.
-            x[0] = t
-            # print(t)
-            # print(CP)
-            detector.detect(
-                x, observation_likelihood=observation_likelihood
-            )
-            _, CP, _, _ = detector.retrieve(observation_likelihood)
+            R_mat = np.zeros((data_end.shape[0], data_end.shape[0]))
+            R_mat_cumfreq = np.zeros((data_end.shape[0], data_end.shape[0]))
+            R_mat.fill(np.nan)
 
-            R_old = detector.R_old
+            CP = np.array([])
+            for t, x in enumerate(data_end[:, :]):
+                # ## Attempt1: Normalize end_time because if not, value will be too big and matrix will be singular.
+                # x[0] = x[0]-data_end[0][0]
 
-            try:
-                R_mat[t, 0 : len(R_old)] = R_old
-                R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(R_old)
-            except:
-                R_mat[t, 0 : len(R_old)] = R_old[0:-1]
-                R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(
-                    R_old[0:-1]
+                ## Attemp2: Use 1...N instead of end_time because end_time has regular 5 minutes interval anyways.
+                x[0] = t
+                # print(CP)
+                detector.detect(
+                    x, observation_likelihood=observation_likelihood
                 )
-        print(CP)
-        change_list = CP
+                _, CP, _, _ = detector.retrieve(observation_likelihood)
+
+                R_old = detector.R_old
+
+                try:
+                    R_mat[t, 0 : len(R_old)] = R_old
+                    R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(R_old)
+                except:
+                    R_mat[t, 0 : len(R_old)] = R_old[0:-1]
+                    R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(
+                        R_old[0:-1]
+                    )
+            # print(CP)
+            # change_list = CP
+
+            # R_mat2 = R_mat.copy()
+            R_mat = R_mat.T
+
+            R_mat_cumfreq = R_mat_cumfreq.T
+            # R_mat_median = np.nanmedian(R_mat_cumfreq, axis=1)
+
+            T = R_mat.shape[1]
+            Mrun = np.zeros(T)
+
+            for ii in range(T):
+                try:
+                    Mrun[ii] = np.where(R_mat_cumfreq[:, ii] >= 0.5)[0][0]
+                except:
+                    pass
+
+            # MchangeTime = np.asarray(range(T)) - Mrun + 1
+
+            #########################################################################
+            # Find the max value in Mrun sequentially
+            # Check if the next value dropped a certain relative value
+            # Check if that drop sustains for 10 points
+            CP_CDF = [0]
+            for i in range(len(Mrun) - 5):
+                j = i + 1
+                if (Mrun[i] - Mrun[j]) > 5:
+                    cnt = 0
+                    for k in range(1, 20):
+                        if (i + k < T) & ((Mrun[i] - Mrun[i + k]) > 10):
+                            cnt = cnt + 1
+                        else:
+                            break
+                    if cnt > 10:
+                        CP_CDF.append(i + 1)
+            print("CP_CDF")
+            print(CP_CDF)
+            change_list=CP_CDF
 
 
     # dd = KSWIN(window_size=window_size)

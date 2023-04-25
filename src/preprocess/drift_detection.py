@@ -6,13 +6,16 @@ from typing import Sequence
 import hydra
 import matplotlib.pyplot as plt
 import numpy as np
+print(np.__version__)
 from omegaconf import DictConfig
 from skmultiflow.drift_detection import DDM, KSWIN, PageHinkley
 from skmultiflow.drift_detection.adwin import ADWIN
 from skmultiflow.drift_detection.eddm import EDDM
 from skmultiflow.drift_detection.hddm_a import HDDM_A
 from skmultiflow.drift_detection.hddm_w import HDDM_W
+from src.preprocess.online_cp import Detector, StudentTMulti
 
+import ruptures as rpt
 
 class DriftDetection:
     def __init__(self, data_stream, verbose=True):
@@ -145,34 +148,77 @@ def main(cfg: DictConfig):
             label_index = 3
         else:
             raise ValueError("Invalid y value")
-
+    
+    ## Nx2 Matrix, with columns end time and cpu usage.
+    data_end = data[:, 1:3 ]
     data = data[:, label_index]
-
-    # print(data)
-
-    # dd = DriftDetection(data, verbose=False)
-    # dd.add_method(ADWIN(), 1)
-    # dd.add_method(DDM(), 1)
-    # dd.add_method(EDDM(), 1)
-    # dd.add_method(HDDM_A(), 1)
-    # dd.add_method(HDDM_W(), 1)
-    # dd.add_method(PageHinkley(), 1)
-    # dd.add_method(KSWIN(), 1)
-
     window_size = cfg.drift.window_size
     threshold = cfg.drift.threshold
 
     change_list = []
-    # dd = KSWIN(window_size=window_size)
-    dd = EDDM()
-    for pos, ele in enumerate(data):
-        dd.add_element(ele)
-        if dd.detected_change():
-            change_list.append(pos)
-
     print(
         f"Start detecting drifts with window_size {window_size} and threshold {threshold}"
     )
+    dd = DriftDetection(data, verbose=False)
+    if "alibaba" in cfg.dataset.name:
+        dd.add_method(ADWIN(), 1)
+        dd.add_method(DDM(), 1)
+        dd.add_method(EDDM(), 1)
+        dd.add_method(HDDM_A(), 1)
+        dd.add_method(HDDM_W(), 1)
+        dd.add_method(PageHinkley(), 1)
+        dd.add_method(KSWIN(), 1)
+    elif "google" in cfg.dataset.name:
+        # Ruptures model. It performs really well!
+        # model = rpt.Pelt(model="rbf").fit(data)
+
+        # # get the change point locations higher penalty = less change points. The model won't want to predict wrong.
+        # change_list = model.predict(pen=15)
+        # print the change point locations
+
+        # Number of rows
+        detector = Detector(data_end.shape[0])
+        # Number of cols
+        observation_likelihood = StudentTMulti(data_end.shape[1])
+        
+
+        R_mat = np.zeros((data_end.shape[0], data_end.shape[0]))
+        R_mat_cumfreq = np.zeros((data_end.shape[0], data_end.shape[0]))
+        R_mat.fill(np.nan)
+
+        CP = np.array([])
+        for t, x in enumerate(data_end[:, :]):
+            # ## Attempt1: Normalize end_time because if not, value will be too big and matrix will be singular.
+            # x[0] = x[0]-data_end[0][0]
+
+            ## Attemp2: Use 1...N instead of end_time because end_time has regular 5 minutes interval anyways.
+            x[0] = t
+            # print(t)
+            # print(CP)
+            detector.detect(
+                x, observation_likelihood=observation_likelihood
+            )
+            _, CP, _, _ = detector.retrieve(observation_likelihood)
+
+            R_old = detector.R_old
+
+            try:
+                R_mat[t, 0 : len(R_old)] = R_old
+                R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(R_old)
+            except:
+                R_mat[t, 0 : len(R_old)] = R_old[0:-1]
+                R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(
+                    R_old[0:-1]
+                )
+        print(CP)
+        change_list = CP
+
+
+    # dd = KSWIN(window_size=window_size)
+    # for pos, ele in enumerate(data):
+    #     dd.add_element(ele)
+    #     if dd.detected_change():
+    #         change_list.append(pos)
 
     # change_list = dd.get_voted_drift(
     #     window_size=window_size, threshold=threshold

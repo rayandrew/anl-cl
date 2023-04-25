@@ -19,6 +19,9 @@ class TaskSummary:
 @dataclass
 class TrainingSummary:
     n_tasks: int
+    ovr_avg_acc: float = 0.0
+    ovr_avg_forgetting: float = 0.0
+    ovr_avg_bwt: float = 0.0
     avg_acc: Sequence[float] = field(default_factory=list)
     avg_forgetting: Sequence[float] = field(default_factory=list)
     avg_bwt: Sequence[float] = field(default_factory=list)
@@ -40,6 +43,9 @@ def generate_summary_dict(
     path = Path(path)
     res = {
         "n_tasks": 0,
+        "ovr_avg_acc": 0.0,
+        "ovr_avg_forgetting": 0.0,
+        "ovr_avg_bwt": 0.0,
         "avg_acc": [],
         "avg_forgetting": [],
         "avg_bwt": [],
@@ -110,12 +116,17 @@ def generate_summary_dict(
                     res["task_data"][task_id]["bwt"] = []
                 res["task_data"][task_id]["bwt"].append(val)
 
+    res["ovr_avg_acc"] = sum(res["avg_acc"]) / len(res["avg_acc"])
+    res["ovr_avg_forgetting"] = sum(res["avg_forgetting"]) / len(
+        res["avg_forgetting"]
+    )
+    res["ovr_avg_bwt"] = sum(res["avg_bwt"]) / len(res["avg_bwt"])
+
     return res
 
 
 def generate_summary(path: str | Path) -> TrainingSummary:
     res = generate_summary_dict(path)
-    print(res)
     task_data = {
         task_id: TaskSummary(**(res["task_data"][task_id]))
         for task_id in res["task_data"]
@@ -131,10 +142,6 @@ def generate_summary_table(res: TrainingSummary):
     table = Texttable()
     table.set_cols_align(["c", "c", "c", "c"])
     table.set_cols_valign(["m", "m", "m", "b"])
-
-    # print(res.n_tasks)
-    print(res.avg_acc)
-    print(res.avg_forgetting)
 
     for task in range(res.n_tasks):
         print(task)
@@ -200,6 +207,8 @@ __all__ = [
     "generate_task_table",
     "generate_summary",
     "summary_to_json",
+    "TrainingSummary",
+    "TaskSummary",
 ]
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ stages:
   drift-detection:
     cmd: >-
       python -m src.preprocess.drift_detection ${dataset.raw_path}
-      -o "data/${dataset.type}"
+      -o "data/${dataset.name}"
       -y "${y}"
       --window_size ${drift.window_size}
       --threshold ${drift.threshold}
@@ -20,14 +20,14 @@ stages:
     - drift
     outs:
     # - data/${data.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}
-    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
-    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv
+    - ${base_path}/data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
+    - ${base_path}/data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv
   training:
     cmd: >-
       python main.py
     deps:
-    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
-    - data/${dataset.type}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv
+    - ${base_path}/data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
+    - ${base_path}/data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv
     params:
     - machine_id
     - y
@@ -42,4 +42,21 @@ stages:
     - strategy 
     - tolerance
     - univariate
-  
+    outs:
+    - ${out_path}/model.pt
+    - ${out_path}/checkpoint.pt
+    - ${out_path}/train_results.json
+  plot:
+    cmd: >-
+      python -m src.plot.plot_single 
+    deps:
+    - data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
+    - data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}_cp.csv
+    - ${out_path}/model.pt
+    outs:
+    - ${out_path}/auc_roc.png
+    - ${out_path}/avg_acc.png
+    - ${out_path}/avg_forgetting.png
+    - ${out_path}/diff.png
+    - ${out_path}/prediction.png
+    # - ${out_path}/end_acc.png

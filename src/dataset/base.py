@@ -1,9 +1,11 @@
 from abc import ABCMeta, abstractmethod
+from typing import Literal
 
 from torch.utils.data import Dataset
 
 import numpy as np
 
+TDatasetSubset = Literal["training", "testing", "all"]
 
 class BaseDataset(Dataset, metaclass=ABCMeta):
     TRAIN_RATIO = 0.8
@@ -27,4 +29,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-__all__ = ["BaseDataset"]
+__all__ = ["BaseDataset", "TDatasetSubset"]
+
+
+# non-sequence
+# y_t = f(X_t)

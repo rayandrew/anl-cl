@@ -1,6 +1,6 @@
 import math
 from numbers import Number
-from typing import Sequence, Tuple
+from typing import Any, Sequence, Tuple
 
 import numpy.typing as npt
 from sklearn.model_selection import train_test_split
@@ -52,10 +52,21 @@ def ceil_up(x, base: float = 10):
     return math.ceil(x / base) * base
 
 
+def get_checkpoint_fname(cfg: Any):
+    return "checkpoint.pt"
+
+
+def get_model_fname(cfg: Any):
+    # return f"{cfg.machine_id}_{cfg.strategy}.pt"
+    return "model.pt"
+
+
 __all__ = [
     "set_seed",
     "split_evenly_by_classes",
     "label_transform",
     "custom_round",
     "ceil_up",
+    "get_model_fname",
+    "get_checkpoint_fname",
 ]

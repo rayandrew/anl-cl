@@ -1,12 +1,12 @@
 dataset:
   _target_: src.dataset.AlibabaMachineDataset
-  type: machine
+  name: alibaba_machine
   raw_path: /lcrc/project/FastBayes/rayandrew/machine_usage/m_881.csv
 machine_id: 881
 'y': disk
 base_path: /lcrc/project/FastBayes/rayandrew/sched-cl
-out_path: /lcrc/project/FastBayes/rayandrew/sched-cl/out/m_881_disk
-filename: data/machine/m_881/m_881_75-300/m_881_disk.csv
+out_path: /lcrc/project/FastBayes/rayandrew/sched-cl/out/m_881_disk_naive
+filename: data/alibaba_machine/m_881/m_881_75-300/m_881_disk.csv
 drift:
   window_size: 75
   threshold: 300
@@ -21,3 +21,4 @@ n_workers: 4
 strategy: naive
 tolerance: 1
 univariate: false
+seed: 3003

@@ -14,6 +14,10 @@ from avalanche.evaluation.metrics import (  # disk_usage_metrics,
     timing_metrics,
 )
 from avalanche.logging import InteractiveLogger, TextLogger
+from avalanche.training.checkpoint import (
+    maybe_load_checkpoint,
+    save_checkpoint,
+)
 from avalanche.training.plugins import EvaluationPlugin
 from avalanche.training.supervised import (
     AGEM,
@@ -25,17 +29,13 @@ from avalanche.training.supervised import (
 )
 
 import gorilla
-from hydra import compose, initialize
-from omegaconf import OmegaConf
-from sacred import Experiment
-from sacred.observers import FileStorageObserver
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
 import src.patches as patches
 from src.dataset import (
     AlibabaMachineDataset,
-    AlibabaMachineDatasetF,
-    AlibabaMachineSequence,
-    AlibabaSchedulerDataset,
+    AlibabaMachineSequenceDataset,
 )
 from src.metrics import (  # forward_transfer_metrics_with_tolerance,
     accuracy_metrics_with_tolerance,
@@ -45,28 +45,15 @@ from src.metrics import (  # forward_transfer_metrics_with_tolerance,
     forgetting_metrics_with_tolerance,
 )
 from src.models import LSTM, MLP
-from src.utils.general import set_seed
+from src.utils.general import (
+    get_checkpoint_fname,
+    get_model_fname,
+    set_seed,
+)
 from src.utils.summary import (  # generate_task_table,
     generate_summary,
     generate_summary_table,
 )
-
-ex = Experiment("argonne-cl")
-file_storage_observer = FileStorageObserver("sacred_runs")
-ex.observers.append(file_storage_observer)
-
-
-@ex.config_hook
-def hook(config, command_name, logger):
-    with initialize(config_path="config", version_base=None):
-        # load the Hydra configuration
-        cfg = compose(config_name="config", return_hydra_config=True)
-        OmegaConf.resolve(cfg)
-        config.update(
-            OmegaConf.to_container(cfg)
-        )  # config.update({})
-    return config
-
 
 # @ex.config
 # def my_config():
@@ -87,65 +74,46 @@ def print_and_log(msg, out_file):
     out_file.write(f"{msg}\n")
 
 
-@ex.automain
-def main(
-    _seed,
-    machine_id,
-    filename,
-    out_path,
-    strategy,
-    cuda,
-    y,
-    sequential,
-    seq_len,
-    n_labels,
-    univariate,
-    lr,
-    batch_size,
-    epoch,
-    n_workers,
-    tolerance,
-):
-    set_seed(_seed)
+@hydra.main(
+    config_path="config", config_name="config", version_base=None
+)
+def main(cfg: DictConfig):
+    set_seed(cfg.seed)
 
     # Patches
     for patch in gorilla.find_patches([patches]):
         gorilla.apply(patch)
 
     # Output folder
-    output_folder = Path(file_storage_observer.dir) / "out"
+    output_folder = Path(cfg.out_path)
     output_folder.mkdir(exist_ok=True, parents=True)
 
     # Config
     device = torch.device(
-        f"cuda:{cuda}"
-        if torch.cuda.is_available() and cuda >= 0
+        f"cuda:{cfg.cuda}"
+        if torch.cuda.is_available() and cfg.cuda >= 0
         else "cpu"
     )
 
     # TODO: instantiate this using hydra
     # ChoosenDataset = AlibabaMachineDatasetF
-    ChoosenDataset = AlibabaMachineSequence
+    ChoosenDataset = AlibabaMachineSequenceDataset
 
     raw_train_dataset, n_experiences, input_size = ChoosenDataset(
-        filename=filename,
-        n_labels=n_labels,
+        filename=cfg.filename,
+        n_labels=cfg.n_labels,
         subset="training",
-        y=y,
-        # seq=False,
-        seq=sequential,
-        seq_len=seq_len,
-        univariate=univariate,
+        y=cfg.y,
+        seq_len=cfg.seq_len,
+        univariate=cfg.univariate,
     )
     raw_test_dataset, _, _ = ChoosenDataset(
-        filename=filename,
-        n_labels=n_labels,
+        filename=cfg.filename,
+        n_labels=cfg.n_labels,
         subset="testing",
-        y=y,
-        # seq=False,
-        seq=sequential,
-        seq_len=seq_len,
-        univariate=univariate,
+        y=cfg.y,
+        seq_len=cfg.seq_len,
+        univariate=cfg.univariate,
     )
 
     train_dataset = raw_train_dataset
@@ -157,11 +125,12 @@ def main(
         TextLogger(open(output_folder / "train_log.txt", "w")),
     ]
 
+    # TODO: change this scenario into online setting
     benchmark = nc_benchmark(
         train_dataset=train_dataset,
         test_dataset=test_dataset,
         n_experiences=n_experiences,
-        shuffle=True,
+        shuffle=False,
         task_labels=False,
     )
     train_stream = benchmark.train_stream
@@ -171,15 +140,15 @@ def main(
     model = (
         LSTM(
             input_size=input_size,
-            num_classes=n_labels,
+            num_classes=cfg.n_labels,
             rnn_layers=3,
             hidden_size=512,
             batch_first=True,
         )
-        if sequential
+        if cfg.sequential
         else MLP(
             input_size=input_size,
-            num_classes=n_labels,
+            num_classes=cfg.n_labels,
             hidden_layers=4,
             drop_rate=0.3,
         )
@@ -193,7 +162,7 @@ def main(
 
     # Prepare for training & testing
     # optimizer = SGD(model.parameters(), lr=args.learning_rate, momentum=0.9)
-    optimizer = Adam(model.parameters(), lr=lr)
+    optimizer = Adam(model.parameters(), lr=cfg.lr)
     criterion = CrossEntropyLoss()
     eval_plugin = EvaluationPlugin(
         loss_metrics(
@@ -208,25 +177,25 @@ def main(
             stream=True,
         ),
         forgetting_metrics_with_tolerance(
-            tolerance=tolerance, experience=True, stream=True
+            tolerance=cfg.tolerance, experience=True, stream=True
         ),
         bwt_metrics_with_tolerance(
-            tolerance=tolerance, experience=True, stream=True
+            tolerance=cfg.tolerance, experience=True, stream=True
         ),
-        # class_accuracy_metrics_with_tolerance(
-        #     tolerance=tolerance, experience=True, stream=True
-        # ),
+        class_accuracy_metrics_with_tolerance(
+            tolerance=cfg.tolerance, experience=True, stream=True
+        ),
         # class_diff_metrics(stream=True),
         # forward_transfer_metrics_with_tolerance(
         #     tolerance=1, experience=True, stream=True
         # ),
-        timing_metrics(
-            minibatch=True,
-            epoch=False,
-            epoch_running=False,
-            experience=True,
-            stream=True,
-        ),
+        # timing_metrics(
+        #     minibatch=True,
+        #     epoch=False,
+        #     epoch_running=False,
+        #     experience=True,
+        #     stream=True,
+        # ),
         # cpu_usage_metrics(
         #     minibatch=True,
         #     epoch=False,
@@ -252,61 +221,61 @@ def main(
         loggers=loggers,
     )
 
-    if strategy == "naive":
+    if cfg.strategy == "naive":
         cl_strategy = Naive(
             model,
             optimizer,
             criterion,
-            train_mb_size=batch_size,
-            train_epochs=epoch,
-            eval_mb_size=batch_size,
+            train_mb_size=cfg.batch_size,
+            train_epochs=cfg.epoch,
+            eval_mb_size=cfg.batch_size,
             evaluator=eval_plugin,
             device=device,
             eval_every=0,  # at the end of each experience
         )
-    elif strategy == "agem":
+    elif cfg.strategy == "agem":
         cl_strategy = AGEM(
             model,
             optimizer,
             criterion,
             patterns_per_exp=n_experiences,
             sample_size=32,
-            train_mb_size=batch_size,
-            train_epochs=epoch,
-            eval_mb_size=batch_size,
+            train_mb_size=cfg.batch_size,
+            train_epochs=cfg.epoch,
+            eval_mb_size=cfg.batch_size,
             evaluator=eval_plugin,
             device=device,
             # eval_every=0,  # at the end of each experience
         )
-    elif strategy == "ewc":
+    elif cfg.strategy == "ewc":
         cl_strategy = EWC(
             model,
             optimizer,
             criterion,
-            ewc_lambda=0.3,
+            ewc_lambda=0.9,
             mode="separate",
-            train_mb_size=batch_size,
-            train_epochs=epoch,
-            eval_mb_size=batch_size,
+            train_mb_size=cfg.batch_size,
+            train_epochs=cfg.epoch,
+            eval_mb_size=cfg.batch_size,
             evaluator=eval_plugin,
             device=device,
             # eval_every=0,  # at the end of each experience
         )
-    elif strategy == "lwf":
+    elif cfg.strategy == "lwf":
         cl_strategy = LwF(
             model,
             optimizer,
             criterion,
             alpha=0.5,
             temperature=2,
-            train_mb_size=batch_size,
-            train_epochs=epoch,
-            eval_mb_size=batch_size,
+            train_mb_size=cfg.batch_size,
+            train_epochs=cfg.epoch,
+            eval_mb_size=cfg.batch_size,
             evaluator=eval_plugin,
             device=device,
             # eval_every=0,  # at the end of each experience
         )
-    elif strategy == "gss":
+    elif cfg.strategy == "gss":
         cl_strategy = GSS_greedy(
             model,
             optimizer,
@@ -314,22 +283,22 @@ def main(
             input_size=[input_size],
             mem_strength=30,
             mem_size=5000,
-            train_mb_size=batch_size,
-            train_epochs=epoch,
-            eval_mb_size=batch_size,
+            train_mb_size=cfg.batch_size,
+            train_epochs=cfg.epoch,
+            eval_mb_size=cfg.batch_size,
             evaluator=eval_plugin,
             device=device,
             # eval_every=0,  # at the end of each experience
         )
-    elif strategy == "gdumb":
+    elif cfg.strategy == "gdumb":
         cl_strategy = GDumb(
             model,
             optimizer,
             criterion,
             mem_size=5000,
-            train_mb_size=batch_size,
-            train_epochs=epoch,
-            eval_mb_size=batch_size,
+            train_mb_size=cfg.batch_size,
+            train_epochs=cfg.epoch,
+            eval_mb_size=cfg.batch_size,
             evaluator=eval_plugin,
             device=device,
             # eval_every=0,  # at the end of each experience
@@ -337,25 +306,31 @@ def main(
     else:
         raise ValueError("Strategy not supported")
 
+    checkpoint_fname = output_folder / get_checkpoint_fname(cfg)
+    cl_strategy, initial_exp = maybe_load_checkpoint(
+        cl_strategy, checkpoint_fname
+    )
+
     # train and test loop
     results = {}
-    for exp in train_stream:
+    for exp in train_stream[initial_exp:]:
         cl_strategy.train(
             exp,
-            num_workers=n_workers,
-            # eval_streams=[test_stream],
+            num_workers=cfg.n_workers,
+            eval_streams=[test_stream],
         )
         result = cl_strategy.eval(test_stream)
         results[exp.current_experience] = result
+        save_checkpoint(cl_strategy,  checkpoint_fname)
 
     json.dump(
         results, open(output_folder / "train_results.json", "w")
     )
 
-    # Saving model
-    model_name = f"{machine_id}_{strategy}"
-    model_scripted = torch.jit.script(model)  # Export to TorchScript
-    model_scripted.save(output_folder / f"{model_name}.pt")  # Save
+    # save the model
+    model_name = output_folder / get_model_fname(cfg)
+    model_scripted = torch.jit.script(model)
+    model_scripted.save(model_name)
 
     # print results
     out_file = open(output_folder / "train_results.txt", "w")
@@ -373,7 +348,8 @@ def main(
     print(table.draw())
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    main()
 #     parser = ArgumentParser()
 #     parser.add_argument(
 #         "--cuda",

@@ -9,6 +9,8 @@ import numpy as np
 from cycler import cycler
 from sklearn.metrics import auc, roc_curve
 
+from src.utils.summary import TrainingSummary
+
 MARKERS = ["D", "P", "s", "v", "o", "*", "X"]
 CYCLE_MARKERS = cycle(MARKERS)
 CYCLER_MARKERS = cycler(marker=MARKERS)
@@ -51,15 +53,15 @@ def get_y_label(y_var: Literal["cpu", "mem", "disk"]):
         raise ValueError(f"Unknown y_var: {y_var}")
 
 
-@dataclass
-class TrainResult:
-    avg_acc: Sequence[Sequence[float]] = field(default_factory=list)
-    avg_forgetting: Sequence[Sequence[float]] = field(
-        default_factory=list
-    )
-    ovr_avg_acc: Optional[float] = None
-    ovr_avg_forgetting: Optional[float] = None
-    raw_acc: Sequence[Sequence[float]] = field(default_factory=list)
+# @dataclass
+# class TrainResult:
+#     avg_acc: Sequence[Sequence[float]] = field(default_factory=list)
+#     avg_forgetting: Sequence[Sequence[float]] = field(
+#         default_factory=list
+#     )
+#     ovr_avg_acc: Optional[float] = None
+#     ovr_avg_forgetting: Optional[float] = None
+#     raw_acc: Sequence[Sequence[float]] = field(default_factory=list)
 
 
 @dataclass
@@ -70,7 +72,7 @@ class EvalResult:
     y_origs: np.ndarray
     y_preds: np.ndarray
     predict_proba: np.ndarray
-    train_results: Optional[TrainResult] = None
+    train_results: Optional[TrainingSummary] = None
 
 
 def auc_roc(result: EvalResult, n_labels: int = 10):
@@ -152,10 +154,10 @@ def plot_roc_curve(
 def plot_diff(
     results: Sequence[EvalResult],
     output_folder: Path,
-    args: Any,
+    config: Any,
     title: Optional[str] = None,
 ):
-    assert len(results) >= 2
+    # assert len(results) >= 2
     print("Plotting diffs...")
 
     n_results = len(results)
@@ -193,7 +195,7 @@ def plot_diff(
     ax.set_xlabel("Diff")
     ax.set_ylabel("Frequency")
     ax.set_title("Diff between actual and predicted label")
-    # ax.set_xlim(-args.n_labels, args.n_labels)
+    # ax.set_xlim(-config.n_labels, config.n_labels)
     ax.set_xticks(diffs)
     ax.set_xticklabels(diffs)
     ax.legend([res.name for res in results])
@@ -217,7 +219,7 @@ def plot_prediction(
     results: Sequence[EvalResult],
     output_folder: Path,
     changepoints: np.ndarray,
-    args: Any,
+    config: Any,
     title: Optional[str] = None,
 ):
     assert len(results) >= 1
@@ -228,7 +230,7 @@ def plot_prediction(
     ):
         ax.set_ylabel("Regions")
         if format:
-            ax.set_ylim(min_x, args.n_labels)
+            ax.set_ylim(min_x, config.n_labels)
             ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
             ax.yaxis.set_major_locator(
                 ticker.MultipleLocator(n_scale)
@@ -280,7 +282,7 @@ def plot_prediction(
 def plot_auc_roc(
     results: Sequence[EvalResult],
     output_folder: Path,
-    args: Any,
+    config: Any,
     title: Optional[str] = None,
 ):
     assert len(results) >= 1
@@ -311,7 +313,7 @@ def plot_avg_acc(
     results: Sequence[EvalResult],
     output_folder: Path,
     n_exp: int,
-    args: Any,
+    config: Any,
     title: Optional[str] = None,
 ):
     assert len(results) >= 1
@@ -326,7 +328,7 @@ def plot_avg_acc(
     for res in results:
         if (
             res.train_results is None
-            or res.train_results.avg_forgetting is None
+            or res.train_results.avg_acc is None
         ):
             continue
         ax.plot(
@@ -364,7 +366,7 @@ def plot_avg_forgetting(
     results: Sequence[EvalResult],
     output_folder: Path,
     n_exp: int,
-    args: Any,
+    config: Any,
     title: Optional[str] = None,
 ):
     assert len(results) >= 1
@@ -417,7 +419,7 @@ def plot_end_acc(
     results: Sequence[EvalResult],
     output_folder: Path,
     n_exp: int,
-    args: Any,
+    config: Any,
     title: Optional[str] = None,
 ):
     assert len(results) >= 2
@@ -481,7 +483,7 @@ def plot_end_forgetting(
     results: Sequence[EvalResult],
     output_folder: Path,
     n_exp: int,
-    args: Any,
+    config: Any,
     title: Optional[str] = None,
 ):
     assert len(results) >= 2

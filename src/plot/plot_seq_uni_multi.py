@@ -66,7 +66,7 @@ def predict(
         if univariate
         else "Predicting using multivariate model..."
     )
-    for i, (x, _dist, y) in enumerate(data):
+    for i, (x, y, _dist) in enumerate(data):
         x = x.to(device)
         y = y.to(device)
         y_pred = model(x)

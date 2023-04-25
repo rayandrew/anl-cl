@@ -161,6 +161,7 @@ cython_debug/
 
 # generated output 
 out
+outputs
 best-out
 *.pt
 stdout
@@ -168,6 +169,7 @@ out_*
 
 # data folder
 data/*
+raw_data
 
 # exception to the rule
 !data/.gitkeep 

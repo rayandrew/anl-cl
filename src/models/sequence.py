@@ -24,11 +24,26 @@ class LSTM(torch.nn.Module, BaseModel):
         self._input_size = input_size
 
     def forward(self, x):
-        x = x.contiguous()
-        x = x.view(x.size(0), self._input_size)
+        # print()
+        # print("(1) x.shape", x.shape)
+        # print()
+        # x = x.contiguous()
+        # x = x.view(x.size(0), self._input_size)
+        # print()
+        # print("(2) x.shape", x.shape)
+        # print()
         x, _ = self.rnn(x)
+        # print()
+        # print("(3) x.shape", x.shape)
+        # print()
         x = x[:, -1] if self.batch_first else x[-1]
+        # print()
+        # print("(4) x.shape", x.shape)
+        # print()
         x = self.classifier(x)
+        # print()
+        # print("(5) x.shape", x.shape)
+        # print()
         return x
 
     def get_features(self, x):

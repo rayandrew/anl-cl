@@ -6,11 +6,7 @@
 stages:
   drift-detection:
     cmd: >-
-      python -m src.preprocess.drift_detection ${dataset.raw_path}
-      -o "data/${dataset.name}"
-      -y "${y}"
-      --window_size ${drift.window_size}
-      --threshold ${drift.threshold}
+      python -m src.preprocess.drift_detection
     deps:
     -  ${dataset.raw_path}
     params:

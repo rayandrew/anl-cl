@@ -1,0 +1,3 @@
+_target_: src.dataset.GoogleMachineDataset
+name: google_machine
+raw_path: "./raw_data/m_${machine_id}.csv"

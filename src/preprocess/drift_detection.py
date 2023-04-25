@@ -3,8 +3,10 @@ from collections import deque
 from pathlib import Path
 from typing import Sequence
 
+import hydra
 import matplotlib.pyplot as plt
 import numpy as np
+from omegaconf import DictConfig
 from skmultiflow.drift_detection import DDM, KSWIN, PageHinkley
 from skmultiflow.drift_detection.adwin import ADWIN
 from skmultiflow.drift_detection.eddm import EDDM
@@ -94,7 +96,9 @@ def add_dist_label(data, dist: Sequence[int], start_from=0):
     for i in range(len(dist) - 2):
         print(f"Dist from {dist[i]} to {dist[i+1]}: {i+1}")
         distributions[dist[i] : dist[i + 1]] = i + 1 + start_from
-    print(f"Dist from {dist[i]} to {dist[-1]}: {len(dist) - 1}")
+    print(
+        f"Dist from {dist[len(dist) - 1]} to {dist[-1]}: {len(dist) - 1}"
+    )
     distributions[dist[-1] :] = len(dist) - 1 + start_from
 
     print(np.unique(distributions, return_counts=True))
@@ -103,72 +107,97 @@ def add_dist_label(data, dist: Sequence[int], start_from=0):
     return data
 
 
-def main(args):
-    input_path = Path(args.input)
+@hydra.main(
+    config_path="../../config",
+    config_name="config",
+    version_base=None,
+)
+def main(cfg: DictConfig):
+    input_path = Path(cfg.dataset.raw_path)
     orig_data = np.genfromtxt(input_path, delimiter=",")
 
-    output_path = (
-        Path(args.output)
-        # .joinpath(
-        #     "local" if args.local else "global"
-        # )
-        / input_path.stem
-        / f"{input_path.stem}_{args.window_size}-{args.threshold}"
-    )
+    outfile_path = Path(cfg.filename)
+    output_path = outfile_path.parent
     output_path.mkdir(parents=True, exist_ok=True)
 
     data = orig_data
 
-    if args.local:
-        label_index = 9
-        if args.y == "cpu":
-            label_index = 7
-        elif args.y == "mem":
+    if "alibaba" in cfg.dataset.name:
+        if cfg.local:
+            label_index = 9
+            if cfg.y == "cpu":
+                label_index = 7
+            elif cfg.y == "mem":
+                label_index = 8
+            orig_data = orig_data[1:]
+            data = data[1:]
+        else:
             label_index = 8
-        orig_data = orig_data[1:]
-        data = data[1:]
-    else:
-        label_index = 8
-        if args.y == "cpu":
+            if cfg.y == "cpu":
+                label_index = 2
+            elif cfg.y == "mem":
+                label_index = 3
+    elif "google" in cfg.dataset.name:
+        data = data[1:]  # google contains csv headers
+        if cfg.y == "cpu":
             label_index = 2
-        elif args.y == "mem":
+        elif cfg.y == "mem":
             label_index = 3
+        else:
+            raise ValueError("Invalid y value")
 
     data = data[:, label_index]
 
-    dd = DriftDetection(data, verbose=False)
-    dd.add_method(ADWIN(), 1)
-    dd.add_method(DDM(), 1)
-    dd.add_method(EDDM(), 1)
-    dd.add_method(HDDM_A(), 1)
-    dd.add_method(HDDM_W(), 1)
-    dd.add_method(PageHinkley(), 1)
-    dd.add_method(KSWIN(), 1)
-    window_size = args.window_size
-    threshold = args.threshold
-    change_list = dd.get_voted_drift(
-        window_size=window_size, threshold=threshold
+    # print(data)
+
+    # dd = DriftDetection(data, verbose=False)
+    # dd.add_method(ADWIN(), 1)
+    # dd.add_method(DDM(), 1)
+    # dd.add_method(EDDM(), 1)
+    # dd.add_method(HDDM_A(), 1)
+    # dd.add_method(HDDM_W(), 1)
+    # dd.add_method(PageHinkley(), 1)
+    # dd.add_method(KSWIN(), 1)
+
+    window_size = cfg.drift.window_size
+    threshold = cfg.drift.threshold
+
+    change_list = []
+    # dd = KSWIN(window_size=window_size)
+    dd = EDDM()
+    for pos, ele in enumerate(data):
+        dd.add_element(ele)
+        if dd.detected_change():
+            change_list.append(pos)
+
+    print(
+        f"Start detecting drifts with window_size {window_size} and threshold {threshold}"
     )
-    change_list = [i + 1000 for i in change_list]
+
+    # change_list = dd.get_voted_drift(
+    #     window_size=window_size, threshold=threshold
+    # )
+    # change_list = [i + 1000 for i in change_list]
     change_list = sorted(change_list)
     # rec_time = int(time.time())
 
     n_dist = len(change_list)
     if n_dist == 0:
         print("No change detected")
-        return
+        # return
 
     print(f"Number of distributions: {n_dist}")
     plot(
         data,
         change_list,
         output_path
-        / f"plot_{input_path.stem}_{window_size}_{threshold}_{args.y}.png",
+        / f"plot_{input_path.stem}_{window_size}_{threshold}_{cfg.y}.png",
     )
 
     data = add_dist_label(orig_data, change_list, start_from=0)
     np.savetxt(
-        output_path / f"{input_path.stem}_{args.y}.csv",
+        # output_path / f"{input_path.stem}_{cfg.y}.csv",
+        outfile_path,
         data,
         fmt="%.4e",
         delimiter=",",
@@ -183,7 +212,7 @@ def main(args):
         ]  # get timestamp
 
     np.savetxt(
-        output_path / f"{input_path.stem}_{args.y}_cp.csv",
+        output_path / f"{input_path.stem}_{cfg.y}_cp.csv",
         changes,
         fmt="%d",
         delimiter=",",
@@ -194,44 +223,45 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="[Preprocess] Drift Detection"
-    )
-    parser.add_argument(
-        "input",
-        type=str,
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        default=f"preprocessed_data",
-    )
-    parser.add_argument(
-        "-y",
-        type=str,
-        choices=["cpu", "mem", "disk"],
-        default="cpu",
-        help="choose the y axis",
-    )
-    parser.add_argument(
-        "--threshold",
-        type=int,
-        default=300,
-        help="threshold for voting",
-    )
-    parser.add_argument(
-        "--window_size",
-        type=int,
-        default=75,
-        help="window size for voting",
-    )
-    parser.add_argument(
-        "--local",
-        action="store_true",
-    )
+    main()
+#     parser = argparse.ArgumentParser(
+#         description="[Preprocess] Drift Detection"
+#     )
+#     parser.add_argument(
+#         "input",
+#         type=str,
+#     )
+#     parser.add_argument(
+#         "-o",
+#         "--output",
+#         type=str,
+#         default=f"preprocessed_data",
+#     )
+#     parser.add_argument(
+#         "-y",
+#         type=str,
+#         choices=["cpu", "mem", "disk"],
+#         default="cpu",
+#         help="choose the y axis",
+#     )
+#     parser.add_argument(
+#         "--threshold",
+#         type=int,
+#         default=300,
+#         help="threshold for voting",
+#     )
+#     parser.add_argument(
+#         "--window_size",
+#         type=int,
+#         default=75,
+#         help="window size for voting",
+#     )
+#     parser.add_argument(
+#         "--local",
+#         action="store_true",
+#     )
 
-    args = parser.parse_args()
-    main(args)
+#     cfg = parser.parse_cfg()
+#     main(cfg)
 
 __all__ = ["DriftDetection", "add_dist_label"]

@@ -1,17 +1,17 @@
 dataset:
-  _target_: src.dataset.AlibabaMachineDataset
-  name: alibaba_machine
-  raw_path: /lcrc/project/FastBayes/rayandrew/machine_usage/m_881.csv
-machine_id: 881
-'y': disk
+  _target_: src.dataset.GoogleMachineDataset
+  name: google_machine
+  raw_path: ./raw_data/m_1.csv
+machine_id: 1
+'y': cpu
 base_path: /lcrc/project/FastBayes/rayandrew/sched-cl
-out_path: /lcrc/project/FastBayes/rayandrew/sched-cl/out/m_881_disk_naive
-filename: data/alibaba_machine/m_881/m_881_75-300/m_881_disk.csv
+out_path: /lcrc/project/FastBayes/rayandrew/sched-cl/out/google_machine/m_1_cpu_naive
+filename: data/google_machine/m_1/m_1_125-5/m_1_cpu.csv
 drift:
-  window_size: 75
-  threshold: 300
+  window_size: 125
+  threshold: 5
 cuda: 0
-sequential: true
+sequential: false
 seq_len: 5
 n_labels: 10
 lr: 0.001

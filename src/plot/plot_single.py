@@ -37,7 +37,7 @@ def predict(
         else "cpu"
     )
 
-    raw_data, n_exp, _ = (
+    dataset, raw_dataset  = (
         AlibabaMachineSequenceDataset(
             filename=data_path,
             n_labels=cfg.n_labels,
@@ -54,7 +54,7 @@ def predict(
         )
     )
     data = torch.utils.data.DataLoader(
-        raw_data,
+        dataset,
         batch_size=cfg.batch_size,
         shuffle=False,
         num_workers=cfg.n_workers,
@@ -115,7 +115,7 @@ def predict(
         # train_results = compute_perf(train_res)
         # res.train_results = TrainResult(**train_results)
 
-    return res, n_exp
+    return res, raw_dataset.n_experiences()
 
 
 @hydra.main(

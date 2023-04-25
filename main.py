@@ -99,7 +99,7 @@ def main(cfg: DictConfig):
     # ChoosenDataset = AlibabaMachineDatasetF
     ChoosenDataset = AlibabaMachineSequenceDataset
 
-    raw_train_dataset, n_experiences, input_size = ChoosenDataset(
+    train_dataset, raw_train_dataset = ChoosenDataset(
         filename=cfg.filename,
         n_labels=cfg.n_labels,
         subset="training",
@@ -107,7 +107,7 @@ def main(cfg: DictConfig):
         seq_len=cfg.seq_len,
         univariate=cfg.univariate,
     )
-    raw_test_dataset, _, _ = ChoosenDataset(
+    test_dataset, _raw_test_dataset = ChoosenDataset(
         filename=cfg.filename,
         n_labels=cfg.n_labels,
         subset="testing",
@@ -115,9 +115,6 @@ def main(cfg: DictConfig):
         seq_len=cfg.seq_len,
         univariate=cfg.univariate,
     )
-
-    train_dataset = raw_train_dataset
-    test_dataset = raw_test_dataset
 
     # Loggers
     loggers = [
@@ -129,7 +126,7 @@ def main(cfg: DictConfig):
     benchmark = nc_benchmark(
         train_dataset=train_dataset,
         test_dataset=test_dataset,
-        n_experiences=n_experiences,
+        n_experiences=raw_train_dataset.n_experiences(),
         shuffle=False,
         task_labels=False,
     )
@@ -139,7 +136,7 @@ def main(cfg: DictConfig):
     # model
     model = (
         LSTM(
-            input_size=input_size,
+            input_size=raw_train_dataset.input_size(),
             num_classes=cfg.n_labels,
             rnn_layers=3,
             hidden_size=512,
@@ -147,7 +144,7 @@ def main(cfg: DictConfig):
         )
         if cfg.sequential
         else MLP(
-            input_size=input_size,
+            input_size=raw_train_dataset.input_size(),
             num_classes=cfg.n_labels,
             hidden_layers=4,
             drop_rate=0.3,
@@ -280,7 +277,7 @@ def main(cfg: DictConfig):
             model,
             optimizer,
             criterion,
-            input_size=[input_size],
+            input_size=[raw_train_dataset.input_size()],
             mem_strength=30,
             mem_size=5000,
             train_mb_size=cfg.batch_size,
@@ -321,7 +318,7 @@ def main(cfg: DictConfig):
         )
         result = cl_strategy.eval(test_stream)
         results[exp.current_experience] = result
-        save_checkpoint(cl_strategy,  checkpoint_fname)
+        save_checkpoint(cl_strategy, checkpoint_fname)
 
     json.dump(
         results, open(output_folder / "train_results.json", "w")

@@ -58,7 +58,7 @@ class BaseGoogleMachineDataset(GoogleDataset):
 
         dist_labels = data[:, -1]
         labels = data[:, label_index]
-        # Normalize labels from 0 to 10
+        # Normalize labels from 0 to 1
         maxi = np.max(labels)
         mini = np.min(labels)
         labels -= mini
@@ -192,7 +192,144 @@ def GoogleMachineDataset(
     )
 
 
+class BaseGoogleMachineSequenceDataset(BaseGoogleMachineDataset):
+    def __init__(
+        self,
+        seq_len: int = 5,
+        univariate: bool = False,
+        flatten: bool = False,
+        *args,
+        **kwargs,
+    ):
+        self.seq_len = seq_len
+        self.univariate = univariate
+        self.flatten = flatten
+        super(BaseGoogleMachineSequenceDataset, self).__init__(
+            *args, **kwargs
+        )
+
+    # def _process_data(self, data, labels, dist_labels):
+    #     Xs = []
+    #     Dists = []
+    #     i = 0
+    #     if self.univariate:
+    #         while i + self.seq_len <= data.shape[0]:
+    #             ys = labels[i : i + self.seq_len]
+    #             Xs.append((ys[:-1], ys[-1]))
+    #             dists = dist_labels[i : i + self.seq_len]
+    #             dist = int(dists[-1])
+    #             Dists.append(dist)
+    #             i += 1
+    #     else:
+    #         # multivariate
+    #         while i + self.seq_len <= data.shape[0]:
+    #             mat = data[i : i + self.seq_len, :]
+    #             x = mat.flatten()
+    #             ys = labels[i : i + self.seq_len]
+    #             x = np.append(x, ys[:-1])
+    #             y = ys[-1]
+    #             dists = dist_labels[i : i + self.seq_len]
+    #             dist = int(dists[-1])
+    #             Xs.append((x, y))
+    #             Dists.append(dist)
+    #             i += 1
+    #     return Xs, Dists
+
+    def _process_data(self, data, labels, dist_labels):
+        Xs = []
+        Dists = []
+        i = 0
+        if self.univariate:
+            # TODO: add non-flatten options
+            while i + self.seq_len <= data.shape[0]:
+                ys = labels[i: i + self.seq_len]
+                Xs.append((ys[:-1], ys[-1]))
+                dists = dist_labels[i: i + self.seq_len]
+                dist = int(dists[-1])
+                Dists.append(dist)
+                i += 1
+        else:
+            # multivariate
+            if self.flatten:
+                while i + self.seq_len <= data.shape[0]:
+                    mat = data[i: i + self.seq_len, :]
+                    x = mat.flatten()
+                    ys = labels[i: i + self.seq_len]
+                    x = np.append(x, ys[:-1])
+                    y = ys[-1]
+                    dists = dist_labels[i: i + self.seq_len]
+                    dist = int(dists[-1])
+                    Xs.append((x, y))
+                    Dists.append(dist)
+                    i += 1
+            else:
+                # non-flatten
+                while i + self.seq_len <= data.shape[0]:
+                    mat = data[i: i + self.seq_len, :]
+                    x = mat
+                    # x = mat.flatten()
+                    ys = labels[i: i + self.seq_len]
+                    y = ys[-1]
+                    ydata = ys[:-1].reshape(-1, 1)
+                    num_missing = self.seq_len - len(ydata)
+                    zeros = np.zeros((num_missing, 1))
+                    ydata = np.concatenate([ydata, zeros], axis=0)
+                    x = np.concatenate([x, ydata], axis=1)
+                    dists = dist_labels[i: i + self.seq_len]
+                    dist = int(dists[-1])
+                    Xs.append((x, y))
+                    Dists.append(dist)
+                    i += 1
+        return Xs, Dists
+
+
+def google_machine_sequence_collate(batch):
+    tensors, targets, t_labels = [], [], []
+    for x, region, _dist_label, t_label in batch:
+        tensors += [x.t()]
+        targets += [torch.tensor(region)]
+        t_labels += [torch.tensor(t_label)]
+    # tensors = [item.t() for item in tensors]
+    tensors = torch.nn.utils.rnn.pad_sequence(
+        tensors, batch_first=True, padding_value=0.0
+    )
+    targets = torch.stack(targets)
+    t_labels = torch.stack(t_labels)
+    return tensors, targets, t_labels
+
+
+def GoogleMachineSequenceDataset(
+    filename: str,
+    n_labels: int = 10,
+    subset="train",
+    y: Literal["cpu", "mem"] = "cpu",
+    seq_len: int = 5,
+    univariate: bool = False,
+):
+    dataset = BaseGoogleMachineSequenceDataset(
+        filename=filename,
+        n_labels=n_labels,
+        subset=subset,
+        y=y,
+        seq_len=seq_len,
+        univariate=univariate,
+    )
+
+    # NOTE: might be slow in the future
+    dist_labels = [datapoint[2] for datapoint in dataset]
+    return (
+        make_classification_dataset(
+            dataset,
+            collate_fn=google_machine_sequence_collate,
+            targets=dist_labels,
+        ),
+        dataset,
+    )
+
+
 __all__ = [
     "BaseGoogleMachineDataset",
+    "BaseGoogleMachineSequenceDataset",
     "GoogleMachineDataset",
+    "GoogleMachineSequenceDataset"
 ]

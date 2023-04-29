@@ -7,6 +7,7 @@ import numpy as np
 
 TDatasetSubset = Literal["training", "testing", "all"]
 
+
 class BaseDataset(Dataset, metaclass=ABCMeta):
     TRAIN_RATIO = 0.8
 

@@ -56,25 +56,27 @@ class BaseGoogleMachineDataset(GoogleDataset):
         elif self.y_var == "mem":
             label_index = 3
 
-        # filter -1 and 101
-        lower_bound = 0
-        upper_bound = 100
-        bad_mask = (
-            np.isnan(data[:, label_index])
-            | ~np.isfinite(data[:, label_index])
-            | (data[:, label_index] < lower_bound)
-            | (data[:, label_index] > upper_bound)
-        )
-        data = data[~bad_mask]
-
         dist_labels = data[:, -1]
         labels = data[:, label_index]
-        labels = labels.astype(int)
-        # normalize labels
-        labels = np.maximum(labels, 0)
-        labels = np.minimum(labels, 99)
-        labels = labels // self.n_labels
+        # Normalize labels from 0 to 10
+        maxi = np.max(labels)
+        mini = np.min(labels)
+        labels -= mini
+        labels /= (maxi - mini)
+        # Now label is from 0 to 1
 
+        # Prevent label with value 10, because we wanna cast to Int
+        labels *= 9.98
+
+        # ROund labels before casting to int
+        labels = labels.astype(int)
+        unique_labels, counts = np.unique(labels, return_counts=True)
+
+        min_count_idx = np.argmin(counts)
+        least_common_value = unique_labels[min_count_idx]
+        least_common_count = counts[min_count_idx]
+        print("The least common value in labels is",
+              least_common_value, "with a count of", least_common_count)
         data = np.delete(data, label_index, axis=1)
         data = data[
             :, 2:-1
@@ -95,10 +97,18 @@ class BaseGoogleMachineDataset(GoogleDataset):
 
     def _load_data(self):
         assert self.subset in ["training", "testing", "all"]
-
         data = np.genfromtxt(self.filename, delimiter=",")
         data = self._process_nan(data)
         data, labels, dist_labels = self._clean_data(data)
+
+        unique_labels, counts = np.unique(dist_labels, return_counts=True)
+        min_count_idx = np.argmin(counts)
+
+        least_common_value = unique_labels[min_count_idx]
+        least_common_count = counts[min_count_idx]
+
+        print("The least common value in labels is",
+              least_common_value, "with a count of", least_common_count)
         Data, Dists = self._process_data(data, labels, dist_labels)
 
         if self.subset == "all":
@@ -108,7 +118,6 @@ class BaseGoogleMachineDataset(GoogleDataset):
             self.dist_labels = Dists
             self.outputs = y
             return
-
         (
             Data_train,
             Data_test,
@@ -160,9 +169,11 @@ class BaseGoogleMachineDataset(GoogleDataset):
 
 def GoogleMachineDataset(
     filename: str,
+    univariate: str,
     n_labels: int = 10,
     subset: TDatasetSubset = "train",
     y: TYVariable = "cpu",
+    seq_len: int = 0,
 ):
     dataset = BaseGoogleMachineDataset(
         filename=filename,

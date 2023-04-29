@@ -1,3 +1,11 @@
+import ruptures as rpt
+from src.preprocess.online_cp import Detector, StudentTMulti
+from skmultiflow.drift_detection.hddm_w import HDDM_W
+from skmultiflow.drift_detection.hddm_a import HDDM_A
+from skmultiflow.drift_detection.eddm import EDDM
+from skmultiflow.drift_detection.adwin import ADWIN
+from skmultiflow.drift_detection import DDM, KSWIN, PageHinkley
+from omegaconf import DictConfig
 import argparse
 from collections import deque
 from pathlib import Path
@@ -6,16 +14,7 @@ from typing import Sequence
 import hydra
 import matplotlib.pyplot as plt
 import numpy as np
-print(np.__version__)
-from omegaconf import DictConfig
-from skmultiflow.drift_detection import DDM, KSWIN, PageHinkley
-from skmultiflow.drift_detection.adwin import ADWIN
-from skmultiflow.drift_detection.eddm import EDDM
-from skmultiflow.drift_detection.hddm_a import HDDM_A
-from skmultiflow.drift_detection.hddm_w import HDDM_W
-from src.preprocess.online_cp import Detector, StudentTMulti
 
-import ruptures as rpt
 
 class DriftDetection:
     def __init__(self, data_stream, verbose=True):
@@ -98,11 +97,11 @@ def add_dist_label(data, dist: Sequence[int], start_from=0):
     distributions[: dist[0]] = start_from
     for i in range(len(dist) - 2):
         print(f"Dist from {dist[i]} to {dist[i+1]}: {i+1}")
-        distributions[dist[i] : dist[i + 1]] = i + 1 + start_from
+        distributions[dist[i]: dist[i + 1]] = i + 1 + start_from
     print(
         f"Dist from {dist[len(dist) - 1]} to {dist[-1]}: {len(dist) - 1}"
     )
-    distributions[dist[-1] :] = len(dist) - 1 + start_from
+    distributions[dist[-1]:] = len(dist) - 1 + start_from
 
     print(np.unique(distributions, return_counts=True))
 
@@ -148,9 +147,9 @@ def main(cfg: DictConfig):
             label_index = 3
         else:
             raise ValueError("Invalid y value")
-    
-    ## Nx2 Matrix, with columns end time and cpu usage.
-    data_end = data[:, 1:3 ]
+
+    # Nx2 Matrix, with columns end time and cpu usage.
+    data_end = data[:, 1:3]
     data = data[:, label_index]
     window_size = cfg.drift.window_size
     threshold = cfg.drift.threshold
@@ -159,7 +158,7 @@ def main(cfg: DictConfig):
     dd = DriftDetection(data, verbose=False)
     if "alibaba" in cfg.dataset.name:
         print(
-        f"Start detecting drifts with window_size {window_size} and threshold {threshold}"
+            f"Start detecting drifts with window_size {window_size} and threshold {threshold}"
         )
         dd.add_method(ADWIN(), 1)
         dd.add_method(DDM(), 1)
@@ -169,26 +168,24 @@ def main(cfg: DictConfig):
         dd.add_method(PageHinkley(), 1)
         dd.add_method(KSWIN(), 1)
     elif "google" in cfg.dataset.name:
-        # can put this in dvc
         method = cfg.drift.google_method
-
+        # can put this in dvc
         if "ruptures" in method:
             # Ruptures model. It performs really well!
             model = rpt.Pelt(model="rbf").fit(data)
 
             # get the change point locations higher penalty = less change points. The model won't want to predict wrong.
-            change_list = model.predict(pen=cfg.drift.ruptures_penalty)
-        ## CAUTION! Takes a long time
+            change_list = model.predict(pen=cfg.drift.ruptures_penalty)[:-1]
+        # CAUTION! Takes a long time
         elif "online_cp" in method:
 
             # print the change point locations
 
-            ## data_end = Nx2 Matrix, with columns end time and cpu usage.
+            # data_end = Nx2 Matrix, with columns end time and cpu usage.
             # Number of rows
             detector = Detector(data_end.shape[0])
             # Number of cols
             observation_likelihood = StudentTMulti(data_end.shape[1])
-            
 
             R_mat = np.zeros((data_end.shape[0], data_end.shape[0]))
             R_mat_cumfreq = np.zeros((data_end.shape[0], data_end.shape[0]))
@@ -198,9 +195,10 @@ def main(cfg: DictConfig):
             for t, x in enumerate(data_end[:, :]):
                 # ## Attempt1: Normalize end_time because if not, value will be too big and matrix will be singular.
                 # x[0] = x[0]-data_end[0][0]
-
-                ## Attemp2: Use 1...N instead of end_time because end_time has regular 5 minutes interval anyways.
+                print(t, x[0])
+                # Attemp2: Use 1...N instead of end_time because end_time has regular 5 minutes interval anyways.
                 x[0] = t
+                print(t)
                 # print(CP)
                 detector.detect(
                     x, observation_likelihood=observation_likelihood
@@ -210,11 +208,11 @@ def main(cfg: DictConfig):
                 R_old = detector.R_old
 
                 try:
-                    R_mat[t, 0 : len(R_old)] = R_old
-                    R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(R_old)
+                    R_mat[t, 0: len(R_old)] = R_old
+                    R_mat_cumfreq[t, 0: len(R_old)] = np.cumsum(R_old)
                 except:
-                    R_mat[t, 0 : len(R_old)] = R_old[0:-1]
-                    R_mat_cumfreq[t, 0 : len(R_old)] = np.cumsum(
+                    R_mat[t, 0: len(R_old)] = R_old[0:-1]
+                    R_mat_cumfreq[t, 0: len(R_old)] = np.cumsum(
                         R_old[0:-1]
                     )
             # print(CP)
@@ -247,7 +245,7 @@ def main(cfg: DictConfig):
                 if (Mrun[i] - Mrun[j]) > 5:
                     cnt = 0
                     for k in range(1, 20):
-                        if (i + k < T) & ((Mrun[i] - Mrun[i + k]) > 10):
+                        if (i + k < len(Mrun)) and ((Mrun[i] - Mrun[i + k]) > 10):
                             cnt = cnt + 1
                         else:
                             break
@@ -255,8 +253,7 @@ def main(cfg: DictConfig):
                         CP_CDF.append(i + 1)
             print("CP_CDF")
             print(CP_CDF)
-            change_list=CP_CDF
-
+            change_list = CP_CDF
 
     # dd = KSWIN(window_size=window_size)
     # for pos, ele in enumerate(data):

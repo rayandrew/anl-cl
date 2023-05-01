@@ -1,3 +1,4 @@
+from functools import cached_property
 from pathlib import Path
 from typing import Literal, Union
 
@@ -28,7 +29,7 @@ class BaseAlibabaMachineDataset(AlibabaDataset):
             n_labels (int): Number of labels to use
             train_ratio (float, optional): Ratio of training data. Defaults to AlibabaDataset.TRAIN_RATIO.
             y (Literal["cpu", "mem", "disk"], optional): Variable to predict. Defaults to "cpu".
-            subset (Literal["training", "testing", "all"], optional): Subset of the dataset. Defaults to "all".
+            subset (Literal["training", "testing", "all"], optional): Subset of the dataset. Defaults to "training".
         """
         assert subset in ["training", "testing", "all"]
         assert y in ["cpu", "mem", "disk"]
@@ -91,38 +92,42 @@ class BaseAlibabaMachineDataset(AlibabaDataset):
             Dists.append(dist)
         return Xs, Dists
 
-    def _load_data(self):
-        assert self.subset in ["training", "testing", "all"]
-
+    @cached_property
+    def _raw_data(self):
         data = np.genfromtxt(self.filename, delimiter=",")
         data = self._process_nan(data)
         data, labels, dist_labels = self._clean_data(data)
-        Data, Dists = self._process_data(data, labels, dist_labels)
+        return self._process_data(data, labels, dist_labels)
+
+    def _load_data(self):
+        assert self.subset in ["training", "testing", "all"]
+
+        data, dists = self._raw_data
 
         if self.subset == "all":
-            X = [d[0] for d in Data]
-            y = [d[1] for d in Data]
+            X = [d[0] for d in data]
+            y = [d[1] for d in data]
             self.data = X
-            self.dist_labels = Dists
+            self.dist_labels = dists
             self.outputs = y
             return
 
         (
-            Data_train,
-            Data_test,
-            Dist_train,
-            Dist_test,
+            data_train,
+            data_test,
+            dist_train,
+            dist_test,
         ) = split_evenly_by_classes(
-            Data, Dists, train_ratio=self.train_ratio
+            data, dists, train_ratio=self.train_ratio
         )
 
-        X_train = [d[0] for d in Data_train]
-        y_train = [d[1] for d in Data_train]
-        dist_labels_train = Dist_train
+        X_train = [d[0] for d in data_train]
+        y_train = [d[1] for d in data_train]
+        dist_labels_train = dist_train
 
-        X_test = [d[0] for d in Data_test]
-        y_test = [d[1] for d in Data_train]
-        dist_labels_test = Dist_test
+        X_test = [d[0] for d in data_test]
+        y_test = [d[1] for d in data_train]
+        dist_labels_test = dist_test
 
         if self.subset == "training":
             self.data = X_train
@@ -133,6 +138,7 @@ class BaseAlibabaMachineDataset(AlibabaDataset):
             self.dist_labels = dist_labels_test
             self.outputs = y_test
 
+    @property
     def input_size(self) -> int:
         if self.data is None:
             raise ValueError("Dataset not loaded yet")
@@ -140,6 +146,7 @@ class BaseAlibabaMachineDataset(AlibabaDataset):
             raise ValueError("Dataset is empty")
         return len(self.data[0])
 
+    @property
     def n_experiences(self) -> int:
         if self._n_experiences is None:
             self._n_experiences = len(np.unique(self.dist_labels))
@@ -364,7 +371,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    dataset, n_exp, input_size = AlibabaMachineSequenceDataset(
+    dataset, raw_dataset = AlibabaMachineSequenceDataset(
         filename=args.data,
         n_labels=args.n_labels,
         y=args.y,
@@ -372,8 +379,8 @@ if __name__ == "__main__":
         seq_len=args.seq_len,
         univariate=args.univariate,
     )
-    print("INPUT SIZE", input_size)
-    print("N EXPERIENCES", n_exp)
+    print("INPUT SIZE", raw_dataset.input_size)
+    print("N EXPERIENCES", raw_dataset.n_experiences)
     # print("TARGETS", np.unique(dataset.targets))
     # print("OUTPUTS", np.unique(dataset.outputs))
     print("LENGTH", len(dataset))

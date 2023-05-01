@@ -7,9 +7,11 @@ import numpy as np
 
 TDatasetSubset = Literal["training", "testing", "all"]
 
+
 class BaseDataset(Dataset, metaclass=ABCMeta):
     TRAIN_RATIO = 0.8
 
+    @property
     @abstractmethod
     def input_size(self) -> int:
         raise NotImplementedError
@@ -24,6 +26,7 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
             arr[i][mask] = arr[i - 1][mask]
         return arr
 
+    @property
     @abstractmethod
     def n_experiences(self) -> int:
         raise NotImplementedError

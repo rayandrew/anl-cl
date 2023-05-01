@@ -115,7 +115,7 @@ def predict(
         # train_results = compute_perf(train_res)
         # res.train_results = TrainResult(**train_results)
 
-    return res, raw_dataset.n_experiences()
+    return res, raw_dataset.n_experiences
 
 
 @hydra.main(

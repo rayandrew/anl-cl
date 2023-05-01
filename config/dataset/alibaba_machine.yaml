@@ -1,3 +1,4 @@
-_target_: src.dataset.AlibabaMachineDataset
-name: alibaba_machine
+defaults:
+  - dataset/base_alibaba_machine_non_seq
+
 raw_path: "/lcrc/project/FastBayes/rayandrew/machine_usage/m_${machine_id}.csv"

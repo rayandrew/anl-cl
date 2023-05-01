@@ -33,6 +33,7 @@ mamba install -c conda-forge hydra-core
 mamba install -c conda-forge dvc
 # mamba install -c conda-forge neptune neptune-sacred
 pip install -U "neptune[sacred]"
+pip install -U "attrs"
 ```
 
 ## Running

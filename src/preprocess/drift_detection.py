@@ -148,35 +148,32 @@ def main(cfg: DictConfig):
 
     data = data[:, label_index]
 
-    # print(data)
-
-    # dd = DriftDetection(data, verbose=False)
-    # dd.add_method(ADWIN(), 1)
-    # dd.add_method(DDM(), 1)
-    # dd.add_method(EDDM(), 1)
-    # dd.add_method(HDDM_A(), 1)
-    # dd.add_method(HDDM_W(), 1)
-    # dd.add_method(PageHinkley(), 1)
-    # dd.add_method(KSWIN(), 1)
+    dd = DriftDetection(data, verbose=False)
+    dd.add_method(ADWIN(), 1)
+    dd.add_method(DDM(), 1)
+    dd.add_method(EDDM(), 1)
+    dd.add_method(HDDM_A(), 1)
+    dd.add_method(HDDM_W(), 1)
+    dd.add_method(PageHinkley(), 1)
+    dd.add_method(KSWIN(), 1)
 
     window_size = cfg.drift.window_size
     threshold = cfg.drift.threshold
 
     change_list = []
     # dd = KSWIN(window_size=window_size)
-    dd = EDDM()
-    for pos, ele in enumerate(data):
-        dd.add_element(ele)
-        if dd.detected_change():
-            change_list.append(pos)
+    # for pos, ele in enumerate(data):
+    #     dd.add_element(ele)
+    #     if dd.detected_change():
+    #         change_list.append(pos)
 
     print(
         f"Start detecting drifts with window_size {window_size} and threshold {threshold}"
     )
 
-    # change_list = dd.get_voted_drift(
-    #     window_size=window_size, threshold=threshold
-    # )
+    change_list = dd.get_voted_drift(
+        window_size=window_size, threshold=threshold
+    )
     # change_list = [i + 1000 for i in change_list]
     change_list = sorted(change_list)
     # rec_time = int(time.time())
@@ -207,9 +204,7 @@ def main(cfg: DictConfig):
     changes[:, 0] = change_list
 
     for i in range(len(change_list)):
-        changes[i, 1] = orig_data[
-            change_list[i] - 1000, 1
-        ]  # get timestamp
+        changes[i, 1] = orig_data[change_list[i], 1]  # get timestamp
 
     np.savetxt(
         output_path / f"{input_path.stem}_{cfg.y}_cp.csv",
@@ -224,44 +219,5 @@ def main(cfg: DictConfig):
 
 if __name__ == "__main__":
     main()
-#     parser = argparse.ArgumentParser(
-#         description="[Preprocess] Drift Detection"
-#     )
-#     parser.add_argument(
-#         "input",
-#         type=str,
-#     )
-#     parser.add_argument(
-#         "-o",
-#         "--output",
-#         type=str,
-#         default=f"preprocessed_data",
-#     )
-#     parser.add_argument(
-#         "-y",
-#         type=str,
-#         choices=["cpu", "mem", "disk"],
-#         default="cpu",
-#         help="choose the y axis",
-#     )
-#     parser.add_argument(
-#         "--threshold",
-#         type=int,
-#         default=300,
-#         help="threshold for voting",
-#     )
-#     parser.add_argument(
-#         "--window_size",
-#         type=int,
-#         default=75,
-#         help="window size for voting",
-#     )
-#     parser.add_argument(
-#         "--local",
-#         action="store_true",
-#     )
-
-#     cfg = parser.parse_cfg()
-#     main(cfg)
 
 __all__ = ["DriftDetection", "add_dist_label"]

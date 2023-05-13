@@ -13,6 +13,8 @@ from skmultiflow.drift_detection.eddm import EDDM
 from skmultiflow.drift_detection.hddm_a import HDDM_A
 from skmultiflow.drift_detection.hddm_w import HDDM_W
 
+from src.utils.dataset import get_alibaba_output, get_google_output
+
 
 class DriftDetection:
     def __init__(self, data_stream, verbose=True):
@@ -113,7 +115,7 @@ def add_dist_label(data, dist: Sequence[int], start_from=0):
     version_base=None,
 )
 def main(cfg: DictConfig):
-    input_path = Path(cfg.dataset.raw_path)
+    input_path = Path(cfg.dataset.path)
     orig_data = np.genfromtxt(input_path, delimiter=",")
 
     outfile_path = Path(cfg.filename)
@@ -123,30 +125,11 @@ def main(cfg: DictConfig):
     data = orig_data
 
     if "alibaba" in cfg.dataset.name:
-        if cfg.local:
-            label_index = 9
-            if cfg.y == "cpu":
-                label_index = 7
-            elif cfg.y == "mem":
-                label_index = 8
-            orig_data = orig_data[1:]
-            data = data[1:]
-        else:
-            label_index = 8
-            if cfg.y == "cpu":
-                label_index = 2
-            elif cfg.y == "mem":
-                label_index = 3
+        data = get_alibaba_output(data, cfg.y)
     elif "google" in cfg.dataset.name:
-        data = data[1:]  # google contains csv headers
-        if cfg.y == "cpu":
-            label_index = 2
-        elif cfg.y == "mem":
-            label_index = 3
-        else:
-            raise ValueError("Invalid y value")
-
-    data = data[:, label_index]
+        data = get_google_output(data, cfg.y)
+    else:
+        raise ValueError("Dataset name not found")
 
     dd = DriftDetection(data, verbose=False)
     dd.add_method(ADWIN(), 1)

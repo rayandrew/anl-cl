@@ -1,13 +1,13 @@
 defaults:
-  - dataset: alibaba_machine
-  # - dataset: google_machine
+  # - dataset: alibaba_machine
+  - dataset: google_machine
   - _self_
   # - train/model: resnet
   # - train/optimizer: sgd
 
-machine_id: 1
-y: cpu 
-base_path: /lcrc/project/FastBayes/rayandrew/sched-cl # needed for SLURM
+machine_id: 5
+y: cpu
+base_path: /Users/rayandrew/Research/argonne-cl/sched-cl # needed for SLURM
 out_path: ${base_path}/out/${dataset.name}/m_${machine_id}_${y}_${strategy}
 filename: data/${dataset.name}/m_${machine_id}/m_${machine_id}_${drift.window_size}-${drift.threshold}/m_${machine_id}_${y}.csv
 drift:
@@ -21,7 +21,7 @@ lr: 0.001
 batch_size: 32
 epoch: 8
 n_workers: 4
-strategy: ewc 
+strategy: ewc
 tolerance: 1
 univariate: false
 seed: 3003

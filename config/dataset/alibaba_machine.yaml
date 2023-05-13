@@ -1,4 +1,5 @@
-defaults:
-  - dataset/base_alibaba_machine_non_seq
+# defaults:
+#   - dataset/base_alibaba_machine_non_seq
 
-raw_path: "/lcrc/project/FastBayes/rayandrew/machine_usage/m_${machine_id}.csv"
+name: alibaba_machine
+path: "./raw_data/m_${machine_id}.csv"

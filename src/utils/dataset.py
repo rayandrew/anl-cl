@@ -1,6 +1,5 @@
 from typing import Literal
 
-import numpy as np
 import numpy.typing as npt
 
 TDatasetName = Literal["alibaba", "google"]
@@ -23,9 +22,9 @@ def get_alibaba_output(data: npt.ArrayLike, y: TOutputVar):
 
 
 def get_google_output_idx(y: TOutputVar):
-    if cfg.y == "cpu":
+    if y == "cpu":
         label_index = 2
-    elif cfg.y == "mem":
+    elif y == "mem":
         label_index = 3
     else:
         raise ValueError("Invalid y value")

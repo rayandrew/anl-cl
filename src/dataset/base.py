@@ -8,6 +8,14 @@ import numpy as np
 TDatasetSubset = Literal["training", "testing", "all"]
 
 
+def assert_dataset_subset(subset: TDatasetSubset):
+    assert subset in [
+        "training",
+        "testing",
+        "all",
+    ], "subset must be one of 'training', 'testing', 'all'"
+
+
 class BaseDataset(Dataset, metaclass=ABCMeta):
     TRAIN_RATIO = 0.8
 
@@ -16,23 +24,13 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
     def input_size(self) -> int:
         raise NotImplementedError
 
-    @staticmethod
-    def _process_nan(arr, fill=0):
-        # change to previous row
-        mask = np.isnan(arr[0])
-        arr[0][mask] = fill
-        for i in range(1, len(arr)):
-            mask = np.isnan(arr[i])
-            arr[i][mask] = arr[i - 1][mask]
-        return arr
-
-    @property
-    @abstractmethod
-    def n_experiences(self) -> int:
-        raise NotImplementedError
+    # @property
+    # @abstractmethod
+    # def n_experiences(self) -> int:
+    #     raise NotImplementedError
 
 
-__all__ = ["BaseDataset", "TDatasetSubset"]
+__all__ = ["BaseDataset", "TDatasetSubset", "assert_dataset_subset"]
 
 
 # non-sequence

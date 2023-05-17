@@ -1,5 +1,0 @@
-# defaults:
-#   - dataset/base_alibaba_machine_non_seq
-
-name: alibaba_machine
-path: "./raw_data/m_${machine_id}.csv"

@@ -30,14 +30,6 @@ class OfflineNoRetrainingTrainer(BaseTrainer):
 
 
 class OfflineRetrainingTrainer(OfflineNoRetrainingTrainer):
-    # def __init__(
-    #     self,
-    #     strategy: SupervisedTemplate,
-    #     benchmark: GenericCLScenario,
-    #     num_workers: int = 4,
-    # ):
-    #     super().__init__(strategy, benchmark, num_workers)
-
     def train(self) -> Dict[int, Dict[str, float]]:
         results = {}
         for experience in self.benchmark.train_stream:

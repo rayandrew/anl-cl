@@ -14,6 +14,10 @@ class TaskSummary:
     acc: Sequence[float] = field(default_factory=list)
     forgetting: Sequence[float] = field(default_factory=list)
     bwt: Sequence[float] = field(default_factory=list)
+    # f1: Sequence[float] = field(default_factory=list)
+    # precision: Sequence[float] = field(default_factory=list)
+    # recall: Sequence[float] = field(default_factory=list)
+    # auroc: Sequence[float] = field(default_factory=list)
 
 
 @dataclass
@@ -26,6 +30,10 @@ class TrainingSummary:
     avg_forgetting: Sequence[float] = field(default_factory=list)
     avg_bwt: Sequence[float] = field(default_factory=list)
     task_data: Dict[int, TaskSummary] = field(default_factory=dict)
+    avg_f1: Sequence[float] = field(default_factory=list)
+    avg_precision: Sequence[float] = field(default_factory=list)
+    avg_recall: Sequence[float] = field(default_factory=list)
+    avg_auroc: Sequence[float] = field(default_factory=list)
 
 
 def generate_summary_dict(
@@ -50,6 +58,10 @@ def generate_summary_dict(
         "avg_forgetting": [],
         "avg_bwt": [],
         "task_data": {},
+        "avg_f1": [],
+        "avg_precision": [],
+        "avg_recall": [],
+        "avg_auroc": [],
     }
 
     if not path.exists():
@@ -70,6 +82,14 @@ def generate_summary_dict(
                 res["avg_forgetting"].append(val)
             elif "StreamBWT_Tol/eval_phase/test_stream" in key:
                 res["avg_bwt"].append(val)
+            elif "F1/eval_phase/test_stream" in key:
+                res["avg_f1"].append(val)
+            elif "Precision_/eval_phase/test_stream" in key:
+                res["avg_precision"].append(val)
+            elif "Recall/eval_phase/test_stream" in key:
+                res["avg_recall"].append(val)
+            elif "AUROC/eval_phase/test_stream" in key:
+                res["avg_auroc"].append(val)
             elif (
                 "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000"
                 in key
@@ -140,8 +160,8 @@ def generate_summary_table(res: TrainingSummary):
         raise ValueError("No tasks found in the results.")
 
     table = Texttable()
-    table.set_cols_align(["c", "c", "c", "c"])
-    table.set_cols_valign(["m", "m", "m", "b"])
+    table.set_cols_align(["c", "c", "c", "c", "c", "c", "c", "c"])
+    table.set_cols_valign(["m", "m", "m", "m", "m", "m", "m", "m"])
 
     for task in range(res.n_tasks):
         print(task)
@@ -152,12 +172,20 @@ def generate_summary_table(res: TrainingSummary):
                     "Avg Test Acc",
                     "Avg Forgetting",
                     "Avg BWT",
+                    "Avg F1",
+                    "Avg Precision",
+                    "Avg Recall",
+                    "Avg AUROC",
                 ],
                 [
                     task,
                     res.avg_acc[task],
                     res.avg_forgetting[task],
                     res.avg_bwt[task],
+                    res.avg_f1[task],
+                    res.avg_precision[task],
+                    res.avg_recall[task],
+                    res.avg_auroc[task],
                 ],
             ]
         )
@@ -177,11 +205,23 @@ def generate_task_table(res: TaskSummary):
         if task > task_id:
             table.add_rows(
                 [
-                    ["Acc", "Forgetting", "BWT"],
+                    [
+                        "Acc",
+                        "Forgetting",
+                        "BWT",
+                        # "F1",
+                        # "Precision",
+                        # "Recall",
+                        # "AUROC",
+                    ],
                     [
                         res.acc[task],
                         res.forgetting[task - task_id - 1],
                         res.bwt[task - task_id - 1],
+                        # res.f1[task - task_id - 1],
+                        # res.precision[task - task_id - 1],
+                        # res.recall[task - task_id - 1],
+                        # res.auroc[task - task_id - 1],
                     ],
                 ]
             )
@@ -189,8 +229,24 @@ def generate_task_table(res: TaskSummary):
 
         table.add_rows(
             [
-                ["Acc", "Forgetting", "BWT"],
-                [res.acc[task], "N/A", "N/A"],
+                [
+                    "Acc",
+                    "Forgetting",
+                    "BWT",
+                    # "F1",
+                    # "Precision",
+                    # "Recall",
+                    # "AUROC",
+                ],
+                [
+                    res.acc[task],
+                    "N/A",
+                    "N/A",
+                    # "N/A",
+                    # "N/A",
+                    # "N/A",
+                    # "N/A",
+                ],
             ]
         )
 
@@ -213,7 +269,7 @@ __all__ = [
 
 if __name__ == "__main__":
     summary = generate_summary(
-        "./temp-out/global/seq/multivariate/m_881_mem/gss/train_results.json"
+        "./out/training/offline-classification-retrain-chunks-from-scratch/alibaba/m_881/train_results.json"
     )
     # print(summary)
     print(generate_summary_table(summary).draw())

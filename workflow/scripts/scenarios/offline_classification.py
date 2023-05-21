@@ -79,7 +79,7 @@ def get_dataset(dataset: str, scenario: str, input_path: Path, y: str, num_class
             raise ValueError("Unknown dataset")
 
     match scenario:
-        case "offline_no_retraining" | "offline_retrain_chunks":
+        case "offline_no_retrain" | "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive":
             dataset = Dataset(
                 filename=input_path,
                 n_labels=num_classes,
@@ -96,10 +96,10 @@ def get_dataset(dataset: str, scenario: str, input_path: Path, y: str, num_class
 
 def get_trainer(scenario: str, cl_strategy, benchmark, num_workers: int = 4):
     match scenario:
-        case "offline_no_retraining":
+        case "offline_no_retrain":
             from src.trainers import OfflineNoRetrainingTrainer
             trainer = OfflineNoRetrainingTrainer(cl_strategy, benchmark=benchmark, num_workers=num_workers)
-        case "offline_retrain_chunks":
+        case "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive":
             from src.trainers import OfflineRetrainingTrainer 
             trainer = OfflineRetrainingTrainer(cl_strategy, benchmark=benchmark, num_workers=num_workers)
         case _:
@@ -109,7 +109,7 @@ def get_trainer(scenario: str, cl_strategy, benchmark, num_workers: int = 4):
 
 def get_benchmark(scenario, dataset):
     match scenario:
-        case "offline_no_retraining" | "offline_retrain_chunks":
+        case "offline_no_retrain" | "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive":
             # creating benchmark
             train_subsets = [subset.train_dataset for subset in dataset]
             test_subsets = [subset.test_dataset for subset in dataset]
@@ -118,13 +118,44 @@ def get_benchmark(scenario, dataset):
             raise ValueError("Unknown scenario")
     return benchmark
 
+def save_train_results(results: dict, output_folder: Path, model: torch.nn.Module):
+    # Cleaning up ====
+    with open(output_folder / "train_results.json", "w") as results_file:
+        json.dump(results, results_file, default=lambda _: "<not serializable>")
+
+    # Save model ====
+    log.info("Saving model")
+    model_name = output_folder / "model.pt"
+    model_scripted = torch.jit.script(model)
+    model_scripted.save(model_name)
+
+    # Print results ====
+    out_file = open(output_folder / "train_results.txt", "w")
+    for key in results:
+        print_and_write(f"Experience #{key}", out_file)
+        sorted_results = sorted(
+            results[key].keys(), key=lambda x: x.lower().strip()
+        )
+        for k in sorted_results:
+            print_and_write(f"{k.strip()}: {results[key][k]}", out_file)
+        print_and_write("", out_file)
+
+    # Generating summary ====
+    log.info("Printing summary")
+    summary = generate_summary(output_folder / "train_results.json")
+    table = generate_summary_table(summary)
+    print_and_write(table.draw(), out_file)
+
+
+
+def evaluation(test_stream):
+    pass
 
 
 def main():
     config = snakemake.config
     dataset_config = snakemake.params.dataset_config
     training_config = snakemake.params.training_config
-    fine_tune = snakemake.params.fine_tune
     scenario = snakemake.params.scenario
     dataset = snakemake.params.dataset
 
@@ -134,7 +165,6 @@ def main():
 
     current_time = int(datetime.now().timestamp())
     run_name = f"{current_time}_{dataset}_{scenario}_{input_path.stem}"
-    run_name += f"_{fine_tune}" if fine_tune else "_no_fine_tune"
 
     output_folder = Path(str(snakemake.output))
     output_folder.mkdir(parents=True, exist_ok=True)
@@ -151,7 +181,6 @@ def main():
     log.info("Dataset config: %s", dataset_config)
     log.info("Training config: %s", training_config)
     log.info("Scenario config: %s", scenario_config)
-    log.info("Fine tune model: %s", fine_tune)
 
     # Device ====
     device = get_device(config)
@@ -192,77 +221,61 @@ def main():
         TextLogger(sys.stderr),
     ]
 
+    wandb_enable = False
     if "enable" in wandb_config and wandb_config["enable"]:
         from avalanche.logging.wandb_logger import WandBLogger
+        wandb_enable = True
         loggers.append(WandBLogger(project_name=wandb_config["project"], run_name=run_name))
 
 
     # Evaluation ====
     eval_plugin = EvaluationPlugin(
-        *get_classification_default_metrics(tolerance=training_config["classification"]["evaluation"]["tolerance"]),
+        *get_classification_default_metrics(num_classes= num_classes, tolerance=training_config["classification"]["evaluation"]["tolerance"]),
         confusion_matrix_metrics(
-            stream=True, wandb=True, class_names=[str(i) for i in range(num_classes)], save_image=True
+            stream=True, wandb=wandb_enable, class_names=[str(i) for i in range(num_classes)], save_image=True
         ),
         loggers=loggers
     )
 
     # Strategy ====
-    if fine_tune:
-        cl_strategy = Naive(
-            model,
-            optimizer,
-            criterion,
-            train_mb_size=training_config["batch_size"],
-            train_epochs=training_config["epochs"],
-            eval_mb_size=training_config["batch_size"],
-            evaluator=eval_plugin,
-            device=device,
-            # eval_every=-1,  # at the end of each experience
-        )
-    else:
-        cl_strategy = FromScratchTraining(
-            model,
-            optimizer,
-            criterion,
-            train_mb_size=training_config["batch_size"],
-            train_epochs=training_config["epochs"],
-            eval_mb_size=training_config["batch_size"],
-            evaluator=eval_plugin,
-            device=device,
-            # eval_every=-1,  # at the end of each experience
-        )
-
+    match scenario:
+        case "offline_no_retrain" | "offline_classification_retrain_chunks_from_scratch":
+            cl_strategy = FromScratchTraining(
+                model,
+                optimizer,
+                criterion,
+                train_mb_size=training_config["batch_size"],
+                train_epochs=training_config["epochs"],
+                eval_mb_size=training_config["batch_size"],
+                evaluator=eval_plugin,
+                device=device,
+                # eval_every=-1,  # at the end of each experience
+            )         
+        case "offline_classification_retrain_chunks_naive": 
+            cl_strategy = Naive(
+                model,
+                optimizer,
+                criterion,
+                train_mb_size=training_config["batch_size"],
+                train_epochs=training_config["epochs"],
+                eval_mb_size=training_config["batch_size"],
+                evaluator=eval_plugin,
+                device=device,
+                # eval_every=-1,  # at the end of each experience
+            )
+        case _:
+            raise ValueError("Unknown scenario")
+        
     # Training ====
     log.info("Starting training...")
     trainer = get_trainer(scenario, cl_strategy=cl_strategy, benchmark=benchmark, num_workers=config.get("num_workers", 4))
-    results = trainer.train()
+    train_results = trainer.train()
     log.info("Training finished")
 
-    # Cleaning up ====
-    with open(output_folder / "train_results.json", "w") as results_file:
-        json.dump(results, results_file, default=lambda o: "<not serializable>")
+    save_train_results(results=train_results, output_folder=output_folder, model=model)
 
-    # save the model
-    log.info("Saving model")
-    model_name = output_folder / "model.pt"
-    model_scripted = torch.jit.script(model)
-    model_scripted.save(model_name)
-
-    # print results
-    out_file = open(output_folder / "train_results.txt", "w")
-    for key in results:
-        print_and_write(f"Experience #{key}", out_file)
-        sorted_results = sorted(
-            results[key].keys(), key=lambda x: x.lower().strip()
-        )
-        for k in sorted_results:
-            print_and_write(f"{k.strip()}: {results[key][k]}", out_file)
-        print_and_write("", out_file)
-
-    log.info("Printing summary")
-    summary = generate_summary(output_folder / "train_results.json")
-    table = generate_summary_table(summary)
-    print_and_write(table.draw(), out_file)
+    # # Additional evaluation ====
+    # log.info("Additional evaluation...")
 
 if __name__ == "__main__":
     main()

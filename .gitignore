@@ -176,3 +176,6 @@ raw_data
 temp
 temp-out
 sacred_runs
+.snakemake
+logs
+wandb

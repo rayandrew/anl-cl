@@ -1,3 +1,4 @@
+import collections.abc
 import math
 from numbers import Number
 from typing import Any, Sequence, Tuple
@@ -61,6 +62,21 @@ def get_model_fname(cfg: Any):
     return "model.pt"
 
 
+def head(data: Any | Sequence[any]):
+    if isinstance(data, collections.abc.Sequence):
+        return data[0]
+    if isinstance(data, collections.abc.Set):
+        return next(iter(data))
+    return data
+
+
+# def add_src_to_path():
+#     import sys
+#     from pathlib import Path
+
+#     sys.path.append(str(Path(__file__).parent.parent.parent))
+
+
 __all__ = [
     "set_seed",
     "split_evenly_by_classes",
@@ -69,4 +85,6 @@ __all__ = [
     "ceil_up",
     "get_model_fname",
     "get_checkpoint_fname",
+    "head",
+    # "add_src_to_path",
 ]

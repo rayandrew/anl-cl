@@ -1,0 +1,4 @@
+dataset:
+  cori:
+    path: "raw_data/cori"
+    y: darshan_agg_perf_by_slowest_posix_gibs

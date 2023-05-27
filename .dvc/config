@@ -1,3 +1,0 @@
-[hydra]
-    enabled = True
-    config_dir = config

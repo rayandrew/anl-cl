@@ -1,0 +1,6 @@
+base_path: "/lcrc/project/FastBayes/rayandrew/sched-cl"
+seed: 123
+cuda:
+  enable: true
+  device: 0
+num_workers: 4

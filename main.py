@@ -33,6 +33,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 import src.patches as patches
+from src.config import Config
 from src.dataset import (
     AlibabaMachineDataset,
     AlibabaMachineSequenceDataset,
@@ -79,7 +80,10 @@ def print_and_log(msg, out_file):
 @hydra.main(
     config_path="config", config_name="config", version_base=None
 )
-def main(cfg: DictConfig):
+def main_v2(cfg: Config):
+    # instantiate config object
+    cfg = Config(**cfg)
+
     set_seed(cfg.seed)
 
     # Patches
@@ -128,7 +132,7 @@ def main(cfg: DictConfig):
     benchmark = nc_benchmark(
         train_dataset=train_dataset,
         test_dataset=test_dataset,
-        n_experiences=raw_train_dataset.n_experiences(),
+        n_experiences=raw_train_dataset.n_experiences,
         shuffle=False,
         task_labels=False,
     )
@@ -232,7 +236,7 @@ def main(cfg: DictConfig):
             model,
             optimizer,
             criterion,
-            patterns_per_exp=n_experiences,
+            patterns_per_exp=raw_train_dataset.n_experiences,
             sample_size=32,
             train_mb_size=cfg.batch_size,
             train_epochs=cfg.epoch,
@@ -340,6 +344,16 @@ def main(cfg: DictConfig):
     summary = generate_summary(output_folder / "train_results.json")
     table = generate_summary_table(summary)
     print(table.draw())
+
+
+@hydra.main(
+    config_path="config", config_name="config", version_base=None
+)
+def main(cfg: Config):
+    # instantiate config object
+    OmegaConf.resolve(cfg)
+    cfg = Config(**cfg)
+    print(cfg)
 
 
 if __name__ == "__main__":

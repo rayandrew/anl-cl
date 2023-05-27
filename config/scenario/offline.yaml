@@ -1,0 +1,9 @@
+scenario:
+  offline_no_retrain:
+    num_split: 8
+  offline_retrain_chunks:
+    num_split: 8
+  offline_retrain_chunks_from_scratch:
+    num_split: 8
+  offline_retrain_chunks_naive:
+    num_split: 8

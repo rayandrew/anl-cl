@@ -1,3 +1,4 @@
+from src.utils.general import head, set_seed
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence
 
@@ -8,8 +9,6 @@ if TYPE_CHECKING:
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-from src.utils.general import head, set_seed
 
 
 def plot(stream_window: Sequence[int], change: Sequence[int], path: Path, config: dict = {}):
@@ -124,6 +123,11 @@ def main():
                     jump=dd_config["jump"],
                     penalty=dd_config["penalty"],
                 ) 
+        case "online":
+            from src.drift_detection.online import (
+                get_online_drift_detector
+            )
+            dd = get_online_drift_detector()
         case _:
             raise ValueError("Method not found")
 

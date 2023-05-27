@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.special import gammaln
 
-from src.preprocess.online_cp.base import ObservationLikelihood
+from src.drift_detection.online_cp.base import ObservationLikelihood
 
 
 class StudentTMulti(ObservationLikelihood["StudentTMulti"]):

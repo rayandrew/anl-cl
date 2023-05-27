@@ -24,8 +24,9 @@ pip install wandb protobuf
 ## Running
 
 ```bash
+# Important for module not found!
 export PYTHONPATH=$PYTHONPATH:.
-snakemake -cn --configfile ./config/dataset/alibaba.yaml ./config/dd/voting.yaml
+snakemake -c1 
 # change N to number of concurrency that you want
 ```
 

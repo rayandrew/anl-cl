@@ -48,16 +48,34 @@ if "drift_detection" in config and "ruptures" in config["drift_detection"] and c
         #     slurm_extra="--gres=gpu:1"
         script: "../scripts/drift_detection.py"
 
-
+if "drift_detection" in config and "online" in config["drift_detection"] and config["drift_detection"]["online"]["enable"]:
+    rule online:
+        input:
+            "raw_data/{dataset}/{path}.csv",
+            # expand("{path}", path=[config["dataset"][dataset]["path"] for dataset in DATASETS]),
+        output:
+            directory("out/dd/{dataset}/online/{path}"),
+        params:
+            method="online",
+            dataset_config=get_database_config(config),
+            dataset="{dataset}",
+            data_path="{path}",
+        log:
+            "logs/dd/{dataset}/online/{path}.log",
+        # resources:
+        #     slurm_extra="--gres=gpu:1"
+        script: "../scripts/drift_detection.py"
 
 def get_drift_detection_output():
     final_output = []
     for dataset in DATASETS:
         for file in get_dataset_files(config, dataset):
+            print(config["drift_detection"])
             if "drift_detection" in config and "voting" in config["drift_detection"] and config["drift_detection"]["voting"]["enable"]:
                 final_output += expand("out/dd/{dataset}/voting/{path}", dataset=dataset, path=file.relative_to(config["dataset"][dataset]["path"]).with_suffix(""))
             if "drift_detection" in config and "ruptures" in config["drift_detection"] and config["drift_detection"]["ruptures"]["enable"]:
                 final_output += expand("out/dd/{dataset}/ruptures/{path}", dataset=dataset, path=file.relative_to(config["dataset"][dataset]["path"]).with_suffix(""))
-
+            if "drift_detection" in config and "online" in config["drift_detection"] and config["drift_detection"]["online"]["enable"]:
+                final_output += expand("out/dd/{dataset}/online/{path}", dataset=dataset, path=file.relative_to(config["dataset"][dataset]["path"]).with_suffix(""))
             
     return final_output

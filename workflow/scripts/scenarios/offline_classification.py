@@ -75,6 +75,10 @@ def get_dataset(dataset: str, scenario: str, input_path: Path, y: str, num_class
             from src.dataset.alibaba import (
                 get_classification_alibaba_machine_dataset_splitted as Dataset,
             )
+        case "google":
+            from src.dataset.google import (
+                get_classification_google_machine_dataset_splitted as Dataset,
+            )
         case _:
             raise ValueError("Unknown dataset")
 

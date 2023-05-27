@@ -1,335 +1,310 @@
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
-from typing import Literal, Union
+from typing import Any, Literal, Optional, Sequence, Union
 
 import torch
 
 from avalanche.benchmarks.utils import make_classification_dataset
+from avalanche.benchmarks.utils.classification_dataset import (
+    ClassificationDataset,
+)
 
 import numpy as np
+import pandas as pd
 
-from src.dataset.base import TDatasetSubset
+from src.dataset.base import TDatasetSubset, assert_dataset_subset
 from src.utils.general import split_evenly_by_classes
 
 from .base import GoogleDataset
 
-TYVariable = Literal["cpu", "mem"]
+TGoogleOutput = Literal["cpu"]
 
 
-class BaseGoogleMachineDataset(GoogleDataset):
+def assert_google_output(output: TGoogleOutput):
+    assert output in ["cpu"], "output must be 'cpu'"
+
+
+class GoogleMachineDataset(GoogleDataset):
     def __init__(
         self,
-        filename: Union[str, Path],
-        n_labels: int,
-        train_ratio: float = GoogleDataset.TRAIN_RATIO,
-        y: TYVariable = "cpu",
-        subset: TDatasetSubset = "training",
+        features: pd.DataFrame,
+        targets: pd.Series,
+        timestamps: pd.DataFrame,
     ):
-        """Dataset for Google Machine dataset
+        super().__init__()
+        self.features = features
+        self.targets = targets.values
+        self.timestamps = timestamps
 
-        Args:
-            filename (Union[str, Path]): Path to the dataset file
-            n_labels (int): Number of labels to use
-            train_ratio (float, optional): Ratio of training data. Defaults to GoogleDataset.TRAIN_RATIO.
-            y (Literal["cpu", "mem"], optional): Variable to predict. Defaults to "cpu".
-            subset (Literal["training", "testing", "all"], optional): Subset of the dataset. Defaults to "all".
-        """
-        assert subset in ["training", "testing", "all"]
-        assert y in ["cpu", "mem"]
+    @property
+    def input_size(self) -> int:
+        if self.features is None:
+            raise ValueError("Dataset not loaded yet")
+        if len(self.features) == 0:
+            raise ValueError("Dataset is empty")
+        return self.features.shape[1]
+
+    def __len__(self):
+        return len(self.features)
+
+    def __getitem__(self, index: int):
+        # print(index, self.features.shape, self.targets.shape)
+        # print(index)
+        # print(index, self.features[index], self.targets[index])
+        return (
+            self.features.iloc[index].astype(np.float32).values,
+            self.targets[index],
+        )
+
+
+class GoogleMachineDatasetGenerator:
+    def __init__(
+        self,
+        filename: Union[str, Path] = None,
+        n_labels: int = 10,
+        train_ratio: float = GoogleDataset.TRAIN_RATIO,
+        dataframe: Optional[pd.DataFrame] = None,
+        y: TGoogleOutput = "cpu",
+    ):
+        assert_google_output(y)
+
+        if dataframe is not None and filename is not None:
+            raise ValueError(
+                "Only one of dataframe or filename should be specified"
+            )
+
+        self.dataframe = dataframe
         self.filename = filename
         self.train_ratio = train_ratio
         self.n_labels = n_labels
         self.y_var = y
-        self.subset = subset
-        self._n_experiences = None
-        self._load_data()
 
-    def _clean_data(self, data):
-        # do not need code below as the data should come without header
-        data = data[1:]
-        # ts = data[:, 1] # timestamp
-        # TODO: this is hacky solution, need to fix
-        # X need to accomodate "data" and dist_labels together
-        # such that we can use `train_test_split` to split the data
-        # in the future, we should not use these two variables together
-        if self.y_var == "cpu":
-            label_index = 2
-        elif self.y_var == "mem":
-            label_index = 3
+    def _clean_data(self, data: pd.DataFrame):
+        data = data.fillna(0)
+        data = data.drop_duplicates()
+        data = data.reset_index(drop=True)
 
-        dist_labels = data[:, -1]
-        labels = data[:, label_index]
-        # Normalize labels from 0 to 1
-        maxi = np.max(labels)
-        mini = np.min(labels)
-        labels -= mini
-        labels /= (maxi - mini)
-        # Now label is from 0 to 1
-
-        # Prevent label with value 10, because we wanna cast to Int
-        labels *= 9.98
-
-        # ROund labels before casting to int
-        labels = labels.astype(int)
-        unique_labels, counts = np.unique(labels, return_counts=True)
-
-        min_count_idx = np.argmin(counts)
-        least_common_value = unique_labels[min_count_idx]
-        least_common_count = counts[min_count_idx]
-        print("The least common value in labels is",
-              least_common_value, "with a count of", least_common_count)
-        data = np.delete(data, label_index, axis=1)
+        # remove invalid values (negative or > 100) because this is a percentage
         data = data[
-            :, 2:-1
-        ]  # remove start_time + end_time + dist_label
+            (data[self.y_var] >= 0) & (data[self.y_var] <= 100)
+        ]
 
-        return data, labels, dist_labels
+        return data
 
-    def _process_data(self, data, labels, dist_labels):
-        Xs = []
-        Dists = []
-        for i, d in enumerate(data):
-            x = d.flatten()
-            y = labels[i]
-            dist = int(dist_labels[i])
-            Xs.append((x, y))
-            Dists.append(dist)
-        return Xs, Dists
+    @cached_property
+    def raw_data(self):
+        if self.dataframe is not None:
+            return self.dataframe
+        data = pd.read_csv(self.filename)
+        return data
 
-    def _load_data(self):
-        assert self.subset in ["training", "testing", "all"]
-        data = np.genfromtxt(self.filename, delimiter=",")
-        data = self._process_nan(data)
-        data, labels, dist_labels = self._clean_data(data)
+    @cached_property
+    def cleaned_data(self):
+        data = self._clean_data(self.raw_data)
+        # change y to be discrete
+        data[self.y_var] = pd.qcut(
+            data[self.y_var], self.n_labels, labels=False
+        )
+        return data
 
-        unique_labels, counts = np.unique(dist_labels, return_counts=True)
-        min_count_idx = np.argmin(counts)
-
-        least_common_value = unique_labels[min_count_idx]
-        least_common_count = counts[min_count_idx]
-
-        print("The least common value in labels is",
-              least_common_value, "with a count of", least_common_count)
-        Data, Dists = self._process_data(data, labels, dist_labels)
-
-        if self.subset == "all":
-            X = [d[0] for d in Data]
-            y = [d[1] for d in Data]
-            self.data = X
-            self.dist_labels = Dists
-            self.outputs = y
-            return
+    def __call__(self):
         (
-            Data_train,
-            Data_test,
-            Dist_train,
-            Dist_test,
+            data_train,
+            data_test,
+            y_train,
+            y_test,
         ) = split_evenly_by_classes(
-            Data, Dists, train_ratio=self.train_ratio
+            self.cleaned_data.drop(columns=[self.y_var]),
+            self.cleaned_data[self.y_var],
+            train_ratio=self.train_ratio,
+            shuffle=True,
         )
 
-        X_train = [d[0] for d in Data_train]
-        y_train = [d[1] for d in Data_train]
-        dist_labels_train = Dist_train
+        ts_train = data_train["start_time"]
+        X_train = data_train.drop(columns=["start_time", "end_time"])
 
-        X_test = [d[0] for d in Data_test]
-        y_test = [d[1] for d in Data_train]
-        dist_labels_test = Dist_test
+        ts_test = data_test["start_time"]
+        X_test = data_test.drop(columns=["start_time", "end_time"])
 
-        if self.subset == "training":
-            self.data = X_train
-            self.dist_labels = dist_labels_train
-            self.outputs = y_train
-        elif self.subset == "testing":
-            self.data = X_test
-            self.dist_labels = dist_labels_test
-            self.outputs = y_test
+        self.train_features = X_train
+        self.train_outputs = y_train
+        self.train_timestamps = ts_train
 
-    def input_size(self) -> int:
-        if self.data is None:
-            raise ValueError("Dataset not loaded yet")
-        if len(self.data) == 0:
-            raise ValueError("Dataset is empty")
-        return len(self.data[0])
-
-    def n_experiences(self) -> int:
-        if self._n_experiences is None:
-            self._n_experiences = len(np.unique(self.dist_labels))
-        return self._n_experiences
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, index):
-        data = self.data[index]
-        dist_label = self.dist_labels[index]
-        label = self.outputs[index]
-        data_tensor = torch.tensor(data, dtype=torch.float32)
-        return data_tensor, label, dist_label
+        self.test_features = X_test
+        self.test_outputs = y_test
+        self.test_timestamps = ts_test
+        return GoogleMachineDataset(
+            self.train_features,
+            self.train_outputs,
+            self.train_timestamps,
+        ), GoogleMachineDataset(
+            self.test_features,
+            self.test_outputs,
+            self.test_timestamps,
+        )
 
 
-def GoogleMachineDataset(
+@dataclass
+class ClassificationGoogleMachineDataAccessor:
+    original_train_dataset: GoogleMachineDataset
+    original_test_dataset: GoogleMachineDataset
+    train_dataset: ClassificationDataset
+    test_dataset: ClassificationDataset
+
+
+def get_classification_google_machine_dataset(
     filename: str,
-    univariate: str,
     n_labels: int = 10,
-    subset: TDatasetSubset = "train",
-    y: TYVariable = "cpu",
-    seq_len: int = 0,
+    y: TGoogleOutput = "cpu",
 ):
-    dataset = BaseGoogleMachineDataset(
+    assert_google_output(y)
+
+    generator = GoogleMachineDatasetGenerator(
         filename=filename,
         n_labels=n_labels,
-        subset=subset,
         y=y,
     )
-    # NOTE: might be slow in the future
-    dist_labels = [datapoint[2] for datapoint in dataset]
-    return (
-        make_classification_dataset(
-            dataset,
-            targets=dist_labels,
-        ),
-        dataset,
+    train_dataset, test_dataset = generator()
+    avalanche_train_dataset = make_classification_dataset(
+        train_dataset
+    )
+    avalanche_test_dataset = make_classification_dataset(test_dataset)
+    return ClassificationGoogleMachineDataAccessor(
+        original_train_dataset=train_dataset,
+        original_test_dataset=test_dataset,
+        train_dataset=avalanche_train_dataset,
+        test_dataset=avalanche_test_dataset,
     )
 
 
-class BaseGoogleMachineSequenceDataset(BaseGoogleMachineDataset):
-    def __init__(
-        self,
-        seq_len: int = 5,
-        univariate: bool = False,
-        flatten: bool = False,
-        *args,
-        **kwargs,
-    ):
-        self.seq_len = seq_len
-        self.univariate = univariate
-        self.flatten = flatten
-        super(BaseGoogleMachineSequenceDataset, self).__init__(
-            *args, **kwargs
-        )
+def get_classification_google_machine_dataset_splitted(
+    filename: str,
+    n_labels: int = 10,
+    y: TGoogleOutput = "cpu",
+    num_split: int = 4,
+) -> Sequence[ClassificationGoogleMachineDataAccessor]:
+    assert_google_output(y)
 
-    # def _process_data(self, data, labels, dist_labels):
-    #     Xs = []
-    #     Dists = []
-    #     i = 0
-    #     if self.univariate:
-    #         while i + self.seq_len <= data.shape[0]:
-    #             ys = labels[i : i + self.seq_len]
-    #             Xs.append((ys[:-1], ys[-1]))
-    #             dists = dist_labels[i : i + self.seq_len]
-    #             dist = int(dists[-1])
-    #             Dists.append(dist)
-    #             i += 1
-    #     else:
-    #         # multivariate
-    #         while i + self.seq_len <= data.shape[0]:
-    #             mat = data[i : i + self.seq_len, :]
-    #             x = mat.flatten()
-    #             ys = labels[i : i + self.seq_len]
-    #             x = np.append(x, ys[:-1])
-    #             y = ys[-1]
-    #             dists = dist_labels[i : i + self.seq_len]
-    #             dist = int(dists[-1])
-    #             Xs.append((x, y))
-    #             Dists.append(dist)
-    #             i += 1
-    #     return Xs, Dists
+    raw_data = pd.read_csv(filename)
+    size = len(raw_data)
+    split_size = size // num_split
 
-    def _process_data(self, data, labels, dist_labels):
-        Xs = []
-        Dists = []
-        i = 0
-        if self.univariate:
-            # TODO: add non-flatten options
-            while i + self.seq_len <= data.shape[0]:
-                ys = labels[i: i + self.seq_len]
-                Xs.append((ys[:-1], ys[-1]))
-                dists = dist_labels[i: i + self.seq_len]
-                dist = int(dists[-1])
-                Dists.append(dist)
-                i += 1
+    subsets = []
+    for i in range(num_split):
+        if i == num_split - 1:
+            data = raw_data.iloc[i * split_size :]
         else:
-            # multivariate
-            if self.flatten:
-                while i + self.seq_len <= data.shape[0]:
-                    mat = data[i: i + self.seq_len, :]
-                    x = mat.flatten()
-                    ys = labels[i: i + self.seq_len]
-                    x = np.append(x, ys[:-1])
-                    y = ys[-1]
-                    dists = dist_labels[i: i + self.seq_len]
-                    dist = int(dists[-1])
-                    Xs.append((x, y))
-                    Dists.append(dist)
-                    i += 1
-            else:
-                # non-flatten
-                while i + self.seq_len <= data.shape[0]:
-                    mat = data[i: i + self.seq_len, :]
-                    x = mat
-                    # x = mat.flatten()
-                    ys = labels[i: i + self.seq_len]
-                    y = ys[-1]
-                    ydata = ys[:-1].reshape(-1, 1)
-                    num_missing = self.seq_len - len(ydata)
-                    zeros = np.zeros((num_missing, 1))
-                    ydata = np.concatenate([ydata, zeros], axis=0)
-                    x = np.concatenate([x, ydata], axis=1)
-                    dists = dist_labels[i: i + self.seq_len]
-                    dist = int(dists[-1])
-                    Xs.append((x, y))
-                    Dists.append(dist)
-                    i += 1
-        return Xs, Dists
+            data = raw_data.iloc[
+                i * split_size : (i + 1) * split_size
+            ]
 
-
-def google_machine_sequence_collate(batch):
-    tensors, targets, t_labels = [], [], []
-    for x, region, _dist_label, t_label in batch:
-        tensors += [x.t()]
-        targets += [torch.tensor(region)]
-        t_labels += [torch.tensor(t_label)]
-    # tensors = [item.t() for item in tensors]
-    tensors = torch.nn.utils.rnn.pad_sequence(
-        tensors, batch_first=True, padding_value=0.0
-    )
-    targets = torch.stack(targets)
-    t_labels = torch.stack(t_labels)
-    return tensors, targets, t_labels
-
-
-def GoogleMachineSequenceDataset(
-    filename: str,
-    n_labels: int = 10,
-    subset="train",
-    y: Literal["cpu", "mem"] = "cpu",
-    seq_len: int = 5,
-    univariate: bool = False,
-):
-    dataset = BaseGoogleMachineSequenceDataset(
-        filename=filename,
-        n_labels=n_labels,
-        subset=subset,
-        y=y,
-        seq_len=seq_len,
-        univariate=univariate,
-    )
-
-    # NOTE: might be slow in the future
-    dist_labels = [datapoint[2] for datapoint in dataset]
-    return (
-        make_classification_dataset(
-            dataset,
-            collate_fn=google_machine_sequence_collate,
-            targets=dist_labels,
-        ),
-        dataset,
-    )
+        generator = GoogleMachineDatasetGenerator(
+            dataframe=data,
+            n_labels=n_labels,
+            y=y,
+        )
+        train_dataset, test_dataset = generator()
+        avalanche_train_dataset = make_classification_dataset(
+            train_dataset
+        )
+        avalanche_test_dataset = make_classification_dataset(
+            test_dataset
+        )
+        subsets.append(
+            ClassificationGoogleMachineDataAccessor(
+                original_train_dataset=train_dataset,
+                original_test_dataset=test_dataset,
+                train_dataset=avalanche_train_dataset,
+                test_dataset=avalanche_test_dataset,
+            )
+        )
+    return subsets
 
 
 __all__ = [
-    "BaseGoogleMachineDataset",
-    "BaseGoogleMachineSequenceDataset",
     "GoogleMachineDataset",
-    "GoogleMachineSequenceDataset"
+    "GoogleMachineDatasetGenerator",
+    "ClassificationGoogleMachineDataAccessor",
+    "get_classification_google_machine_dataset",
+    "get_classification_google_machine_dataset_splitted",
 ]
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    # parser.add_argument("-d", "--data", type=str, default="data/mu_dist/m_25.csv")
+    parser.add_argument(
+        "-d",
+        "--data",
+        type=str,
+        default="out_preprocess/m_25/m_25.csv",
+    )
+    parser.add_argument("-n", "--n_labels", type=int, default=10)
+    parser.add_argument(
+        "-m",
+        "--subset",
+        type=str,
+        choices=["training", "testing", "all"],
+        default="training",
+    )
+    parser.add_argument(
+        "-y",
+        type=str,
+        choices=[
+            "cpu_util_percent",
+            "mem_util_percent",
+            "disk_io_percent",
+        ],
+        default="cpu",
+    )
+    parser.add_argument(
+        "-s",
+        "--seq",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-w",
+        "--seq_len",
+        type=int,
+        default=5,
+    )
+    parser.add_argument(
+        "--univariate",
+        action="store_true",
+    )
+    args = parser.parse_args()
+
+    if args.seq:
+        dataset, raw_dataset = AlibabaMachineSequenceDataset(
+            filename=args.data,
+            n_labels=args.n_labels,
+            y=args.y,
+            subset=args.subset,
+            seq_len=args.seq_len,
+            univariate=args.univariate,
+        )
+    else:
+        dataset, raw_dataset = AlibabaMachineDataset(
+            filename=args.data,
+            n_labels=args.n_labels,
+            y=args.y,
+            subset=args.subset,
+        )
+    print("INPUT SIZE", raw_dataset.input_size)
+    print("N EXPERIENCES", raw_dataset.n_experiences)
+    # print("TARGETS", np.unique(dataset.targets))
+    # print("OUTPUTS", np.unique(dataset.outputs))
+    print("LENGTH", len(dataset))
+    for d in dataset:
+        print(d)
+        break
+
+    # print(dataset[3911])
+    # print(dataset[3912])
+    # print(dataset[3913])
+    # print(dataset[3914])
+    # print(dataset[3915])
+    # print(dataset[3916])
+    # print(dataset[3917])

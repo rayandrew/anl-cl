@@ -3,33 +3,29 @@
 - Dependencies
 
 ```bash
-conda create -n cl python=3.9 pip
+conda create -n clbb python=3.10 pip
 conda activate cl
-# Voting library need low numpy ver
-pip install numpy==1.19 
 conda install -c conda-forge mamba
-pip install gorilla hydra-core
-mamba install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
-pip install git+https://github.com/ContinualAI/avalanche.git@c2601fccec29bfa2f4ed692cb9955526111d56be
-mamba install pandas black matplotlib scikit-learn scikit-multiflow seaborn -c conda-forge
-mamba install -c conda-forge torchmetrics
-pip install texttable
-pip install semver
+pip install gorilla hydra-core texttable semver ruptures git+https://github.com/ContinualAI/avalanche.git@c2601fccec29bfa2f4ed692cb9955526111d56be
+mamba install numpy=1.21 pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
+mamba install numpy=1.21 pandas black matplotlib scikit-learn scikit-multiflow torchmetrics seaborn -c conda-forge
 
 # for pipeline
 mamba install -c conda-forge -c bioconda snakemake
   
 # for development only
 pip install black isort
-pip install wandb
+
+# If protobuf error from wandb
+pip uninstall wandb protobuf
+pip install wandb protobuf
 ```
 
 ## Running
 
 ```bash
 export PYTHONPATH=$PYTHONPATH:.
-snakemake -c1 --configfile ./config/dataset/alibaba.yaml ./config/dd/voting.yaml
-snakemake -c1 --configfile ./config/dataset/google.yaml ./config/dd/voting.yaml
+snakemake -cn --configfile ./config/dataset/alibaba.yaml ./config/dd/voting.yaml
 # change N to number of concurrency that you want
 ```
 

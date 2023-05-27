@@ -3,7 +3,7 @@
 - Dependencies
 
 ```bash
-conda create -n clbb python=3.10 pip
+conda create -n cl python=3.10 pip
 conda activate cl
 conda install -c conda-forge mamba
 pip install gorilla hydra-core texttable semver ruptures git+https://github.com/ContinualAI/avalanche.git@c2601fccec29bfa2f4ed692cb9955526111d56be
@@ -26,7 +26,7 @@ pip install wandb protobuf
 ```bash
 # Important for module not found!
 export PYTHONPATH=$PYTHONPATH:.
-snakemake -c1 
+snakemake -cN
 # change N to number of concurrency that you want
 ```
 

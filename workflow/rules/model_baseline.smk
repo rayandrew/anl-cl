@@ -10,7 +10,7 @@ rule offline_classification_no_retrain:
     input:
         "raw_data/{dataset}/{path}.csv",
     output:
-        directory("out/training/offline-classification-no-retrain/{dataset}/{path}"),
+        directory("out/training/{dataset}/{path}/offline-classification-no-retrain"),
     params:
         dataset="{dataset}",
         data_path="{path}",
@@ -21,12 +21,12 @@ rule offline_classification_no_retrain:
         scenario_config=config["scenario"]["offline_no_retrain"],
         task="classification",
     log:
-        "logs/training/offline-classification-no-retrain/{dataset}/{path}.log",
+        "logs/training/{dataset}/{path}/offline-classification-no-retrain.log",
     script: "../scripts/scenarios/offline_classification.py"
 
 use rule offline_classification_no_retrain as offline_classification_retrain_chunks_from_scratch with:
     output:
-        directory("out/training/offline-classification-retrain-chunks-from-scratch/{dataset}/{path}"),
+        directory("out/training/{dataset}/{path}/offline-classification-retrain-chunks-from-scratch"),
     params:
         dataset="{dataset}",
         data_path="{path}",
@@ -37,11 +37,11 @@ use rule offline_classification_no_retrain as offline_classification_retrain_chu
         scenario_config=config["scenario"]["offline_retrain_chunks_from_scratch"],
         task="classification",
     log:
-        "logs/training/offline-classification-retrain-chunks-from-scratch/{dataset}/{path}.log",
+        "logs/training/{dataset}/{path}/offline-classification-retrain-chunks-from-scratch.log",
 
 use rule offline_classification_retrain_chunks_from_scratch as offline_classification_retrain_chunks_naive with:
     output:
-        directory("out/training/offline-classification-retrain-chunks-naive/{dataset}/{path}"),
+        directory("out/training/{dataset}/{path}/offline-classification-retrain-chunks-naive"),
     params:
         dataset="{dataset}",
         data_path="{path}",
@@ -52,15 +52,17 @@ use rule offline_classification_retrain_chunks_from_scratch as offline_classific
         scenario_config=config["scenario"]["offline_retrain_chunks_naive"],
         task="classification",
     log:
-        "logs/training/offline-classification-retrain-chunks-naive/{dataset}/{path}.log",
+        "logs/training/{dataset}/{path}/offline-classification-retrain-chunks-naive.log",
 
 def get_model_baseline_output():
     final_output = []
     for dataset in DATASETS:
         for file in get_dataset_files(config, dataset):
             filepath = file.relative_to(config["dataset"][dataset]["path"]).with_suffix("")
-            final_output += expand("out/training/offline-classification-no-retrain/{dataset}/{path}", dataset=dataset, path=filepath)
-            final_output += expand("out/training/offline-classification-retrain-chunks-from-scratch/{dataset}/{path}", dataset=dataset, path=filepath)
-            final_output += expand("out/training/offline-classification-retrain-chunks-naive/{dataset}/{path}", dataset=dataset, path=filepath)
+            final_output += expand("out/training/{dataset}/{path}/offline-classification-no-retrain", dataset=dataset, path=filepath)
+            final_output += expand("out/training/{dataset}/{path}/offline-classification-retrain-chunks-from-scratch", dataset=dataset, path=filepath)
+            final_output += expand("out/training/{dataset}/{path}/offline-classification-retrain-chunks-naive", dataset=dataset, path=filepath)
+
+    print(final_output)
 
     return final_output

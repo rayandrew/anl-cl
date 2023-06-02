@@ -34,6 +34,7 @@ configfile: "config/wandb.yaml"
 include: "rules/drift_detection.smk"
 include: "rules/model_baseline.smk"
 include: "rules/plots.smk"
+include: "rules/test.smk"
 
 ###### resources ######
 # resource_scopes:

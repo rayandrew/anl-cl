@@ -1,4 +1,8 @@
+from collections import defaultdict
 from pathlib import Path
+from typing import List
+
+DATASETS = ["alibaba"]
 
 
 def get_datasets(config: dict):
@@ -18,4 +22,21 @@ def get_dataset_files(config: dict, dataset: str):
         yield file
 
 
-__all__ = ["get_dataset_files", "get_database_config", "get_datasets"]
+def get_dataset_machines(
+    config: dict, datasets: List[str] = DATASETS
+):
+    result = defaultdict(list)
+    for dataset in datasets:
+        for file in Path(config["dataset"][dataset]["path"]).glob(
+            "**/*.csv"
+        ):
+            result[dataset].append(file.stem)
+    return result
+
+
+__all__ = [
+    "get_dataset_files",
+    "get_database_config",
+    "get_datasets",
+    "get_dataset_machines",
+]

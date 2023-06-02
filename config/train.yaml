@@ -1,0 +1,11 @@
+training:
+  offline:
+    batch_size: 32
+    epochs: 4
+    classification:
+      num_classes: 10
+      optimizer:
+        name: Adam
+        lr: 0.0001
+      evaluation:
+        tolerance: 1

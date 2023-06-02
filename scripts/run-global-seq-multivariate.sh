@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=acl    
+#SBATCH --job-name=acl
 #SBATCH --account=FASTBAYES
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:1             
-#SBATCH --time=24:00:00          
+#SBATCH --gres=gpu:1
+#SBATCH --time=24:00:00
 #SBATCH --output=./stdout/stdout_run_acl.%j
 #SBATCH --output=./stdout/stdout_run_acl.%j
 
@@ -24,67 +24,69 @@ source $INIT_SCRIPT
 # MACHINE_ID="m_25"
 # Y_VAR="disk"
 # STRATEGY="gdumb"
-EXP_OUT_DIR="$EXP_DIR/out/global/seq/multivariate"
+EXP_OUT_DIR="$EXP_DIR/temp-out/global/seq/multivariate"
 SEQ_LEN=5
 EVAL_ONLY=0
+EPOCH=1
 
 # DATA PREPROCESSING OPTIONS
 WINDOW_SIZE=75
 THRESHOLD=300 # for voting
-PREPROCESS_DATA_DIR="$EXP_DIR/preprocessed_data/global"
+PREPROCESS_DATA_DIR="$EXP_DIR/data/global"
 
 mkdir -p $PREPROCESS_DATA_DIR
 mkdir -p $EXP_OUT_DIR
 
 run() {
-    local machine_id=$1
-    local y_var=$2
-    local strategy=$3
-    local seq_len=$4
-    local eval_only=$5
+	local machine_id=$1
+	local y_var=$2
+	local strategy=$3
+	local seq_len=$4
+	local eval_only=$5
 
-    local data_file="$PREPROCESS_DATA_DIR/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv"
-    if [[ ! -f $data_file ]]; then
-        echo ">>> Preprocessing data for machine_id=$machine_id, y_var=$y_var"
-        echo
-        # python drift_detection.py data/mu/m_25.csv -y cpu --window_size 75 --threshold 300
-        python drift_detection.py "$ALIBABA_MU/$machine_id.csv" \
-            -o "$PREPROCESS_DATA_DIR" \
-            -y $y_var \
-            --window_size $WINDOW_SIZE \
-            --threshold $THRESHOLD
-        echo
-    else
-        echo ">>> Data for machine_id=$machine_id, y_var=$y_var, window_size=$WINDOW_SIZE, and threshold=$THRESHOLD already exists, skipping preprocessing data"
-        echo
-    fi
-    
-    if [[ $eval_only == 0 && ! -f "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done" ]]; then
-        echo ">>> Train SEQUENTIAL MULTIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
-        echo
-        python main.py \
-            -f "$data_file" \
-            -m "${machine_id}_${strategy}" \
-            -s $strategy \
-            -o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/" \
-            -y $y_var \
-            --seq --seq_len $seq_len
-        touch "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done"
-        echo
-    else
-        echo ">>> SEQUENTIAL MULTIVARIATE model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy already exists, skipping training"
-        echo 
-    fi
+	local data_file="$PREPROCESS_DATA_DIR/$machine_id/${machine_id}_${WINDOW_SIZE}-${THRESHOLD}/${machine_id}_${y_var}.csv"
+	if [[ ! -f $data_file ]]; then
+		echo ">>> Preprocessing data for machine_id=$machine_id, y_var=$y_var"
+		echo
+		# python drift_detection.py data/mu/m_25.csv -y cpu --window_size 75 --threshold 300
+		python ./preprocess/drift_detection.py "$ALIBABA_MU/$machine_id.csv" \
+			-o "$PREPROCESS_DATA_DIR" \
+			-y $y_var \
+			--window_size $WINDOW_SIZE \
+			--threshold $THRESHOLD
+		echo
+	else
+		echo ">>> Data for machine_id=$machine_id, y_var=$y_var, window_size=$WINDOW_SIZE, and threshold=$THRESHOLD already exists, skipping preprocessing data"
+		echo
+	fi
 
-    echo ">>> Evaluate SEQUENTIAL MULTIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"  
-    echo
-    python eval.py \
-        -f "$data_file" \
-        -o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}" \
-        -m "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt" \
-        -y $y_var \
-        --plot \
-        --seq --seq_len $seq_len
+	if [[ $eval_only == 0 && ! -f "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done" ]]; then
+		echo ">>> Train SEQUENTIAL MULTIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
+		echo
+		python main.py \
+			-f "$data_file" \
+			-m "${machine_id}_${strategy}" \
+			-s $strategy \
+			-o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/" \
+			-y $y_var \
+			-e $EPOCH \
+			--seq --seq_len $seq_len
+		touch "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/done"
+		echo
+	else
+		echo ">>> SEQUENTIAL MULTIVARIATE model for machine_id=$machine_id, y_var=$y_var, strategy=$strategy already exists, skipping training"
+		echo
+	fi
+
+	echo ">>> Evaluate SEQUENTIAL MULTIVARIATE model machine_id=$machine_id, y_var=$y_var, strategy=$strategy"
+	echo
+	python eval.py \
+		-f "$data_file" \
+		-o "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}" \
+		-m "$EXP_OUT_DIR/${machine_id}_${y_var}/${strategy}/${machine_id}_${strategy}.pt" \
+		-y $y_var \
+		--plot \
+		--seq --seq_len $seq_len
 }
 
 run "m_881" "mem" "gss" $SEQ_LEN $EVAL_ONLY

@@ -1,0 +1,46 @@
+import sys
+from snakemake.utils import min_version
+
+###### minimum snakemake version ######
+min_version("7.0")
+
+###### initialize config ###### 
+
+configfile: "config/general.yaml"
+
+# dataset config
+configfile: "config/dataset/cori.yaml"
+configfile: "config/dataset/alibaba.yaml"
+configfile: "config/dataset/google.yaml"
+
+# drift detection config
+configfile: "config/dd/voting.yaml"
+configfile: "config/dd/ruptures.yaml"
+configfile: "config/dd/online.yaml"
+
+# training config
+configfile: "config/train.yaml"
+
+# model config
+configfile: "config/model.yaml"
+
+# scenario config
+configfile: "config/scenario/offline.yaml"
+
+# others config
+configfile: "config/wandb.yaml"
+
+###### load rules ######
+include: "rules/drift_detection.smk"
+include: "rules/model_baseline.smk"
+include: "rules/plots.smk"
+
+###### resources ######
+# resource_scopes:
+#     slurm_extra="--gres=gpu:1"
+
+###### target rules ######
+rule all:
+    input:
+        get_drift_detection_output(),
+        get_model_baseline_output()

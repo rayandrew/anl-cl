@@ -161,9 +161,21 @@ cython_debug/
 
 # generated output 
 out
+outputs
 best-out
 *.pt
 stdout
 out_*
-preprocessed_data
-preprocessed_local_data
+
+# data folder
+data/*
+raw_data
+
+# exception to the rule
+!data/.gitkeep 
+temp
+temp-out
+sacred_runs
+.snakemake
+logs
+wandb

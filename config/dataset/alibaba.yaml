@@ -1,0 +1,8 @@
+dataset:
+  alibaba:
+    path: "raw_data/alibaba"
+    y: cpu_util_percent
+    drift_detection:
+      voting:
+        threshold: 300
+        window_size: 75

@@ -1,0 +1,9 @@
+dataset:
+  google:
+    path: "raw_data/google"
+    y: cpu
+    drift_detection:
+      voting:
+        threshold: 10
+        window_size: 100
+

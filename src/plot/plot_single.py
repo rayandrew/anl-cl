@@ -12,6 +12,8 @@ from src.dataset import (
     AlibabaMachineDataset,
     AlibabaMachineSequenceDataset,
     alibaba_machine_sequence_collate,
+    GoogleMachineDataset,
+    GoogleMachineSequenceDataset
 )
 from src.utils.general import get_model_fname
 from src.utils.plot import (
@@ -30,27 +32,37 @@ def predict(
     cfg: DictConfig,
 ):
     data_path = Path(cfg.filename)
-
     device = torch.device(
         f"cuda:{cfg.cuda}"
         if torch.cuda.is_available() and cfg.cuda > 0
         else "cpu"
     )
 
-    dataset, raw_dataset  = (
-        AlibabaMachineSequenceDataset(
+    # dataset, raw_dataset = (
+    #     AlibabaMachineSequenceDataset(
+    #         filename=data_path,
+    #         n_labels=cfg.n_labels,
+    #         subset="all",
+    #         y=cfg.y,
+    #         seq_len=cfg.seq_len,
+    #     )
+    #     if cfg.sequential
+    #     else AlibabaMachineDataset(
+    #         filename=data_path,
+    #         n_labels=cfg.n_labels,
+    #         subset="all",
+    #         y=cfg.y,
+    #     )
+    # )
+    # Please set this properly
+    dataset, raw_dataset = (
+        GoogleMachineSequenceDataset(
             filename=data_path,
             n_labels=cfg.n_labels,
             subset="all",
             y=cfg.y,
             seq_len=cfg.seq_len,
-        )
-        if cfg.sequential
-        else AlibabaMachineDataset(
-            filename=data_path,
-            n_labels=cfg.n_labels,
-            subset="all",
-            y=cfg.y,
+            univariate=cfg.univariate
         )
     )
     data = torch.utils.data.DataLoader(
@@ -59,6 +71,7 @@ def predict(
         shuffle=False,
         num_workers=cfg.n_workers,
         collate_fn=alibaba_machine_sequence_collate
+        # If not using sequential, removing this statement may help
         if cfg.sequential
         else None,
     )

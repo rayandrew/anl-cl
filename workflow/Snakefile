@@ -16,6 +16,7 @@ configfile: "config/dataset/google.yaml"
 # drift detection config
 configfile: "config/dd/voting.yaml"
 configfile: "config/dd/ruptures.yaml"
+configfile: "config/dd/online.yaml"
 
 # training config
 configfile: "config/train.yaml"

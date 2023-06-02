@@ -37,6 +37,8 @@ from src.config import Config
 from src.dataset import (
     AlibabaMachineDataset,
     AlibabaMachineSequenceDataset,
+    GoogleMachineDataset,
+    GoogleMachineSequenceDataset
 )
 from src.metrics import (  # forward_transfer_metrics_with_tolerance,
     accuracy_metrics_with_tolerance,
@@ -101,8 +103,7 @@ def main_v2(cfg: Config):
 
     # TODO: instantiate this using hydra
     # ChoosenDataset = AlibabaMachineDatasetF
-    ChoosenDataset = AlibabaMachineSequenceDataset
-
+    ChoosenDataset = GoogleMachineSequenceDataset
     train_dataset, raw_train_dataset = ChoosenDataset(
         filename=cfg.filename,
         n_labels=cfg.n_labels,
@@ -111,6 +112,7 @@ def main_v2(cfg: Config):
         seq_len=cfg.seq_len,
         univariate=cfg.univariate,
     )
+
     test_dataset, _raw_test_dataset = ChoosenDataset(
         filename=cfg.filename,
         n_labels=cfg.n_labels,
@@ -154,12 +156,6 @@ def main_v2(cfg: Config):
             drop_rate=0.3,
         )
     )
-    # model = MLP(
-    #     input_size=raw_train_dataset.input_size(),
-    #     num_classes=n_labels,
-    #     hidden_layers=4,
-    #     drop_rate=0.3,
-    # )
 
     # Prepare for training & testing
     # optimizer = SGD(model.parameters(), lr=args.learning_rate, momentum=0.9)
@@ -221,6 +217,7 @@ def main_v2(cfg: Config):
         # ),
         loggers=loggers,
     )
+    print(cfg.strategy)
 
     if cfg.strategy == "naive":
         cl_strategy = Naive(
@@ -318,7 +315,7 @@ def main_v2(cfg: Config):
         cl_strategy.train(
             exp,
             num_workers=cfg.n_workers,
-            eval_streams=[test_stream],
+            eval_streams=[test_stream]
         )
         result = cl_strategy.eval(test_stream)
         results[exp.current_experience] = result
@@ -360,43 +357,45 @@ def main(cfg: Config):
 
 
 if __name__ == "__main__":
+    # out_file = open(output_folder / "model.pt", "w")
+    # print_and_log("", out_file)
     main()
-#     parser = ArgumentParser()
-#     parser.add_argument(
-#         "--cuda",
-#         type=int,
-#         default=0,
-#         help="Select zero-indexed cuda device. -1 to use CPU.",
-#     )
-#     parser.add_argument("-f", "--filename", type=str, required=True)
-#     parser.add_argument(
-#         "-o", "--output_folder", type=str, default="out"
-#     )
-#     parser.add_argument("-m", "--model_name", type=str, required=True)
-#     parser.add_argument("-nl", "--n_labels", type=int, default=10)
-#     parser.add_argument("-w", "--n_workers", type=int, default=4)
-#     parser.add_argument(
-#         "-y",
-#         type=str,
-#         choices=["cpu", "mem", "disk"],
-#         default="cpu",
-#     )
-#     parser.add_argument("-e", "--epoch", type=int, default=8)
-#     # parser.add_argument("-e", "--epoch", type=int, default=1)
-#     parser.add_argument(
-#         "-lr", "--learning_rate", type=float, default=0.001
-#     )
-#     parser.add_argument("-b", "--batch_size", type=int, default=32)
-#     parser.add_argument(
-#         "-s",
-#         "--strategy",
-#         type=str,
-#         choices=["gss", "agem", "naive", "lwf", "ewc", "gdumb"],
-#         default="gdumb",
-#     )
-#     parser.add_argument("--seq", action="store_true")
-#     parser.add_argument("--seq_len", type=int, default=3)
-#     parser.add_argument("--univariate", action="store_true")
-#     parser.add_argument("--local", action="store_true")
-#     args = parser.parse_args()
-#     main(args)
+    #     parser = ArgumentParser()
+    # parser.add_argument(
+    #     "--cuda",
+    #     type=int,
+    #     default=0,
+    #     help="Select zero-indexed cuda device. -1 to use CPU.",
+    # )
+    #     parser.add_argument("-f", "--filename", type=str, required=True)
+    #     parser.add_argument(
+    #         "-o", "--output_folder", type=str, default="out"
+    #     )
+    #     parser.add_argument("-m", "--model_name", type=str, required=True)
+    #     parser.add_argument("-nl", "--n_labels", type=int, default=10)
+    #     parser.add_argument("-w", "--n_workers", type=int, default=4)
+    #     parser.add_argument(
+    #         "-y",
+    #         type=str,
+    #         choices=["cpu", "mem", "disk"],
+    #         default="cpu",
+    #     )
+    #     parser.add_argument("-e", "--epoch", type=int, default=8)
+    #     # parser.add_argument("-e", "--epoch", type=int, default=1)
+    #     parser.add_argument(
+    #         "-lr", "--learning_rate", type=float, default=0.001
+    #     )
+    #     parser.add_argument("-b", "--batch_size", type=int, default=32)
+    #     parser.add_argument(
+    #         "-s",
+    #         "--strategy",
+    #         type=str,
+    #         choices=["gss", "agem", "naive", "lwf", "ewc", "gdumb"],
+    #         default="gdumb",
+    #     )
+    #     parser.add_argument("--seq", action="store_true")
+    #     parser.add_argument("--seq_len", type=int, default=3)
+    #     parser.add_argument("--univariate", action="store_true")
+    #     parser.add_argument("--local", action="store_true")
+    #     args = parser.parse_args()
+    #     main(args)

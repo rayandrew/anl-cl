@@ -3,7 +3,6 @@ from typing import Literal
 
 from torch.utils.data import Dataset
 
-import numpy as np
 
 TDatasetSubset = Literal["training", "testing", "all"]
 

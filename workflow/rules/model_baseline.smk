@@ -1,8 +1,7 @@
 from pathlib import Path
 from helper import get_dataset_files
 
-# DATASETS = get_datasets(config)
-DATASETS = ["alibaba"]
+DATASETS = get_datasets(config)
 
 wildcard_constraints:
     dataset = "|".join(DATASETS)

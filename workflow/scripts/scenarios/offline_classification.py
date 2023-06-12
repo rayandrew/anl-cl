@@ -16,7 +16,11 @@ from avalanche.training.checkpoint import (
     save_checkpoint,
 )
 from avalanche.training.plugins import EvaluationPlugin
-from avalanche.training.supervised import FromScratchTraining, Naive, GSS_greedy
+from avalanche.training.supervised import (
+    FromScratchTraining,
+    GSS_greedy,
+    Naive,
+)
 
 from src.utils.logging import logging, setup_logging
 
@@ -37,44 +41,11 @@ def print_and_write(msg, out_file):
     print(msg)
     out_file.write(f"{msg}\n")
 
-
-
-def get_device(cfg: dict):
-    device = "cpu"
-    cuda_config = cfg.get("cuda", {})
-    if (
-        "enable" in cuda_config
-        and "device" in cuda_config
-        and cuda_config["enable"]
-        and cuda_config["device"] >= 0
-        and torch.cuda.is_available()
-    ):
-        device = f"cuda:{cuda_config['device']}"
-
-    return torch.device(device)
-
-def get_optimizer(cfg: dict, model: torch.nn.Module):
-    if "name" not in cfg:
-        from torch.optim import Adam
-        optimizer = Adam(model.parameters(), lr=0.001)
-    else:
-        if cfg["name"].lower() == "adam":
-            from torch.optim import Adam
-            optimizer = Adam(model.parameters(), lr=cfg["lr"])
-        elif cfg["name"].lower() == "sgd":
-            from torch.optim import SGD
-            optimizer = SGD(model.parameters(), lr=cfg["lr"])
-        else:
-            raise ValueError("Unknown optimizer")
-     
-    return optimizer
-
 def get_dataset(dataset: str, scenario: str, input_path: Path, y: str, num_classes: int = 10, num_split: int = 4):
     match dataset:
         case "alibaba":
             from src.dataset.alibaba import (
-                # get_classification_alibaba_machine_dataset_splitted as Dataset,
-                get_classification_alibaba_scheduler_dataset_splitted as Dataset,
+                get_classification_alibaba_scheduler_dataset_splitted as Dataset,  # get_classification_alibaba_machine_dataset_splitted as Dataset,
             )
         case "google":
             from src.dataset.google import (

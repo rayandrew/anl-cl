@@ -35,11 +35,7 @@ for dataset in dataset_files:
         rule:
             name: f"plot_classification_{dataset}_{filename}"
             input:
-                # generate_inputs(dataset, machine, SCENARIO),
-                # f"out/training/{dataset}/{machine}/{{scenario}}"
-                expand(f"out/training/{dataset}/{filename}/{{scenario}}", scenario=SCENARIO),
-                # dataset=dataset,
-                # filename=filename),
+                f"out/training/classification/offline/{dataset}/{filename}",
             output:
                 directory(f"out/results/{dataset}/{filename}/classification"),
             log:

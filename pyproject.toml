@@ -30,11 +30,11 @@ known_avalanche = ['avalanche']
 known_doit = ['doit']
 
 [tool.mypy]
-files = ["src", "*.py"]
+files = ["src", "workflow", "*.py"]
 ignore_missing_imports = true
 exclude = []
 
 [tool.pyright]
-include = ["src", "*.py"]
+include = ["src", "workflow", "*.py"]
 exclude = ["**/node_modules", "**/__pycache__"]
 ignore = []

@@ -1,9 +1,13 @@
 from avalanche.evaluation.metrics import (
-    cpu_usage_metrics,
-    gpu_usage_metrics,
+    # cpu_usage_metrics,
+    # gpu_usage_metrics,
     loss_metrics,
-    ram_usage_metrics,
-    timing_metrics,
+    # ram_usage_metrics,
+    # timing_metrics,
+    accuracy_metrics,
+    class_accuracy_metrics,
+    forgetting_metrics,
+    bwt_metrics,
 )
 
 from src.metrics.accuracy import accuracy_metrics_with_tolerance
@@ -36,16 +40,30 @@ def get_classification_default_metrics(
             epoch_running=False,
             experience=True,
             stream=True,
+        )
+        if tolerance > 0
+        else accuracy_metrics(
+            minibatch=True,
+            epoch=True,
+            epoch_running=False,
+            experience=True,
+            stream=True,
         ),
         forgetting_metrics_with_tolerance(
             tolerance=tolerance, experience=True, stream=True
-        ),
+        )
+        if tolerance > 0
+        else forgetting_metrics(experience=True, stream=True),
         bwt_metrics_with_tolerance(
             tolerance=tolerance, experience=True, stream=True
-        ),
+        )
+        if tolerance > 0
+        else bwt_metrics(experience=True, stream=True),
         class_accuracy_metrics_with_tolerance(
             tolerance=tolerance, experience=True, stream=True
-        ),
+        )
+        if tolerance > 0
+        else class_accuracy_metrics(experience=True, stream=True),
         classification_metrics(
             num_classes=num_classes,
             average=average,

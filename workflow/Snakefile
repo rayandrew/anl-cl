@@ -25,7 +25,10 @@ configfile: "config/train.yaml"
 configfile: "config/model.yaml"
 
 # scenario config
-configfile: "config/scenario/offline.yaml"
+configfile: "config/scenario/offline_classification.yaml"
+
+# strategies config
+configfile: "config/strategies.yaml"
 
 # others config
 configfile: "config/wandb.yaml"

@@ -32,14 +32,18 @@ def plot_bar(data: Sequence[float], labels: Sequence[str]):
 
 
 def label_from_path(path: Path):
-    if "offline-classification-no-retrain" in str(path):
+    if "offline_classification_no_retrain" in str(path):
         return "OFF_FROM_SCRATCH"
-    elif "offline-classification-retrain-chunks-naive" in str(path):
+    elif "offline_classification_retrain_chunks_naive" in str(path):
         return "OFF_RETRAIN_CHUNKS_NAIVE"
-    elif "offline-classification-retrain-chunks-from-scratch" in str(
+    elif "offline_classification_retrain_chunks_from_scratch" in str(
         path
     ):
         return "OFF_RETRAIN_CHUNKS_FROM_SCRATCH"
+    elif "offline_classification_retrain_chunks_gss_greedy" in str(
+        path
+    ):
+        return "OFF_RETRAIN_CHUNKS_GSS_GREEDY"
     raise ValueError(f"Unknown scenario for path: {path}")
 
 
@@ -121,8 +125,8 @@ def main():
         get_f1(summaries, labels), columns=["label", "value"]
     )
 
-    log.info(f"labels: {label}")
-    log.info(f"avg_aurocs: {avg_aurocs}")
+    log.info(f"labels: {labels}")
+    # log.info(f"avg_aurocs: {avg_aurocs}")
 
     # for i in avg_aurocs:
     #     print(i, len(avg_aurocs[i]), labels)

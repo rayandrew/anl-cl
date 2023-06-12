@@ -16,7 +16,7 @@ from avalanche.training.checkpoint import (
     save_checkpoint,
 )
 from avalanche.training.plugins import EvaluationPlugin
-from avalanche.training.supervised import FromScratchTraining, Naive
+from avalanche.training.supervised import FromScratchTraining, Naive, GSS_greedy
 
 from src.utils.logging import logging, setup_logging
 
@@ -73,7 +73,8 @@ def get_dataset(dataset: str, scenario: str, input_path: Path, y: str, num_class
     match dataset:
         case "alibaba":
             from src.dataset.alibaba import (
-                get_classification_alibaba_machine_dataset_splitted as Dataset,
+                # get_classification_alibaba_machine_dataset_splitted as Dataset,
+                get_classification_alibaba_scheduler_dataset_splitted as Dataset,
             )
         case "google":
             from src.dataset.google import (
@@ -83,7 +84,7 @@ def get_dataset(dataset: str, scenario: str, input_path: Path, y: str, num_class
             raise ValueError("Unknown dataset")
 
     match scenario:
-        case "offline_no_retrain" | "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive":
+        case "offline_classification_no_retrain" | "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive" | "offline_classification_retrain_chunks_gss_greedy":
             dataset = Dataset(
                 filename=input_path,
                 n_labels=num_classes,
@@ -100,10 +101,10 @@ def get_dataset(dataset: str, scenario: str, input_path: Path, y: str, num_class
 
 def get_trainer(scenario: str, cl_strategy, benchmark, num_workers: int = 4):
     match scenario:
-        case "offline_no_retrain":
+        case "offline_classification_no_retrain":
             from src.trainers import OfflineNoRetrainingTrainer
             trainer = OfflineNoRetrainingTrainer(cl_strategy, benchmark=benchmark, num_workers=num_workers)
-        case "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive":
+        case "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive" | "offline_classification_retrain_chunks_gss_greedy":
             from src.trainers import OfflineRetrainingTrainer 
             trainer = OfflineRetrainingTrainer(cl_strategy, benchmark=benchmark, num_workers=num_workers)
         case _:
@@ -113,7 +114,7 @@ def get_trainer(scenario: str, cl_strategy, benchmark, num_workers: int = 4):
 
 def get_benchmark(scenario, dataset):
     match scenario:
-        case "offline_no_retrain" | "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive":
+        case "offline_classification_no_retrain" | "offline_classification_retrain_chunks_from_scratch" | "offline_classification_retrain_chunks_naive" | "offline_classification_retrain_chunks_gss_greedy":
             # creating benchmark
             train_subsets = [subset.train_dataset for subset in dataset]
             test_subsets = [subset.test_dataset for subset in dataset]
@@ -243,7 +244,7 @@ def main():
 
     # Strategy ====
     match scenario:
-        case "offline_no_retrain" | "offline_classification_retrain_chunks_from_scratch":
+        case "offline_classification_no_retrain" | "offline_classification_retrain_chunks_from_scratch":
             cl_strategy = FromScratchTraining(
                 model,
                 optimizer,
@@ -260,6 +261,19 @@ def main():
                 model,
                 optimizer,
                 criterion,
+                train_mb_size=training_config["batch_size"],
+                train_epochs=training_config["epochs"],
+                eval_mb_size=training_config["batch_size"],
+                evaluator=eval_plugin,
+                device=device,
+                # eval_every=-1,  # at the end of each experience
+            )
+        case "offline_classification_retrain_chunks_gss_greedy":
+            cl_strategy = GSS_greedy(
+                model,
+                optimizer,
+                criterion,
+                input_size=[input_size],
                 train_mb_size=training_config["batch_size"],
                 train_epochs=training_config["epochs"],
                 eval_mb_size=training_config["batch_size"],

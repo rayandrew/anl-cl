@@ -76,11 +76,20 @@ def generate_summary_dict(
     for exp_str, value in data.items():
         # exp = int(exp_str)
         for key, val in value.items():
-            if "Top1_Acc_Stream_Tol/eval_phase/test_stream" in key:
+            if (
+                "Top1_Acc_Stream_Tol/eval_phase/test_stream" in key
+                or "Top1_Acc_Stream/eval_phase/test_stream" in key
+            ):
                 res["avg_acc"].append(val)
-            elif "StreamForgetting_Tol/eval_phase/test_stream" in key:
+            elif (
+                "StreamForgetting_Tol/eval_phase/test_stream" in key
+                or "StreamForgetting/eval_phase/test_stream" in key
+            ):
                 res["avg_forgetting"].append(val)
-            elif "StreamBWT_Tol/eval_phase/test_stream" in key:
+            elif (
+                "StreamBWT_Tol/eval_phase/test_stream" in key
+                or "StreamBWT/eval_phase/test_stream" in key
+            ):
                 res["avg_bwt"].append(val)
             elif "F1/eval_phase/test_stream" in key:
                 res["avg_f1"].append(val)
@@ -93,9 +102,15 @@ def generate_summary_dict(
             elif (
                 "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000"
                 in key
+            ) or (
+                "Top1_Acc_Exp/eval_phase/test_stream/Task000" in key
             ):
                 task_id = key.replace(
                     "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = task_id.replace(
+                    "Top1_Acc_Exp/eval_phase/test_stream/Task000/Exp",
                     "",
                 )
                 task_id = int(task_id)
@@ -108,9 +123,16 @@ def generate_summary_dict(
             elif (
                 "ExperienceForgetting_Tol/eval_phase/test_stream/Task000/"
                 in key
+            ) or (
+                "ExperienceForgetting/eval_phase/test_stream/Task000/"
+                in key
             ):
                 task_id = key.replace(
                     "ExperienceForgetting_Tol/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = task_id.replace(
+                    "ExperienceForgetting/eval_phase/test_stream/Task000/Exp",
                     "",
                 )
                 task_id = int(task_id)
@@ -123,9 +145,15 @@ def generate_summary_dict(
             elif (
                 "ExperienceBWT_Tol/eval_phase/test_stream/Task000/"
                 in key
+            ) or (
+                "ExperienceBWT/eval_phase/test_stream/Task000/" in key
             ):
                 task_id = key.replace(
                     "ExperienceBWT_Tol/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = task_id.replace(
+                    "ExperienceBWT/eval_phase/test_stream/Task000/Exp",
                     "",
                 )
                 task_id = int(task_id)

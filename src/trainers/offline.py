@@ -18,6 +18,10 @@ class OfflineNoRetrainingTrainer(BaseTrainer):
         self.num_workers = num_workers
 
     def train(self) -> Dict[int, Dict[str, float]]:
+        assert (
+            len(self.benchmark.train_stream) > 1
+        ), "OfflineNoRetrainingTrainer requires at least 2 experiences"
+
         first_experience = self.benchmark.train_stream[0]
         results = {}
         self.strategy.train(

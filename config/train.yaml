@@ -3,9 +3,9 @@ training:
     batch_size: 32
     epochs: 4
     classification:
-      num_classes: 10
+      num_classes: 4
       optimizer:
         name: Adam
         lr: 0.0001
       evaluation:
-        tolerance: 1
+        tolerance: 0

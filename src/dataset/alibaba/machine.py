@@ -18,12 +18,12 @@ from src.utils.general import split_evenly_by_classes
 
 from .base import AlibabaDataset
 
-TAlibabaOutput = Literal[
+TAlibabaMachineOutput = Literal[
     "cpu_util_percent", "mem_util_percent", "disk_io_percent"
 ]
 
 
-def assert_alibaba_output(output: TAlibabaOutput):
+def assert_alibaba_machine_output(output: TAlibabaMachineOutput):
     assert output in [
         "cpu_util_percent",
         "mem_util_percent",
@@ -68,10 +68,10 @@ class AlibabaMachineDatasetGenerator:
     def __init__(
         self,
         filename: Union[str, Path] = None,
-        n_labels: int = 10,
+        n_labels: int = 4,
         train_ratio: float = AlibabaDataset.TRAIN_RATIO,
         dataframe: Optional[pd.DataFrame] = None,
-        y: TAlibabaOutput = "cpu_util_percent",
+        y: TAlibabaMachineOutput = "cpu_util_percent",
     ):
         """Dataset for Alibaba Machine dataset
 
@@ -81,7 +81,7 @@ class AlibabaMachineDatasetGenerator:
             train_ratio (float, optional): Ratio of training data. Defaults to AlibabaDataset.TRAIN_RATIO.
             y (Literal["cpu_util_percent", "mem_util_percent", "disk_io_percent"], optional): Variable to predict. Defaults to "cpu".
         """
-        assert_alibaba_output(y)
+        assert_alibaba_machine_output(y)
 
         if dataframe is not None and filename is not None:
             raise ValueError(
@@ -172,9 +172,9 @@ class ClassificationAlibabaMachineDataAccessor:
 def get_classification_alibaba_machine_dataset(
     filename: str,
     n_labels: int = 10,
-    y: TAlibabaOutput = "cpu_util_percent",
+    y: TAlibabaMachineOutput = "cpu_util_percent",
 ):
-    assert_alibaba_output(y)
+    assert_alibaba_machine_output(y)
 
     generator = AlibabaMachineDatasetGenerator(
         filename=filename,
@@ -197,10 +197,10 @@ def get_classification_alibaba_machine_dataset(
 def get_classification_alibaba_machine_dataset_splitted(
     filename: str,
     n_labels: int = 10,
-    y: TAlibabaOutput = "cpu_util_percent",
+    y: TAlibabaMachineOutput = "cpu_util_percent",
     num_split: int = 4,
 ) -> Sequence[ClassificationAlibabaMachineDataAccessor]:
-    assert_alibaba_output(y)
+    assert_alibaba_machine_output(y)
 
     raw_data = pd.read_csv(filename)
     size = len(raw_data)

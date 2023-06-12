@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from helper import get_dataset_machines
+from helper import get_all_dataset_files
 
 DATASETS = ["alibaba"]
 
@@ -14,11 +14,12 @@ wildcard_constraints:
 #             final_inputs.append(file)
 #     return final_inputs
 
-dataset_machines = get_dataset_machines(config, DATASETS)
+dataset_files = get_all_dataset_files(config, DATASETS)
 SCENARIO = [
-    "offline-classification-no-retrain",
-    "offline-classification-retrain-chunks-from-scratch",
-    "offline-classification-retrain-chunks-naive",
+    "offline_classification_no_retrain",
+    "offline_classification_retrain_chunks_from_scratch",
+    "offline_classification_retrain_chunks_naive",
+    "offline_classification_retrain_chunks_gss_greedy",
 ]
 
 # def generate_inputs(dataset, machine, scenario):
@@ -29,20 +30,20 @@ SCENARIO = [
 #         return inputs
 #     return __generate
 
-for dataset in dataset_machines:
-    for machine in dataset_machines[dataset]:
+for dataset in dataset_files:
+    for filename in dataset_files[dataset]:
         rule:
-            name: f"plot_auroc_{dataset}_{machine}"
+            name: f"plot_classification_{dataset}_{filename}"
             input:
                 # generate_inputs(dataset, machine, SCENARIO),
                 # f"out/training/{dataset}/{machine}/{{scenario}}"
-                expand(f"out/training/{dataset}/{machine}/{{scenario}}", scenario=SCENARIO),
+                expand(f"out/training/{dataset}/{filename}/{{scenario}}", scenario=SCENARIO),
                 # dataset=dataset,
-                # machine=machine),
+                # filename=filename),
             output:
-                directory(f"out/results/{dataset}/{machine}/auroc"),
+                directory(f"out/results/{dataset}/{filename}/classification"),
             log:
-                f"logs/results/{dataset}/{machine}/plot_auroc.log",
+                f"logs/results/{dataset}/{filename}/plot_classification.log",
             script: "../scripts/plots/plot_bar.py"
 
             

@@ -13,6 +13,9 @@ def set_seed(random_seed: Number) -> None:
     RNGManager.set_random_seeds(random_seed)
 
 
+split_dataset = train_test_split
+
+
 def split_evenly_by_classes(
     X: Sequence[Tuple[npt.ArrayLike, Number, Number]],
     y: Sequence[Number],
@@ -79,6 +82,7 @@ def head(data: Any | Sequence[any]):
 
 __all__ = [
     "set_seed",
+    "split_dataset",
     "split_evenly_by_classes",
     "label_transform",
     "custom_round",

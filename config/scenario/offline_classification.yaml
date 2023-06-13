@@ -1,6 +1,0 @@
-scenario:
-  split_chunks:
-    num_split: 8
-  drift_detection:
-  
-  

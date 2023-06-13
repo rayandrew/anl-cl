@@ -8,7 +8,7 @@ import torch
 import numpy as np
 
 from src.dataset import AlibabaMachineDataset
-from src.utils.parse_v2 import compute_perf
+from src.utils.parse_training_log import compute_perf
 from src.utils.plot import (
     EvalResult,
     TrainResult,
@@ -27,18 +27,14 @@ def predict(
     data_path: Path,
     device: torch.device,
     args: Any,
-    is_seq: bool,
     univariate: bool = False,
 ):
-    if univariate:
-        assert is_seq, "Univariate data must be sequential"
-
     raw_data = AlibabaMachineDataset(
         filename=data_path,
         n_labels=args.n_labels,
         subset="all",
         y=args.y,
-        seq=is_seq,
+        seq=True,
         seq_len=args.seq_len,
         univariate=univariate,
     )
@@ -66,9 +62,9 @@ def predict(
         res["diffs_dict"][i] = 0
 
     print(
-        "Predicting using sequential model..."
-        if is_seq
-        else "Predicting using non-sequential model..."
+        "Predicting using univariate model..."
+        if univariate
+        else "Predicting using multivariate model..."
     )
     for i, (x, y, _dist) in enumerate(data):
         x = x.to(device)
@@ -86,7 +82,7 @@ def predict(
     res["predict_proba"] = np.array(res["predict_proba"])
 
     res = EvalResult(
-        **res, name="Sequential" if is_seq else "Non-Sequential"
+        **res, name="Univariate" if univariate else "Multivariate"
     )
 
     train_res_path = model_path.parent / f"train_results.json"
@@ -105,8 +101,8 @@ def main(args):
     changepoints_path = (
         data_path.parent / f"{data_path.stem}_change.csv"
     )
-    seq_path = Path(args.seq)
-    non_seq_path = Path(args.non_seq)
+    univariate_path = Path(args.univariate)
+    multivariate_path = Path(args.multivariate)
 
     changepoints = np.array([])
     if changepoints_path.exists():
@@ -123,33 +119,20 @@ def main(args):
         "cuda:0" if torch.cuda.is_available() else "cpu"
     )
 
-    print("Using non-sequential data...")
-    non_seq_eval_res, n_exp = predict(
-        non_seq_path,
-        data_path,
-        device,
-        args,
-        is_seq=False,
-        univariate=False,
+    print("Using univariate sequential data...")
+    uni_eval_res, n_exp = predict(
+        univariate_path, data_path, device, args, univariate=True
     )
 
-    print("Using sequential data...")
-    seq_eval_res, _ = predict(
-        seq_path,
-        data_path,
-        device,
-        args,
-        is_seq=True,
-        univariate=args.univariate,
+    print("Using multivariate sequential data...")
+    multi_eval_res, _ = predict(
+        multivariate_path, data_path, device, args, univariate=False
     )
 
     plot_title_prefix = "[Local]" if args.local else "[Global]"
 
-    if args.univariate:
-        plot_title_prefix += "[Univariate]"
-
-    plot_title = f"{plot_title_prefix} Sequential vs Non-Sequential (y={args.y}, strategy={args.strategy})"
-    results = [non_seq_eval_res, seq_eval_res]
+    plot_title = f"{plot_title_prefix} Univariate vs Multivariate (y={args.y}, strategy={args.strategy})"
+    results = [uni_eval_res, multi_eval_res]
     plot_prediction(
         results,
         output_folder,
@@ -213,14 +196,13 @@ if __name__ == "__main__":
         default="naive",
     )
     parser.add_argument(
-        "--seq", help="Path to sequential model", type=str
+        "--univariate", help="Path to univariate model", type=str
     )
     parser.add_argument(
-        "--non_seq", help="Path to non-sequential model", type=str
+        "--multivariate", help="Path to multivariate model", type=str
     )
     parser.add_argument("--seq_len", type=int, default=5)
     parser.add_argument("--local", action="store_true")
-    parser.add_argument("--univariate", action="store_true")
 
     args = parser.parse_args()
     main(args)

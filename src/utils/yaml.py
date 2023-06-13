@@ -24,4 +24,9 @@ def load_config_from_dir(dir: Path):
     files = dir.glob("**/*.yml")
     return load_yaml_files(files)
 
-__all__ = ["load_yaml_files", "load_yaml_file", "load_config_from_dir"]
+
+__all__ = [
+    "load_yaml_files",
+    "load_yaml_file",
+    "load_config_from_dir",
+]

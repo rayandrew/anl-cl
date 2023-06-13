@@ -1,0 +1,3 @@
+strategy: GSS
+mem_size: 10000
+model_name: GSS

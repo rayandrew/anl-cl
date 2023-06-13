@@ -1,2 +1,3 @@
-data: cori
-y: darshan_agg_perf_by_slowest_posix_gibs
+dataset: 
+  name: cori
+  y: darshan_agg_perf_by_slowest_posix_gibs

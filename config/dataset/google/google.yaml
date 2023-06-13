@@ -1,4 +1,4 @@
-data: google
-path: "raw_data/google"
-y: cpu
+dataset: 
+  name: google
+  y: cpu
   

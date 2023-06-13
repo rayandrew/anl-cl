@@ -1,11 +1,8 @@
-from enum import Enum
+from .config import DatasetConfig
+from .definitions import Dataset
 
 
-class Dataset(Enum):
-    ALIBABA = "alibaba"
-    GOOGLE = "google"
-
-def get_splitted_dataset(dataset: Dataset):
+def _get_splitted_dataset(dataset: Dataset):
     match dataset:
         case Dataset.ALIBABA:
             from src.dataset.alibaba import (
@@ -20,7 +17,7 @@ def get_splitted_dataset(dataset: Dataset):
             raise ValueError("Unknown dataset")
     return DatasetFactory
 
-def get_dataset(dataset: Dataset):
+def _get_dataset(dataset: Dataset):
     match dataset:
         case Dataset.ALIBABA:
             from src.dataset.alibaba import (
@@ -35,5 +32,13 @@ def get_dataset(dataset: Dataset):
             raise ValueError("Unknown dataset")
     return DatasetFactory
 
+def get_splitted_dataset(cfg: DatasetConfig):
+    return _get_splitted_dataset(cfg.name)
 
-__all__ = ["Dataset", "get_dataset", "get_splitted_dataset"]
+
+def get_dataset(cfg: DatasetConfig):
+    return _get_dataset(cfg.name)
+
+__all__ = [
+    "Dataset", "get_dataset", "get_splitted_dataset", "_get_dataset", "_get_splitted_dataset"
+]

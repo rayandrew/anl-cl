@@ -17,8 +17,6 @@ for (ext, scenario, strategy, training, task) in itertools.product(EXTENSIONS, S
         name: f"train_{task}_{training}_{scenario}_{strategy}"
         input:
             "raw_data/{dataset}/{path}" + f".{ext}",
-            # general = "config/general/{general_cfg}.yaml",
-            # strategy = "config/strategies/{strategy}/{strategy_cfg}.yaml",
         output:
             directory("out/training/{dataset}/{path}/" + f"{task}/{training}/{scenario}/{strategy}"),
         params:

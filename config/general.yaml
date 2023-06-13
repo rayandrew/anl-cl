@@ -3,12 +3,10 @@ seed: 123
 num_workers: 4
 epochs: 4
 num_classes: 4
-optimizer: SGD
-model_hidden_layers: 2
-model_hidden_size: 512
-model_drop_rate: 0.0
+optimizer: sgd
 eval_tol: 0
 batch: 32
 test_batch: 32
 wandb: "sched-cl"
-online: true
+online: false
+model_name: "model"

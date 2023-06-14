@@ -1,4 +1,0 @@
-strategies:
-  gss_greedy:
-    mem_size: 5000
-    mem_strength: 30

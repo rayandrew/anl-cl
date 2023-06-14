@@ -1,53 +1,74 @@
+import itertools
 from collections import defaultdict
 from pathlib import Path
 from typing import List
 
-DATASETS = ["alibaba"]
+DATASETS = ["alibaba", "google", "cori"]
+EXTENSIONS = ["csv", "parquet"]
+SCENARIOS = ["split-chunks"]
+STRATEGIES = ["no-retrain", "from-scratch", "naive", "gss"]
+TRAININGS = ["online", "offline"]
+TASKS = [
+    "classification",
+    #  "regression"
+]
+# PIPELINE_FLOWS = list(
+#     itertools.product(SCENARIOS, STRATEGIES, TRAININGS, TASKS)
+# )
 
 
-def get_datasets(config: dict):
-    return [
-        dataset for dataset in config["dataset"] if dataset != "cori"
-    ]
+def get_dataset_files(
+    base_path: Path | str, dataset: str, remove_ext: bool = False
+):
+    base_path = Path(base_path)
+    files: List[Path] = []
+    for ext in EXTENSIONS:
+        for file in (base_path / dataset).glob(f"**/*.{ext}"):
+            if file.is_file():
+                files.append(
+                    file.with_suffix("") if remove_ext else file
+                )
+    return files
 
 
-def get_database_config(config):
-    return lambda wildcards: config["dataset"][wildcards.dataset]
-
-
-def get_dataset_files(config: dict, dataset: str):
-    for file in Path(config["dataset"][dataset]["path"]).glob(
-        "**/*.csv"
-    ):
-        yield file
-
-    for file in Path(config["dataset"][dataset]["path"]).glob(
-        "**/*.parquet"
-    ):
-        yield file
-
-
-def get_all_dataset_files(
-    config: dict, datasets: List[str] = DATASETS
+def get_all_dataset_files_as_dict(
+    base_path: Path | str,
+    datasets: List[str] = DATASETS,
+    return_stem: bool = False,
+    remove_ext: bool = False,
 ):
     result = defaultdict(list)
     for dataset in datasets:
-        for file in get_dataset_files(config, dataset):
-            result[dataset].append(file.stem)
-        # for file in Path(config["dataset"][dataset]["path"]).glob(
-        #     "**/*.csv"
-        # ):
-        #     result[dataset].append(file.stem)
-        # for file in Path(config["dataset"][dataset]["path"]).glob(
-        #     "**/*.parquet"
-        # ):
-        #     result[dataset].append(file.stem)
+        for file in get_dataset_files(base_path, dataset, remove_ext):
+            result[dataset].append(file.stem if return_stem else file)
+    return result
+
+
+def get_all_dataset_files(
+    base_path: Path | str,
+    datasets: List[str] = DATASETS,
+    return_stem: bool = False,
+    remove_ext: bool = False,
+):
+    result = []
+    for dataset in datasets:
+        result += [
+            file.stem if return_stem else file
+            for file in get_dataset_files(
+                base_path, dataset, remove_ext
+            )
+        ]
     return result
 
 
 __all__ = [
-    "get_dataset_files",
-    "get_database_config",
+    "DATASETS",
+    "EXTENSIONS",
+    "SCENARIOS",
+    "STRATEGIES",
+    "TRAININGS",
+    "TASKS",
     "get_datasets",
-    "get_dataset_files",
+    "get_all_dataset_files",
+    "get_all_dataset_files_as_dict",
 ]

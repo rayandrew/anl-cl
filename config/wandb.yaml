@@ -1,3 +1,0 @@
-wandb:
-  enable: true 
-  project: "sched-cl"

@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from torch.nn import CrossEntropyLoss
 
@@ -28,13 +28,8 @@ setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
 
 
-def get_benchmark(dataset: Sequence[Any]):
-    from avalanche.benchmarks.generators import dataset_benchmark
-
-    train_subsets = [subset.train_dataset for subset in dataset]
-    test_subsets = [subset.test_dataset for subset in dataset]
-    benchmark = dataset_benchmark(train_subsets, test_subsets)
-    return benchmark
+def get_benchmark(dataset: Any):
+    raise NotImplementedError
 
 
 def main():
@@ -134,14 +129,16 @@ def main():
     benchmark = get_benchmark(dataset)
     Trainer = get_trainer(config)
     trainer = Trainer(
-        strategy, benchmark, num_workers=config.num_workers
+        strategy,
+        benchmark,
+        num_workers=config.num_workers,
     )
-    log.info("Starting training")
+    log.info("Start training")
     results = trainer.train()
-    log.info("Training finished")
+    log.info("End training")
 
-    log.info("Generating summary and saving training results")
-    save_train_results(results, output_folder, model)
+    log.info("Generating summary and saving results")
+    save_train_results(results, output_folder, run_name)
 
 
 if __name__ == "__main__":

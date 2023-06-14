@@ -87,6 +87,7 @@ def save_train_results(
     summary = generate_summary(output_folder / "train_results.json")
     table = generate_summary_table(summary)
     out_file.write_line(table.draw())
+    out_file.close()
 
 
 __all__ = ["get_trainer", "get_offline_trainer", "save_train_results"]

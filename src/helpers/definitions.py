@@ -1,24 +1,29 @@
 from enum import Enum
 
 
-class Dataset(Enum):
+class StrEnum(str, Enum):
+    def __str__(self):
+        return self.value
+
+
+class Dataset(StrEnum):
     ALIBABA = "alibaba"
     GOOGLE = "google"
     # CORI = "cori"
     # AZURE = "azure"
 
 
-class Optimizer(Enum):
+class Optimizer(StrEnum):
     ADAM = "adam"
     SGD = "sgd"
 
 
-class Scenario(Enum):
+class Scenario(StrEnum):
     SPLIT_CHUNKS = "split-chunks"
     DRIFT_DETECTION = "drift-detection"
 
 
-class Strategy(Enum):
+class Strategy(StrEnum):
     NO_RETRAIN = "no-retrain"
     FROM_SCRATCH = "from-scratch"
     NAIVE = "naive"
@@ -31,16 +36,17 @@ class Strategy(Enum):
     LWF = "lwf"
 
 
-class Task(Enum):
+class Task(StrEnum):
     CLASSIFICATION = "classification"
     REGRESSION = "regression"
 
 
-class Model(Enum):
+class Model(StrEnum):
     MLP = "mlp"
 
 
 __all__ = [
+    "StrEnum",
     "Optimizer",
     "Dataset",
     "Scenario",

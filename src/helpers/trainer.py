@@ -12,6 +12,7 @@ from .definitions import Scenario, Strategy
 
 log = logging.getLogger(__name__)
 
+
 def get_offline_trainer(strategy: Strategy):
     if strategy == Strategy.NO_RETRAIN:
         from src.trainers import OfflineNoRetrainingTrainer
@@ -30,29 +31,38 @@ def get_trainer(config: Config):
     return get_offline_trainer(config.strategy.name)
 
 
-def _get_benchmark(scenario: Scenario, dataset: Any):
-    match scenario:
-        case Scenario.SPLIT_CHUNKS:
-            from avalanche.benchmarks.generators import (
-                dataset_benchmark,
-            )
+# def _get_benchmark(scenario: Scenario, dataset: Any):
+#     match scenario:
+#         case Scenario.SPLIT_CHUNKS:
+#             from avalanche.benchmarks.generators import (
+#                 dataset_benchmark,
+#             )
 
-            train_subsets = [subset.train_dataset for subset in dataset]
-            test_subsets = [subset.test_dataset for subset in dataset]
-            benchmark = dataset_benchmark(train_subsets, test_subsets)
-            return benchmark
-        case _:
-            raise ValueError("Unknown scenario")
+#             train_subsets = [subset.train_dataset for subset in dataset]
+#             test_subsets = [subset.test_dataset for subset in dataset]
+#             benchmark = dataset_benchmark(train_subsets, test_subsets)
+#             return benchmark
+#         case _:
+#             raise ValueError("Unknown scenario")
 
-def get_benchmark(cfg: Config, dataset: Any):
-    return _get_benchmark(cfg.scenario.name, dataset)
+# def get_benchmark(cfg: Config, dataset: Any):
+#     return _get_benchmark(cfg.scenario.name, dataset)
 
-def save_train_results(results: dict, output_folder: Path, model: torch.nn.Module):
+
+def save_train_results(
+    results: dict, output_folder: Path, model: torch.nn.Module
+):
     import json
 
     # Cleaning up ====
-    with open(output_folder / "train_results.json", "w") as results_file:
-        json.dump(results, results_file, default=lambda _: "<not serializable>")
+    with open(
+        output_folder / "train_results.json", "w"
+    ) as results_file:
+        json.dump(
+            results,
+            results_file,
+            default=lambda _: "<not serializable>",
+        )
 
     # Save model ====
     log.info("Saving model")
@@ -79,5 +89,4 @@ def save_train_results(results: dict, output_folder: Path, model: torch.nn.Modul
     out_file.write_line(table.draw())
 
 
-
-__all__ = ["get_trainer", "get_offline_trainer", "get_benchmark", "save_train_results"]
+__all__ = ["get_trainer", "get_offline_trainer", "save_train_results"]

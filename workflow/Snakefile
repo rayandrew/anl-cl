@@ -6,7 +6,7 @@ min_version("7.0")
 
 ###### load rules ######
 # include: "rules/drift_detection.smk"
-include: "rules/pipeline.smk"
+include: "rules/training.smk"
 include: "rules/evaluation.smk"
 include: "rules/test.smk"
 

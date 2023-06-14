@@ -1,6 +1,6 @@
-from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,85 +19,100 @@ log = logging.getLogger(__name__)
 sns.color_palette("tab10")
 
 
-def plot_bar(data: Sequence[float], labels: Sequence[str]):
-    fig, ax = plt.subplots()
-    x = range(len(data))
-    ax.bar(x, data)
-    ax.set_xticks(x, labels)
-    ax.set_ylim(0, 1)
-    ax.set_ybound(0, 1)
-    ax.set_ylabel("AUROC")
-    ax.set_title(f"AUROC")
-    return fig
-
-
-def label_from_path(path: Path):
-    if "offline_classification_no_retrain" in str(path):
-        return "OFF_FROM_SCRATCH"
-    elif "offline_classification_retrain_chunks_naive" in str(path):
-        return "OFF_RETRAIN_CHUNKS_NAIVE"
-    elif "offline_classification_retrain_chunks_from_scratch" in str(
-        path
-    ):
-        return "OFF_RETRAIN_CHUNKS_FROM_SCRATCH"
-    elif "offline_classification_retrain_chunks_gss_greedy" in str(
-        path
-    ):
-        return "OFF_RETRAIN_CHUNKS_GSS_GREEDY"
-    raise ValueError(f"Unknown scenario for path: {path}")
-
-
-def get_auroc(
-    summaries: Sequence[TrainingSummary], labels: Sequence[str]
+def append_if_enum_exists_in_str(
+    EnumType, input: str, output: Sequence[str]
 ):
-    avg_aurocs = []
-    for summary, label in zip(summaries, labels):
-        for i in range(len(summary.avg_auroc)):
-            avg_aurocs.append(
-                [label, np.mean(summary.avg_auroc[i]).item()]
-            )
-    return avg_aurocs
+    for e in EnumType:
+        if e.value in input:
+            output.append(e.value)
+            return
 
 
-def get_recall(
+def label_from_path(path: Path, sep: str = "_"):
+    path = str(path)
+    path = path.replace("/train_results.json", "")
+    paths = path.split("/")
+    return sep.join(paths[-3:]) # training_scenario_strategy
+
+
+@dataclass
+class Result:
+    # avg_precisions: Sequence[float]
+    # avg_recalls: Sequence[float]
+    # avg_f1s: Sequence[float]
+    # avg_aurocs: Sequence[float]
+    avg_precisions: pd.DataFrame
+    avg_recalls: pd.DataFrame
+    avg_f1s: pd.DataFrame
+    avg_aurocs: pd.DataFrame
+    # label: str
+    # f1: float
+    # precision: float
+    # recall: float
+    # auroc: float
+
+
+def get_metrics(
     summaries: Sequence[TrainingSummary], labels: Sequence[str]
-):
-    avg_recalls = []
-    for summary, label in zip(summaries, labels):
-        for i in range(len(summary.avg_recall)):
-            avg_recalls.append(
-                [label, np.mean(summary.avg_recall[i]).item()]
-            )
-    return avg_recalls
-
-
-def get_precision(
-    summaries: Sequence[TrainingSummary], labels: Sequence[str]
-):
-    avg_precisions = []
-    for summary, label in zip(summaries, labels):
-        for i in range(len(summary.avg_precision)):
-            avg_precisions.append(
-                [label, np.mean(summary.avg_precision[i]).item()]
-            )
-    return avg_precisions
-
-
-def get_f1(
-    summaries: Sequence[TrainingSummary], labels: Sequence[str]
-):
-    avg_f1s = []
+) -> Sequence[Result]:
+    avg_f1s: Sequence[Tuple[str, float]] = []
+    avg_precisions: Sequence[Tuple[str, float]] = []
+    avg_recalls: Sequence[Tuple[str, float]] = []
+    avg_aurocs: Sequence[Tuple[str, float]] = []
     for summary, label in zip(summaries, labels):
         for i in range(len(summary.avg_f1)):
-            avg_f1s.append([label, np.mean(summary.avg_f1[i]).item()])
-    return avg_f1s
+            avg_f1s.append((label, np.mean(summary.avg_f1[i]).item()))
+            avg_precisions.append(
+                (label, np.mean(summary.avg_precision[i]).item())
+            )
+            avg_recalls.append(
+                (label, np.mean(summary.avg_recall[i]).item())
+            )
+            avg_aurocs.append(
+                (label, np.mean(summary.avg_auroc[i]).item())
+            )
+
+    return Result(
+        avg_f1s=pd.DataFrame(avg_f1s, columns=["label", "value"]),
+        avg_precisions=pd.DataFrame(
+            avg_precisions, columns=["label", "value"]
+        ),
+        avg_recalls=pd.DataFrame(
+            avg_recalls, columns=["label", "value"]
+        ),
+        avg_aurocs=pd.DataFrame(
+            avg_aurocs, columns=["label", "value"]
+        ),
+    )
+
+
+def plot_bar(data: pd.DataFrame, label: str):
+    label = label.upper()
+    fig, ax = plt.subplots(figsize=(5, 5))
+    sns.barplot(x="label", y="value", data=data)
+    # sns.barplot(x="label", y="value", data=df, ax=ax)
+    ax.set_ylim(0, 1)
+    ax.set_ybound(0, 1)
+    ax.set_ylabel(label)
+    ax.set_title(label)
+    ax.set_xticklabels(
+        ax.get_xticklabels(),
+        rotation=30,
+        horizontalalignment="right",
+    )
+    ax.set_xlabel("")
+    # ax.set_xticklabels(bars, rotation=90)
+    fig.tight_layout()
+    return fig
 
 
 def main():
     config = snakemake.config
 
     set_seed(config.get("seed", 0))
-    input_paths = [Path(str(input)) for input in snakemake.input]
+    input_paths = Path(str(snakemake.input)).glob(
+        "**/train_results.json"
+    )
     output_folder = Path(str(snakemake.output))
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -107,55 +122,17 @@ def main():
     for input in input_paths:
         label = label_from_path(input)
         labels.append(label)
-
-        summary = generate_summary(input / "train_results.json")
+        summary = generate_summary(input)
         summaries.append(summary)
 
-    dfs = {}
-    dfs["auroc"] = pd.DataFrame(
-        get_auroc(summaries, labels), columns=["label", "value"]
-    )
-    dfs["precision"] = pd.DataFrame(
-        get_precision(summaries, labels), columns=["label", "value"]
-    )
-    dfs["recall"] = pd.DataFrame(
-        get_recall(summaries, labels), columns=["label", "value"]
-    )
-    dfs["f1"] = pd.DataFrame(
-        get_f1(summaries, labels), columns=["label", "value"]
-    )
+    result = get_metrics(summaries, labels)
 
-    log.info(f"labels: {labels}")
-    # log.info(f"avg_aurocs: {avg_aurocs}")
-
-    # for i in avg_aurocs:
-    #     print(i, len(avg_aurocs[i]), labels)
-    #     fig = plot_bar(i, avg_aurocs[i], labels)
-    #     fig.savefig(output_folder / f"auroc_{i}.png")
-    # fig = plot_bar(avg_aurocs, labels)
-
-    for metric in dfs:
-        fig, ax = plt.subplots(figsize=(5, 5))
-        sns.barplot(x="label", y="value", data=dfs[metric])
-        # sns.barplot(x="label", y="value", data=df, ax=ax)
-        ax.set_ylim(0, 1)
-        ax.set_ybound(0, 1)
-        ax.set_ylabel(metric.upper())
-        ax.set_title(metric.upper())
-        ax.set_xticklabels(
-            ax.get_xticklabels(),
-            rotation=30,
-            horizontalalignment="right",
-        )
-        ax.set_xlabel("")
-        # ax.set_xticklabels(bars, rotation=90)
-        fig.tight_layout()
+    for metric in ["auroc", "precision", "recall", "f1"]:
+        data: pd.DataFrame = getattr(result, f"avg_{metric}s")
+        fig = plot_bar(data, metric)
+        data.to_csv(output_folder / f"{metric}.csv", index=False)
         fig.savefig(output_folder / f"{metric}.png", dpi=300)
-        # sns.despine(left=True, bottom=True)
         plt.close(fig)
-        dfs[metric].to_csv(
-            output_folder / f"{metric}.csv", index=False
-        )
 
 
 if __name__ == "__main__":

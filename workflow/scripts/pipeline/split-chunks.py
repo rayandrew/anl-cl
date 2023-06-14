@@ -15,11 +15,7 @@ from src.helpers.device import get_device
 from src.helpers.model import get_model
 from src.helpers.optimizer import get_optimizer
 from src.helpers.strategy import get_strategy
-from src.helpers.trainer import (
-    get_benchmark,
-    get_trainer,
-    save_train_results,
-)
+from src.helpers.trainer import get_trainer, save_train_results
 from src.metrics import get_classification_default_metrics
 from src.utils.general import set_seed
 from src.utils.io import Transcriber
@@ -32,6 +28,15 @@ if TYPE_CHECKING:
 
 setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
+
+
+def get_benchmark(dataset: Sequence[Any]):
+    from avalanche.benchmarks.generators import dataset_benchmark
+
+    train_subsets = [subset.train_dataset for subset in dataset]
+    test_subsets = [subset.test_dataset for subset in dataset]
+    benchmark = dataset_benchmark(train_subsets, test_subsets)
+    return benchmark
 
 
 def main():
@@ -129,7 +134,7 @@ def main():
         **additional_strategy_params,
     )
 
-    benchmark = get_benchmark(config, dataset)
+    benchmark = get_benchmark(dataset)
     Trainer = get_trainer(config)
     trainer = Trainer(
         strategy, benchmark, num_workers=config.num_workers

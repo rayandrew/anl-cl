@@ -4,9 +4,7 @@ from .definitions import Strategy
 
 def _get_strategy(strategy: Strategy):
     match strategy:
-        case Strategy.NO_RETRAIN:
-            return None
-        case Strategy.FROM_SCRATCH:
+        case Strategy.NO_RETRAIN | Strategy.FROM_SCRATCH:
             from avalanche.training.supervised import (
                 FromScratchTraining,
             ) 
@@ -35,6 +33,9 @@ def _get_strategy(strategy: Strategy):
         case Strategy.LWF:
             from avalanche.training.supervised import LwF
             return LwF
+        case Strategy.GDUMB:
+            from avalanche.training.supervised import GDumb
+            return GDumb
         case _:
             raise ValueError("Unknown strategy")
 

@@ -35,6 +35,82 @@ snakemake -cN
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing --jobs 2 --directory `realpath -s .`
+
+# running scenario
+
+# running evaluation
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/eval/alibaba/chunk-0/classification/online/split-chunks
+```
+
+## Scenario
+
+### Split Chunks
+
+Default chunk = 8
+
+- No Retrain
+
+```bash
+# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/no-retrain
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/no-retrain \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/no_retrain/no_retrain.yaml
+```
+
+- Retrain from scratch each chunk
+
+```bash
+# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/from-scratch
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/from-scratch \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/from_scratch/from_scratch.yaml
+```
+
+- Retrain using GSS
+
+```bash
+# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/gss
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/gss \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/gss/gss.yaml
+```
+
+- Retrain using GDumb
+
+```bash
+# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/gdumb
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/gdumb \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/gdumb/gdumb.yaml
+```
+
+- Retrain using EWC
+
+```bash
+# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/ewc
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/ewc \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/ewc/ewc.yaml
 ```
 
 ## Analyzing dataset

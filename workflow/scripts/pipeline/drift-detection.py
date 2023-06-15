@@ -11,6 +11,7 @@ from avalanche.training.plugins import EvaluationPlugin
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import get_splitted_dataset
 from src.helpers.definitions import Strategy as StrategyEnum
+from src.helpers.definitions import Training
 from src.helpers.device import get_device
 from src.helpers.model import get_model
 from src.helpers.optimizer import get_optimizer
@@ -46,6 +47,9 @@ def main():
 
     current_time = get_current_time()
 
+    training_type = (
+        Training.ONLINE if config.online else Training.BATCH
+    )
     run_name = f"{config.dataset.name}_{config.scenario.name}_{input_path.stem}_{current_time}"
     log.info(f"Run name: {run_name}")
 

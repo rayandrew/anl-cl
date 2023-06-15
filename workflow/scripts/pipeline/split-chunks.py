@@ -11,6 +11,7 @@ from avalanche.training.plugins import EvaluationPlugin
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import get_splitted_dataset
 from src.helpers.definitions import Strategy as StrategyEnum
+from src.helpers.definitions import Training
 from src.helpers.device import get_device
 from src.helpers.model import get_model
 from src.helpers.optimizer import get_optimizer
@@ -51,7 +52,10 @@ def main():
 
     current_time = get_current_time()
 
-    run_name = f"{config.dataset.name}_{config.scenario.name}_{input_path.stem}_{current_time}"
+    training_type = (
+        Training.ONLINE if config.online else Training.BATCH
+    )
+    run_name = f"{config.dataset.name}_{training_type}_{config.scenario.name}_{config.strategy.name}_{input_path.stem}_{current_time}"
     log.info(f"Run name: {run_name}")
 
     output_folder = Path(str(snakemake.output))
@@ -77,14 +81,15 @@ def main():
     # Evaluation ====
     loggers = [TextLogger(sys.stderr)]
 
-    wandb_enable = False
+    wandb_logger = None
     if config.wandb is not None:
         from avalanche.logging.wandb_logger import WandBLogger
 
-        loggers.append(
-            WandBLogger(project_name=config.wandb, run_name=run_name)
+        wandb_logger = WandBLogger(
+            project_name=config.wandb, run_name=run_name
         )
-        wandb_enable = True
+        wandb_logger.wandb.config.config = config.dict()
+        loggers.append(wandb_logger)
 
     eval_plugin = EvaluationPlugin(
         *get_classification_default_metrics(
@@ -93,7 +98,7 @@ def main():
         ),
         confusion_matrix_metrics(
             stream=True,
-            wandb=wandb_enable,
+            wandb=wandb_logger is not None,
             class_names=[str(i) for i in range(config.num_classes)],
             save_image=True,
         ),
@@ -115,7 +120,9 @@ def main():
     )
 
     Strategy = get_strategy(config)
-    additional_strategy_params = {}
+    additional_strategy_params = config.strategy.dict(
+        exclude={"name"}
+    )
     if config.strategy.name == StrategyEnum.GSS:
         additional_strategy_params["input_size"] = [input_size]
 

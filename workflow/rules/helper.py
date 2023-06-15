@@ -1,4 +1,3 @@
-import itertools
 from collections import defaultdict
 from pathlib import Path
 from typing import List
@@ -6,7 +5,16 @@ from typing import List
 DATASETS = ["alibaba", "google", "cori"]
 EXTENSIONS = ["csv", "parquet"]
 SCENARIOS = ["split-chunks"]
-STRATEGIES = ["no-retrain", "from-scratch", "naive", "gss"]
+STRATEGIES = [
+    "no-retrain",
+    "from-scratch",
+    "naive",
+    "gss",
+    "gdumb",
+    "agem",
+    "gem",
+    "ewc",
+]
 TRAININGS = ["online", "offline"]
 TASKS = [
     "classification",

@@ -32,7 +32,8 @@ def label_from_path(path: Path, sep: str = "_"):
     path = str(path)
     path = path.replace("/train_results.json", "")
     paths = path.split("/")
-    return sep.join(paths[-3:]) # training_scenario_strategy
+    # return sep.join(paths[-3:])  # training_scenario_strategy
+    return sep.join(paths[-2:])  # training_scenario_strategy
 
 
 @dataclass
@@ -41,10 +42,12 @@ class Result:
     # avg_recalls: Sequence[float]
     # avg_f1s: Sequence[float]
     # avg_aurocs: Sequence[float]
-    avg_precisions: pd.DataFrame
-    avg_recalls: pd.DataFrame
-    avg_f1s: pd.DataFrame
-    avg_aurocs: pd.DataFrame
+    precision: pd.DataFrame
+    recall: pd.DataFrame
+    f1: pd.DataFrame
+    auroc: pd.DataFrame
+    acc: pd.DataFrame
+    forgetting: pd.DataFrame
     # label: str
     # f1: float
     # precision: float
@@ -59,6 +62,8 @@ def get_metrics(
     avg_precisions: Sequence[Tuple[str, float]] = []
     avg_recalls: Sequence[Tuple[str, float]] = []
     avg_aurocs: Sequence[Tuple[str, float]] = []
+    avg_accs: Sequence[Tuple[str, float]] = []
+    avg_forgettings: Sequence[Tuple[str, float]] = []
     for summary, label in zip(summaries, labels):
         for i in range(len(summary.avg_f1)):
             avg_f1s.append((label, np.mean(summary.avg_f1[i]).item()))
@@ -71,17 +76,21 @@ def get_metrics(
             avg_aurocs.append(
                 (label, np.mean(summary.avg_auroc[i]).item())
             )
+            avg_accs.append((label, summary.ovr_avg_acc))
+            avg_forgettings.append(
+                (label, summary.ovr_avg_forgetting)
+            )
 
     return Result(
-        avg_f1s=pd.DataFrame(avg_f1s, columns=["label", "value"]),
-        avg_precisions=pd.DataFrame(
+        f1=pd.DataFrame(avg_f1s, columns=["label", "value"]),
+        precision=pd.DataFrame(
             avg_precisions, columns=["label", "value"]
         ),
-        avg_recalls=pd.DataFrame(
-            avg_recalls, columns=["label", "value"]
-        ),
-        avg_aurocs=pd.DataFrame(
-            avg_aurocs, columns=["label", "value"]
+        recall=pd.DataFrame(avg_recalls, columns=["label", "value"]),
+        auroc=pd.DataFrame(avg_aurocs, columns=["label", "value"]),
+        acc=pd.DataFrame(avg_accs, columns=["label", "value"]),
+        forgetting=pd.DataFrame(
+            avg_forgettings, columns=["label", "value"]
         ),
     )
 
@@ -127,9 +136,9 @@ def main():
 
     result = get_metrics(summaries, labels)
 
-    for metric in ["auroc", "precision", "recall", "f1"]:
-        data: pd.DataFrame = getattr(result, f"avg_{metric}s")
-        fig = plot_bar(data, metric)
+    for metric in result.__annotations__.keys():
+        data: pd.DataFrame = getattr(result, metric)
+        fig = plot_bar(data, metric.replace("avg_", ""))
         data.to_csv(output_folder / f"{metric}.csv", index=False)
         fig.savefig(output_folder / f"{metric}.png", dpi=300)
         plt.close(fig)

@@ -1,0 +1,4 @@
+model_name: GDumb
+strategy:
+  name: gdumb
+  mem_size: 10000

@@ -67,10 +67,20 @@ class Config(GeneralConfig):
 
 
 def assert_config_params(config: Config, params: Any):
-    assert Dataset(params.dataset) == config.dataset.name
-    assert Scenario(params.scenario) == config.scenario.name
+    assert (
+        Dataset(params.dataset) == config.dataset.name
+    ), f"Dataset mismatch: got {params.dataset} instead of {config.dataset.name}"
+    assert (
+        Scenario(params.scenario) == config.scenario.name
+    ), f"Scenario mismatch: got {params.scenario} instead of {config.scenario.name}"
     if config.online:
-        assert params.training == Training.ONLINE
+        assert (
+            params.training == Training.ONLINE
+        ), f"Training mismatch: got {params.training} instead of {Training.ONLINE}"
+    else:
+        assert (
+            params.training == Training.BATCH
+        ), f"Training mismatch: Got {params.training} instead of {Training.BATCH}"
 
 
 __all__ = [

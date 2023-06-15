@@ -2,24 +2,43 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List
 
-DATASETS = ["alibaba", "google", "cori"]
+from src.helpers.definitions import (
+    Dataset,
+    DriftDetector,
+    Model,
+    Scenario,
+    Strategy,
+    Task,
+    Training,
+)
+
+DATASETS = [e.value for e in Dataset]
+SCENARIOS = [e.value for e in Scenario]
+STRATEGIES = [e.value for e in Strategy]
+TRAININGS = [e.value for e in Training]
+TASKS = [e.value for e in Task]
+MODELS = [e.value for e in Model]
+DRIFT_DETECTORS = [e.value for e in DriftDetector]
 EXTENSIONS = ["csv", "parquet"]
-SCENARIOS = ["split-chunks"]
-STRATEGIES = [
-    "no-retrain",
-    "from-scratch",
-    "naive",
-    "gss",
-    "gdumb",
-    "agem",
-    "gem",
-    "ewc",
-]
-TRAININGS = ["online", "offline"]
-TASKS = [
-    "classification",
-    #  "regression"
-]
+
+
+# DATASETS = ["alibaba", "google", "cori"]
+# SCENARIOS = ["split-chunks"]
+# STRATEGIES = [
+#     "no-retrain",
+#     "from-scratch",
+#     "naive",
+#     "gss",
+#     "gdumb",
+#     "agem",
+#     "gem",
+#     "ewc",
+# ]
+# TRAININGS = ["online", "batch"]
+# TASKS = [
+#     "classification",
+#     #  "regression"
+# ]
 # PIPELINE_FLOWS = list(
 #     itertools.product(SCENARIOS, STRATEGIES, TRAININGS, TASKS)
 # )

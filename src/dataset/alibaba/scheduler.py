@@ -195,7 +195,6 @@ class AlibabaSchedulerDatasetGenerator:
         ]
         data = data.drop(columns=non_feature_columns)
 
-        # scaler = Normalizer()
         scaler = StandardScaler()
         data[feature_columns] = scaler.fit_transform(
             data[feature_columns]

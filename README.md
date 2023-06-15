@@ -37,6 +37,12 @@ snakemake -cN
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing --jobs 2 --directory `realpath -s .`
 
 # running scenario
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing <OUTPUT> \
+    --configfiles <GENERAL_CONFIG> \
+                  <DATASET_CONFIG> \
+                  <SCENARIO_CONFIG> \
+                  <MODEL_CONFIG> \
+                  <STRATEGY_CONFIG>
 
 # running evaluation
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/eval/alibaba/chunk-0/classification/online/split-chunks

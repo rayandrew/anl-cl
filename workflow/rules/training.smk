@@ -3,8 +3,8 @@ import itertools
 
 from helper import DATASETS, EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS, get_all_dataset_files, get_all_dataset_files_as_dict
 
-wildcard_constraints:
-    dataset = "|".join(DATASETS),
+# wildcard_constraints:
+#     dataset = "|".join(DATASETS),
     # path = "|".join(get_all_dataset_files("raw_data", DATASETS, return_stem=True)),
     # ext = "|".join(EXTENSIONS),
     # scenario = "|".join(SCENARIOS),
@@ -14,7 +14,7 @@ wildcard_constraints:
 
 for (ext, scenario, strategy, training, task) in itertools.product(EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS):
     rule:
-        name: f"train_{task}_{training}_{scenario}_{strategy}"
+        name: f"{training}_training_{scenario}"
         input:
             "raw_data/{dataset}/{path}" + f".{ext}",
         output:

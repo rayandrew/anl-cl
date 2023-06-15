@@ -51,6 +51,12 @@ class Training(StrEnum):
     BATCH = "batch"
 
 
+class DriftDetector(StrEnum):
+    VOTING = "voting"
+    RUPTURES = "ruptures"
+    ONLINE = "online"
+
+
 __all__ = [
     "StrEnum",
     "Optimizer",
@@ -60,4 +66,5 @@ __all__ = [
     "Task",
     "Model",
     "Training",
+    "DriftDetector",
 ]

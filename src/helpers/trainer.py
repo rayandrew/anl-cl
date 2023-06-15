@@ -7,7 +7,7 @@ from src.utils.io import Transcriber
 from src.utils.logging import logging
 from src.utils.summary import generate_summary, generate_summary_table
 
-from .config import Config
+from .config import Config, assert_config_params
 from .definitions import Strategy
 
 log = logging.getLogger(__name__)

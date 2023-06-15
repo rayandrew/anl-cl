@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Literal, Union, Optional, Sequence, Any
 from functools import cached_property
+from pathlib import Path
+from typing import Callable, Literal, Optional, Sequence, Union
 
 import torch
 
@@ -10,14 +10,18 @@ from avalanche.benchmarks.utils.classification_dataset import (
     ClassificationDataset,
 )
 
-import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, Normalizer
+import pandas as pd
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    Normalizer,
+    StandardScaler,
+    minmax_scale,
+)
 
-from src.utils.general import split_evenly_by_classes, split_dataset
+from src.utils.general import split_dataset
 
 from .base import AlibabaDataset
-
 
 TAlibabaSchedulerOutput = Literal[
     "mem_avg", "mem_max", "cpu_avg", "cpu_max", "duration"
@@ -74,6 +78,10 @@ class AlibabaSchedulerDataset(AlibabaDataset):
         )
 
 
+def _default_transform(df: pd.DataFrame):
+    return df
+
+
 class AlibabaSchedulerDatasetGenerator:
     def __init__(
         self,
@@ -83,6 +91,9 @@ class AlibabaSchedulerDatasetGenerator:
         dataframe: Optional[pd.DataFrame] = None,
         y: TAlibabaSchedulerOutput = "cpu_avg",
         n_historical: int = 4,
+        transform: Callable[
+            [pd.DataFrame], pd.DataFrame
+        ] = _default_transform,
     ):
         """Dataset for Alibaba Scheduler dataset
 
@@ -106,6 +117,7 @@ class AlibabaSchedulerDatasetGenerator:
         self.n_labels = n_labels
         self.y_var = y
         self.n_historical = n_historical
+        self.transform = transform
 
     # def _clean_data(self, data: pd.DataFrame):
     #     data = data.fillna(0)
@@ -146,8 +158,10 @@ class AlibabaSchedulerDatasetGenerator:
         append_prev_feature(data, self.n_historical, "plan_cpu")
         append_prev_feature(data, self.n_historical, "plan_mem")
         append_prev_feature(data, self.n_historical, "instance_num")
+
+        data[self.y_var] = minmax_scale(data[self.y_var])
         data[self.output_column] = discretize_column(
-            data.cpu_avg, n_bins=self.n_labels
+            data[self.y_var], n_bins=self.n_labels
         )
         data = data.dropna()
         data = data.reset_index(drop=True)
@@ -181,7 +195,8 @@ class AlibabaSchedulerDatasetGenerator:
         ]
         data = data.drop(columns=non_feature_columns)
 
-        scaler = Normalizer()
+        # scaler = Normalizer()
+        scaler = StandardScaler()
         data[feature_columns] = scaler.fit_transform(
             data[feature_columns]
         )
@@ -355,5 +370,5 @@ if __name__ == "__main__":
     )
     print("INPUT SIZE", data.original_test_dataset.input_size)
     print("FEATURES", data.original_test_dataset.features.columns)
-    print("OUTPUT", data.original_test_dataset.targets.unique())
+    print("OUTPUT", data.original_test_dataset.targets)
     # print("OUTPUT SIZE", data.original_test_dataset.features.columns)

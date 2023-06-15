@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from torch.nn import CrossEntropyLoss
 
@@ -29,13 +29,8 @@ setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
 
 
-def get_benchmark(dataset: Sequence[Any]):
-    from avalanche.benchmarks.generators import dataset_benchmark
-
-    train_subsets = [subset.train_dataset for subset in dataset]
-    test_subsets = [subset.test_dataset for subset in dataset]
-    benchmark = dataset_benchmark(train_subsets, test_subsets)
-    return benchmark
+def get_benchmark(dataset: Any):
+    raise NotImplementedError
 
 
 def main():
@@ -55,7 +50,7 @@ def main():
     training_type = (
         Training.ONLINE if config.online else Training.BATCH
     )
-    run_name = f"{config.dataset.name}_{training_type}_{config.scenario.name}_{config.strategy.name}_{input_path.stem}_{current_time}"
+    run_name = f"{config.dataset.name}_{config.scenario.name}_{input_path.stem}_{current_time}"
     log.info(f"Run name: {run_name}")
 
     output_folder = Path(str(snakemake.output))
@@ -81,15 +76,14 @@ def main():
     # Evaluation ====
     loggers = [TextLogger(sys.stderr)]
 
-    wandb_logger = None
+    wandb_enable = False
     if config.wandb is not None:
         from avalanche.logging.wandb_logger import WandBLogger
 
-        wandb_logger = WandBLogger(
-            project_name=config.wandb, run_name=run_name
+        loggers.append(
+            WandBLogger(project_name=config.wandb, run_name=run_name)
         )
-        wandb_logger.wandb.config.config = config.dict()
-        loggers.append(wandb_logger)
+        wandb_enable = True
 
     eval_plugin = EvaluationPlugin(
         *get_classification_default_metrics(
@@ -98,7 +92,7 @@ def main():
         ),
         confusion_matrix_metrics(
             stream=True,
-            wandb=wandb_logger is not None,
+            wandb=wandb_enable,
             class_names=[str(i) for i in range(config.num_classes)],
             save_image=True,
         ),
@@ -120,9 +114,7 @@ def main():
     )
 
     Strategy = get_strategy(config)
-    additional_strategy_params = config.strategy.dict(
-        exclude={"name"}
-    )
+    additional_strategy_params = {}
     if config.strategy.name == StrategyEnum.GSS:
         additional_strategy_params["input_size"] = [input_size]
 
@@ -141,14 +133,16 @@ def main():
     benchmark = get_benchmark(dataset)
     Trainer = get_trainer(config)
     trainer = Trainer(
-        strategy, benchmark, num_workers=config.num_workers
+        strategy,
+        benchmark,
+        num_workers=config.num_workers,
     )
-    log.info("Starting training")
+    log.info("Start training")
     results = trainer.train()
-    log.info("Training finished")
+    log.info("End training")
 
-    log.info("Generating summary and saving training results")
-    save_train_results(results, output_folder, model)
+    log.info("Generating summary and saving results")
+    save_train_results(results, output_folder, run_name)
 
 
 if __name__ == "__main__":

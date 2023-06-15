@@ -34,6 +34,7 @@ class Strategy(StrEnum):
     MAS = "mas"
     SI = "si"
     LWF = "lwf"
+    GDUMB = "gdumb"
 
 
 class Task(StrEnum):
@@ -45,6 +46,11 @@ class Model(StrEnum):
     MLP = "mlp"
 
 
+class Training(StrEnum):
+    ONLINE = "online"
+    BATCH = "batch"
+
+
 __all__ = [
     "StrEnum",
     "Optimizer",
@@ -53,4 +59,5 @@ __all__ = [
     "Strategy",
     "Task",
     "Model",
+    "Training",
 ]

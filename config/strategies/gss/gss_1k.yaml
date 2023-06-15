@@ -1,4 +1,4 @@
-model_name: GSS_10k
+model_name: GSS_1k
 strategy: 
   name: gss
-  mem_size: 10000
+  mem_size: 1000

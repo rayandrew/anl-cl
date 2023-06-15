@@ -7,8 +7,8 @@ from src.utils.io import Transcriber
 from src.utils.logging import logging
 from src.utils.summary import generate_summary, generate_summary_table
 
-from .config import Config, ScenarioConfig
-from .definitions import Scenario, Strategy
+from .config import Config
+from .definitions import Strategy
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +87,7 @@ def save_train_results(
     summary = generate_summary(output_folder / "train_results.json")
     table = generate_summary_table(summary)
     out_file.write_line(table.draw())
+    out_file.close()
 
 
 __all__ = ["get_trainer", "get_offline_trainer", "save_train_results"]

@@ -5,7 +5,14 @@ from typing import Any
 
 from pydantic import BaseModel, Extra
 
-from .definitions import Dataset, Model, Optimizer, Scenario, Strategy
+from .definitions import (
+    Dataset,
+    Model,
+    Optimizer,
+    Scenario,
+    Strategy,
+    Training,
+)
 
 
 class DynamicConfig(BaseModel, metaclass=ABCMeta, extra=Extra.allow):
@@ -62,6 +69,8 @@ class Config(GeneralConfig):
 def assert_config_params(config: Config, params: Any):
     assert Dataset(params.dataset) == config.dataset.name
     assert Scenario(params.scenario) == config.scenario.name
+    if config.online:
+        assert params.training == Training.ONLINE
 
 
 __all__ = [

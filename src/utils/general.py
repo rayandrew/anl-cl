@@ -1,9 +1,11 @@
 import collections.abc
 import math
 from numbers import Number
+from pathlib import Path
 from typing import Any, Sequence, Tuple
 
 import numpy.typing as npt
+import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
@@ -65,7 +67,7 @@ def get_model_fname(cfg: Any):
     return "model.pt"
 
 
-def head(data: Any | Sequence[any]):
+def head(data: Any | Sequence[Any]):
     if isinstance(data, collections.abc.Sequence):
         return data[0]
     if isinstance(data, collections.abc.Set):
@@ -73,11 +75,31 @@ def head(data: Any | Sequence[any]):
     return data
 
 
-# def add_src_to_path():
-#     import sys
-#     from pathlib import Path
+def discretize_column(series: pd.Series, n_bins: int = 4):
+    # return pd.cut(series, bins=n_bins, labels=list(range(n_bins)))
+    return pd.cut(series, bins=n_bins, labels=False)
 
-#     sys.path.append(str(Path(__file__).parent.parent.parent))
+
+def append_prev_feature(df: pd.DataFrame, num: int, colname: str):
+    for i in range(1, num + 1):
+        df["prev_" + colname + "_" + str(i)] = (
+            df[colname].shift(i).values
+        )
+
+
+def read_dataframe(file: str | Path | pd.DataFrame) -> pd.DataFrame:
+    if isinstance(file, pd.DataFrame):
+        return file
+
+    file = Path(file)
+    if file.suffix == ".parquet":
+        return pd.read_parquet(file, engine="fastparquet")
+    elif file.suffix == ".csv":
+        return pd.read_csv(file)
+    else:
+        raise ValueError(
+            "File must be either a parquet or a csv file"
+        )
 
 
 __all__ = [
@@ -90,5 +112,8 @@ __all__ = [
     "get_model_fname",
     "get_checkpoint_fname",
     "head",
+    "discretize_column",
+    "append_prev_feature",
+    "read_dataframe",
     # "add_src_to_path",
 ]

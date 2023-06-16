@@ -2,9 +2,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence
 
 from src.helpers.config import Config
-from src.helpers.dataset import (
-    get_splitted_dataset as get_splitted_dataset_helper,
-)
 from src.helpers.definitions import Snakemake
 from src.helpers.scenario import train_classification_scenario
 
@@ -13,12 +10,17 @@ if TYPE_CHECKING:
 
 
 def get_dataset(config: Config, input_path: Path):
-    Dataset = get_splitted_dataset_helper(config.dataset)
-    dataset = Dataset(
-        filename=input_path,
-        y=config.dataset.y,
-        num_split=config.scenario.num_split,
+    from src.dataset.alibaba import (
+        AlibabaSchedulerDatasetChunkGenerator,
     )
+
+    generator = AlibabaSchedulerDatasetChunkGenerator(
+        file=input_path,
+        y=config.dataset.y,
+        n_labels=config.num_classes,
+        n_split=config.scenario.num_split,
+    )
+    dataset = generator()
     if len(dataset) == 0:
         raise ValueError("Dataset is empty")
     return dataset, dataset[0].original_test_dataset.input_size

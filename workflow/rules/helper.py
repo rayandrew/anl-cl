@@ -22,25 +22,6 @@ DRIFT_DETECTORS = [e.value for e in DriftDetector]
 EXTENSIONS = ["csv", "parquet"]
 
 
-# DATASETS = ["alibaba", "google", "cori"]
-# SCENARIOS = ["split-chunks"]
-# STRATEGIES = [
-#     "no-retrain",
-#     "from-scratch",
-#     "naive",
-#     "gss",
-#     "gdumb",
-#     "agem",
-#     "gem",
-#     "ewc",
-# ]
-# TRAININGS = ["online", "batch"]
-# TASKS = [
-#     "classification",
-#     #  "regression"
-# ]
-
-
 def get_dataset_files(
     base_path: Path | str, dataset: str, remove_ext: bool = False
 ):

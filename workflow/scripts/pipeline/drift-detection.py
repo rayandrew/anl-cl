@@ -14,7 +14,15 @@ if TYPE_CHECKING:
 
 
 def get_dataset(config: Config, input_path: Path):
-    raise NotImplementedError
+    from src.dataset.alibaba import AlibabaSchedulerDatasetGenerator
+
+    generator = AlibabaSchedulerDatasetGenerator(
+        file=input_path,
+        y=config.dataset.y,
+        n_labels=config.num_classes,
+    )
+    dataset = generator()
+    return dataset, dataset.original_test_dataset.input_size
 
 
 def get_benchmark(dataset: Any):

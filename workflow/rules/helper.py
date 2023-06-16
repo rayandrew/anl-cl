@@ -39,9 +39,6 @@ EXTENSIONS = ["csv", "parquet"]
 #     "classification",
 #     #  "regression"
 # ]
-# PIPELINE_FLOWS = list(
-#     itertools.product(SCENARIOS, STRATEGIES, TRAININGS, TASKS)
-# )
 
 
 def get_dataset_files(

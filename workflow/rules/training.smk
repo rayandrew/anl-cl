@@ -3,8 +3,8 @@ import itertools
 
 from helper import DATASETS, EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS, get_all_dataset_files, get_all_dataset_files_as_dict
 
-# wildcard_constraints:
-#     dataset = "|".join(DATASETS),
+wildcard_constraints:
+    dataset = "|".join(DATASETS),
     # path = "|".join(get_all_dataset_files("raw_data", DATASETS, return_stem=True)),
     # ext = "|".join(EXTENSIONS),
     # scenario = "|".join(SCENARIOS),
@@ -13,8 +13,11 @@ from helper import DATASETS, EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS
     # task = "|".join(TASKS),
 
 for (ext, scenario, strategy, training, task) in itertools.product(EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS):
+    # print(f"Creating rule for {ext}, {scenario}, {strategy}, {training}, {task}")
+    # print(f"{task}/{training}/{scenario}/{strategy}")
     rule:
-        name: f"{training}_training_{scenario}"
+        # name: f"training_{training}__{scenario}"
+        name: f"train_{task}_{training}_{scenario}_{strategy}"
         input:
             "raw_data/{dataset}/{path}" + f".{ext}",
         output:
@@ -31,9 +34,10 @@ for (ext, scenario, strategy, training, task) in itertools.product(EXTENSIONS, S
 
 def get_pipeline_output():
     final_output = []
-    dicts = get_all_dataset_files_as_dict("raw_data", return_stem=True) 
-    for dataset in dicts:
-        for filepath in dicts[dataset]:
-            final_output += expand("out/training/{dataset}/{path}/{task}/{training}/{scenario}/{strategy}", dataset=dataset, path=filepath, task=TASKS, scenario=SCENARIOS, strategy=STRATEGIES, training=TRAININGS)
+    # dicts = get_all_dataset_files_as_dict("raw_data", return_stem=True) 
+    # for dataset in dicts:
+    #     for filepath in dicts[dataset]:
+    #         final_output += expand("out/training/{dataset}/{path}/{task}/{training}/{scenario}/{strategy}", dataset=dataset, path=filepath, task=TASKS, scenario=SCENARIOS, strategy=STRATEGIES, training=TRAININGS)
 
+    # print(final_output)
     return final_output

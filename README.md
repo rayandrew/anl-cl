@@ -45,7 +45,7 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing <OUTPUT> \
                   <STRATEGY_CONFIG>
 
 # running evaluation
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/eval/alibaba/chunk-0/classification/online/split-chunks
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/eval/alibaba/chunk-0/classification/batch/split-chunks
 ```
 
 ## Scenario
@@ -57,9 +57,9 @@ Default chunk = 8
 - No Retrain
 
 ```bash
-# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/no-retrain
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/no-retrain \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/alibaba/alibaba.yaml \
@@ -70,9 +70,9 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 - Retrain from scratch each chunk
 
 ```bash
-# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/from-scratch
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/from-scratch
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/from-scratch \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/from-scratch \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/alibaba/alibaba.yaml \
@@ -83,9 +83,9 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 - Retrain using GSS
 
 ```bash
-# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/gss
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/gss
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/gss \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/gss \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/alibaba/alibaba.yaml \
@@ -96,9 +96,9 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 - Retrain using GDumb
 
 ```bash
-# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/gdumb
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/gdumb
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/gdumb \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/gdumb \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/alibaba/alibaba.yaml \
@@ -109,9 +109,9 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 - Retrain using EWC
 
 ```bash
-# rm -rf out/training/alibaba/chunk-0/classification/online/split-chunks/ewc
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/ewc
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/chunk-0/classification/online/split-chunks/ewc \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/ewc \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/alibaba/alibaba.yaml \

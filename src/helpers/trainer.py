@@ -13,22 +13,22 @@ from .definitions import Strategy
 log = logging.getLogger(__name__)
 
 
-def get_offline_trainer(strategy: Strategy):
+def get_batch_trainer(strategy: Strategy):
     if strategy == Strategy.NO_RETRAIN:
-        from src.trainers import OfflineNoRetrainingTrainer
+        from src.trainers import BatchNoRetrainTrainer
 
-        return OfflineNoRetrainingTrainer
+        return BatchNoRetrainTrainer
 
-    from src.trainers import OfflineRetrainingTrainer
+    from src.trainers import BatchSimpleRetrainTrainer
 
-    return OfflineRetrainingTrainer
+    return BatchSimpleRetrainTrainer
 
 
 def get_trainer(config: Config):
     if config.online:
         raise ValueError("Online trainer not implemented yet")
 
-    return get_offline_trainer(config.strategy.name)
+    return get_batch_trainer(config.strategy.name)
 
 
 # def _get_benchmark(scenario: Scenario, dataset: Any):
@@ -90,4 +90,4 @@ def save_train_results(
     out_file.close()
 
 
-__all__ = ["get_trainer", "get_offline_trainer", "save_train_results"]
+__all__ = ["get_trainer", "get_batch_trainer", "save_train_results"]

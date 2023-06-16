@@ -1,4 +1,14 @@
+from abc import ABCMeta
 from enum import Enum
+from typing import Any, Dict
+
+from snakemake.io import (
+    InputFiles,
+    Log,
+    OutputFiles,
+    Params,
+    Wildcards,
+)
 
 
 class StrEnum(str, Enum):
@@ -57,6 +67,15 @@ class DriftDetector(StrEnum):
     ONLINE = "online"
 
 
+class Snakemake(metaclass=ABCMeta):
+    input: InputFiles
+    output: OutputFiles
+    log: Log
+    params: Params
+    wildcards: Wildcards
+    config: Dict[str, Any]
+
+
 __all__ = [
     "StrEnum",
     "Optimizer",
@@ -67,4 +86,5 @@ __all__ = [
     "Model",
     "Training",
     "DriftDetector",
+    "Snakemake",
 ]

@@ -6,31 +6,29 @@ from helper import DATASETS, EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS
 wildcard_constraints:
     dataset = "|".join(DATASETS),
     # path = "|".join(get_all_dataset_files("raw_data", DATASETS, return_stem=True)),
-    # ext = "|".join(EXTENSIONS),
-    # scenario = "|".join(SCENARIOS),
-    # strategy = "|".join(STRATEGIES),
-    # training = "|".join(TRAININGS),
-    # task = "|".join(TASKS),
+    ext = "|".join(EXTENSIONS),
+    scenario = "|".join(SCENARIOS),
+    strategy = "|".join(STRATEGIES),
+    training = "|".join(TRAININGS),
+    task = "|".join(TASKS),
 
-for (ext, scenario, strategy, training, task) in itertools.product(EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS):
-    # print(f"Creating rule for {ext}, {scenario}, {strategy}, {training}, {task}")
-    # print(f"{task}/{training}/{scenario}/{strategy}")
-    rule:
-        # name: f"training_{training}__{scenario}"
-        name: f"train_{task}_{training}_{scenario}_{strategy}"
-        input:
-            "raw_data/{dataset}/{path}" + f".{ext}",
-        output:
-            directory("out/training/{dataset}/{path}/" + f"{task}/{training}/{scenario}/{strategy}"),
-        params:
-            dataset="{dataset}",
-            filepath="{path}",
-            scenario=f"{scenario}",
-            task=f"{task}",
-            training=f"{training}",
-        log:
-            "logs/training/{dataset}/{path}/" + f"{task}/{training}/{scenario}/{strategy}.log",
-        script: f"../scripts/pipeline/{scenario}.py"
+# for (ext, scenario, strategy, training, task) in itertools.product(EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS):
+rule:
+    # name: f"train_{task}_{training}_{scenario}_{strategy}"
+    name: f"training"
+    input:
+        "raw_data/{dataset}/{path}.parquet",
+    output:
+        directory("out/training/{dataset}/{path}/{task}/{training}/{scenario}/{strategy}"),
+    params:
+        dataset="{dataset}",
+        filepath="{path}",
+        scenario="{scenario}",
+        task="{task}",
+        training="{training}",
+    log:
+        "logs/training/{dataset}/{path}/{task}/{training}/{scenario}/{strategy}.log",
+    script: "../scripts/pipeline/{wildcards.scenario}.py"
 
 def get_pipeline_output():
     final_output = []

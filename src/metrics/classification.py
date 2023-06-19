@@ -104,8 +104,12 @@ class BaseClassificationMetric(Metric[TResult]):
         #     "Metric: %s, Counter: %d", self._metric, self._counter
         # )
         # log.info("result: %s", result)
-        result = convert_tensor_to_float_or_list(result)
-        self._mean.update(result)
+        result_mod = convert_tensor_to_float_or_list(result)
+        if isinstance(result_mod, float):
+            self._mean.update(result_mod)
+        else:
+            for r in result_mod:
+                self._mean.update(r)
         # log.info("_result: %s", result)
 
     def result(self) -> TResult:
@@ -123,7 +127,7 @@ class ClassificationPluginMetric(GenericPluginMetric[TResult]):
     Base class for all accuracies plugin metrics
     """
 
-    def __init__(self, metric: tm.Metric, reset_at, emit_at, mode):
+    def __init__(self, metric, reset_at, emit_at, mode):
         """Creates the Accuracy plugin
 
         :param metric: the metric to compute
@@ -132,9 +136,8 @@ class ClassificationPluginMetric(GenericPluginMetric[TResult]):
         :param mode:
         :param split_by_task: whether to compute task-aware accuracy or not.
         """
-        metric = BaseClassificationMetric(metric)
         super(ClassificationPluginMetric, self).__init__(
-            metric,
+            metric=BaseClassificationMetric(metric),
             reset_at=reset_at,
             emit_at=emit_at,
             mode=mode,

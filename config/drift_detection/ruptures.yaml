@@ -1,0 +1,6 @@
+drift_detection:
+  name: ruptures
+  kernel: rbf 
+  min_size: 300
+  jump: 1
+  penalty: 25

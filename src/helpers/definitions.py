@@ -1,5 +1,4 @@
 from abc import ABCMeta
-from enum import Enum
 from typing import Any, Dict
 
 from snakemake.io import (
@@ -10,10 +9,7 @@ from snakemake.io import (
     Wildcards,
 )
 
-
-class StrEnum(str, Enum):
-    def __str__(self):
-        return self.value
+from src.utils.ds import StrEnum
 
 
 class Dataset(StrEnum):

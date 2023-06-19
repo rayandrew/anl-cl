@@ -14,10 +14,10 @@ from avalanche.training.plugins import EvaluationPlugin
 
 from src.metrics import get_classification_default_metrics
 from src.utils.general import set_seed
-from src.utils.logging import logging, setup_logging
+from src.utils.logging import Logger
 from src.utils.time import get_current_time
 
-from .config import Config, assert_config_params
+from .config import Config
 from .definitions import Snakemake
 from .definitions import Strategy as StrategyEnum
 from .definitions import Training
@@ -32,20 +32,12 @@ GetBenchmarkFn = Callable[[Any], GenericCLScenario | OnlineCLScenario]
 
 
 def train_classification_scenario(
-    snakemake: Snakemake,
+    config: Config,
+    log: Logger,
     get_dataset: GetDatasetFn,
     get_benchmark: GetBenchmarkFn,
+    snakemake: Snakemake,
 ):
-    setup_logging(snakemake.log[0])
-    log = logging.getLogger(__name__)
-
-    params = snakemake.params
-    config = snakemake.config
-    config = Config(**config)
-    assert_config_params(config, params)
-
-    log.info("Config: %s", config)
-
     set_seed(config.seed)
     input_path = Path(str(snakemake.input))
     log.info(f"Input path: {input_path}")

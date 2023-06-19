@@ -1,7 +1,9 @@
 import json
-from dataclasses import dataclass, field
+from collections import defaultdict
+from collections.abc import Sequence
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, Sequence
+from typing import Dict
 
 from texttable import Texttable
 
@@ -10,14 +12,19 @@ from src.utils.ds import DataClassJSONEncoder
 
 @dataclass
 class TaskSummary:
-    task_id: int
-    acc: Sequence[float] = field(default_factory=list)
-    forgetting: Sequence[float] = field(default_factory=list)
-    bwt: Sequence[float] = field(default_factory=list)
-    # f1: Sequence[float] = field(default_factory=list)
-    # precision: Sequence[float] = field(default_factory=list)
-    # recall: Sequence[float] = field(default_factory=list)
-    # auroc: Sequence[float] = field(default_factory=list)
+    task_id: int = -1
+    acc: list[float] = field(default_factory=list)
+    forgetting: list[float] = field(default_factory=list)
+    bwt: list[float] = field(default_factory=list)
+
+    def set_task_id(self, task_id: int) -> None:
+        if self.task_id == -1:
+            self.task_id = task_id
+
+    # f1:  Sequence[float] = field(default_factory=list)
+    # precision:  Sequence[float] = field(default_factory=list)
+    # recall:  Sequence[float] = field(default_factory=list)
+    # auroc:  Sequence[float] = field(default_factory=list)
 
 
 @dataclass
@@ -26,43 +33,47 @@ class TrainingSummary:
     ovr_avg_acc: float = 0.0
     ovr_avg_forgetting: float = 0.0
     ovr_avg_bwt: float = 0.0
-    avg_acc: Sequence[float] = field(default_factory=list)
-    avg_forgetting: Sequence[float] = field(default_factory=list)
-    avg_bwt: Sequence[float] = field(default_factory=list)
-    task_data: Dict[int, TaskSummary] = field(default_factory=dict)
-    avg_f1: Sequence[float] = field(default_factory=list)
-    avg_precision: Sequence[float] = field(default_factory=list)
-    avg_recall: Sequence[float] = field(default_factory=list)
-    avg_auroc: Sequence[float] = field(default_factory=list)
+    avg_acc: list[float] = field(default_factory=list)
+    avg_forgetting: list[float] = field(default_factory=list)
+    avg_bwt: list[float] = field(default_factory=list)
+    task_data: Dict[int, TaskSummary] = field(  # type: ignore
+        default_factory=lambda: defaultdict(lambda: TaskSummary())
+    )
+    avg_f1: list[float] = field(default_factory=list)
+    avg_precision: list[float] = field(default_factory=list)
+    avg_recall: list[float] = field(default_factory=list)
+    avg_auroc: list[float] = field(default_factory=list)
 
 
-def generate_summary_dict(
+def generate_summary(
     path: str | Path,
-) -> Dict[int, Dict[str, Sequence[float]]]:
+) -> TrainingSummary:
     """Generate a summary dict from a path to a directory containing the results of a single experiment.
 
     Args:
         path (str | Path): Path to the file containing the results of a single experiment.
 
     Returns:
-        Dict[int, Dict[str, Sequence[float]]]: A dictionary containing the results of the experiment.
+        Dict[int, Dict[str,  Sequence[float]]]: A dictionary containing the results of the experiment.
     """
 
     path = Path(path)
-    res = {
-        "n_tasks": 0,
-        "ovr_avg_acc": 0.0,
-        "ovr_avg_forgetting": 0.0,
-        "ovr_avg_bwt": 0.0,
-        "avg_acc": [],
-        "avg_forgetting": [],
-        "avg_bwt": [],
-        "task_data": {},
-        "avg_f1": [],
-        "avg_precision": [],
-        "avg_recall": [],
-        "avg_auroc": [],
-    }
+    summary = TrainingSummary(n_tasks=0)
+
+    # res = {
+    #     "n_tasks": 0,
+    #     "ovr_avg_acc": 0.0,
+    #     "ovr_avg_forgetting": 0.0,
+    #     "ovr_avg_bwt": 0.0,
+    #     "avg_acc": [],
+    #     "avg_forgetting": [],
+    #     "avg_bwt": [],
+    #     "task_data": {},
+    #     "avg_f1": [],
+    #     "avg_precision": [],
+    #     "avg_recall": [],
+    #     "avg_auroc": [],
+    # }
 
     if not path.exists():
         raise ValueError(f"Path {path} does not exist.")
@@ -71,7 +82,7 @@ def generate_summary_dict(
     data = json.load(file)
     file.close()
 
-    res["n_tasks"] = len(data)
+    summary.n_tasks = len(data)
 
     for exp_str, value in data.items():
         # exp = int(exp_str)
@@ -80,25 +91,25 @@ def generate_summary_dict(
                 "Top1_Acc_Stream_Tol/eval_phase/test_stream" in key
                 or "Top1_Acc_Stream/eval_phase/test_stream" in key
             ):
-                res["avg_acc"].append(val)
+                summary.avg_acc.append(val)
             elif (
                 "StreamForgetting_Tol/eval_phase/test_stream" in key
                 or "StreamForgetting/eval_phase/test_stream" in key
             ):
-                res["avg_forgetting"].append(val)
+                summary.avg_forgetting.append(val)
             elif (
                 "StreamBWT_Tol/eval_phase/test_stream" in key
                 or "StreamBWT/eval_phase/test_stream" in key
             ):
-                res["avg_bwt"].append(val)
+                summary.avg_bwt.append(val)
             elif "F1/eval_phase/test_stream" in key:
-                res["avg_f1"].append(val)
+                summary.avg_f1.append(val)
             elif "Precision_/eval_phase/test_stream" in key:
-                res["avg_precision"].append(val)
+                summary.avg_precision.append(val)
             elif "Recall/eval_phase/test_stream" in key:
-                res["avg_recall"].append(val)
+                summary.avg_recall.append(val)
             elif "AUROC/eval_phase/test_stream" in key:
-                res["avg_auroc"].append(val)
+                summary.avg_auroc.append(val)
             elif (
                 "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000"
                 in key
@@ -114,12 +125,8 @@ def generate_summary_dict(
                     "",
                 )
                 task_id = int(task_id)
-                if task_id not in res["task_data"]:
-                    res["task_data"][task_id] = {}
-                    res["task_data"][task_id]["task_id"] = task_id
-                if "acc" not in res["task_data"][task_id]:
-                    res["task_data"][task_id]["acc"] = []
-                res["task_data"][task_id]["acc"].append(val)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].acc.append(val)
             elif (
                 "ExperienceForgetting_Tol/eval_phase/test_stream/Task000/"
                 in key
@@ -136,12 +143,8 @@ def generate_summary_dict(
                     "",
                 )
                 task_id = int(task_id)
-                if task_id not in res["task_data"]:
-                    res["task_data"][task_id] = {}
-                    res["task_data"][task_id]["task_id"] = task_id
-                if "forgetting" not in res["task_data"][task_id]:
-                    res["task_data"][task_id]["forgetting"] = []
-                res["task_data"][task_id]["forgetting"].append(val)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].forgetting.append(val)
             elif (
                 "ExperienceBWT_Tol/eval_phase/test_stream/Task000/"
                 in key
@@ -157,30 +160,19 @@ def generate_summary_dict(
                     "",
                 )
                 task_id = int(task_id)
-                if task_id not in res["task_data"]:
-                    res["task_data"][task_id] = {}
-                    res["task_data"][task_id]["task_id"] = task_id
-                if "bwt" not in res["task_data"][task_id]:
-                    res["task_data"][task_id]["bwt"] = []
-                res["task_data"][task_id]["bwt"].append(val)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].bwt.append(val)
 
-    res["ovr_avg_acc"] = sum(res["avg_acc"]) / len(res["avg_acc"])
-    res["ovr_avg_forgetting"] = sum(res["avg_forgetting"]) / len(
-        res["avg_forgetting"]
+    summary.ovr_avg_acc = sum(summary.avg_acc) / len(summary.avg_acc)
+    summary.ovr_avg_forgetting = sum(summary.avg_forgetting) / len(
+        summary.avg_forgetting
     )
-    res["ovr_avg_bwt"] = sum(res["avg_bwt"]) / len(res["avg_bwt"])
+    summary.ovr_avg_bwt = sum(summary.avg_bwt) / len(summary.avg_bwt)
+    return summary
 
-    return res
 
-
-def generate_summary(path: str | Path) -> TrainingSummary:
-    res = generate_summary_dict(path)
-    task_data = {
-        task_id: TaskSummary(**(res["task_data"][task_id]))
-        for task_id in res["task_data"]
-    }
-    res["task_data"] = task_data
-    return TrainingSummary(**res)
+def generate_summary_dict(path: str | Path) -> dict:
+    return asdict(generate_summary(path))
 
 
 def generate_summary_table(res: TrainingSummary):
@@ -192,7 +184,6 @@ def generate_summary_table(res: TrainingSummary):
     table.set_cols_valign(["m", "m", "m", "m", "m", "m", "m", "m"])
 
     for task in range(res.n_tasks):
-        print(task)
         table.add_rows(
             [
                 [

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Extra
 
 from .definitions import (
     Dataset,
+    DriftDetector,
     Model,
     Optimizer,
     Scenario,
@@ -32,11 +33,15 @@ class ScenarioConfig(DynamicConfig):
 
 class DatasetConfig(DynamicConfig):
     name: Dataset
-    y: str
+    target: str
 
 
 class StrategyConfig(DynamicConfig):
     name: Strategy
+
+
+class DriftDetectionConfig(DynamicConfig):
+    name: DriftDetector
 
 
 class TuneConfig(DynamicConfig):
@@ -64,6 +69,7 @@ class Config(GeneralConfig):
     dataset: DatasetConfig
     strategy: StrategyConfig
     tune: TuneConfig = TuneConfig()
+    drift_detection: DriftDetectionConfig | None = None
 
 
 def assert_config_params(config: Config, params: Any):

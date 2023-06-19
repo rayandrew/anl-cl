@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 
 import torch
 
@@ -7,7 +6,7 @@ from src.utils.io import Transcriber
 from src.utils.logging import logging
 from src.utils.summary import generate_summary, generate_summary_table
 
-from .config import Config, assert_config_params
+from .config import Config
 from .definitions import Strategy
 
 log = logging.getLogger(__name__)
@@ -52,15 +51,16 @@ def get_trainer(config: Config):
 def save_train_results(
     results: dict, output_folder: Path, model: torch.nn.Module
 ):
-    import json
+    import simplejson
 
     # Cleaning up ====
     with open(
         output_folder / "train_results.json", "w"
     ) as results_file:
-        json.dump(
+        simplejson.dump(
             results,
             results_file,
+            ignore_nan=True,
             default=lambda _: "<not serializable>",
         )
 

@@ -1,3 +1,3 @@
 dataset:
   name: alibaba
-  y: cpu_avg
+  target: cpu_avg

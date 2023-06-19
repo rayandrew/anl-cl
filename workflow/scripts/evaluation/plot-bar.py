@@ -1,6 +1,7 @@
+from collections.abc import MutableSequence, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +21,7 @@ sns.color_palette("tab10")
 
 
 def append_if_enum_exists_in_str(
-    EnumType, input: str, output: Sequence[str]
+    EnumType, input: str, output: MutableSequence[str]
 ):
     for e in EnumType:
         if e.value in input:
@@ -29,19 +30,19 @@ def append_if_enum_exists_in_str(
 
 
 def label_from_path(path: Path, sep: str = "_"):
-    path = str(path)
-    path = path.replace("/train_results.json", "")
-    paths = path.split("/")
+    path_str = str(path)
+    path_str = path_str.replace("/train_results.json", "")
+    paths = path_str.split("/")
     # return sep.join(paths[-3:])  # training_scenario_strategy
     return sep.join(paths[-2:])  # training_scenario_strategy
 
 
 @dataclass
 class Result:
-    # avg_precisions: Sequence[float]
-    # avg_recalls: Sequence[float]
-    # avg_f1s: Sequence[float]
-    # avg_aurocs: Sequence[float]
+    # avg_precisions:  Sequence[float]
+    # avg_recalls:  Sequence[float]
+    # avg_f1s:  Sequence[float]
+    # avg_aurocs:  Sequence[float]
     precision: pd.DataFrame
     recall: pd.DataFrame
     f1: pd.DataFrame
@@ -57,13 +58,13 @@ class Result:
 
 def get_metrics(
     summaries: Sequence[TrainingSummary], labels: Sequence[str]
-) -> Sequence[Result]:
-    avg_f1s: Sequence[Tuple[str, float]] = []
-    avg_precisions: Sequence[Tuple[str, float]] = []
-    avg_recalls: Sequence[Tuple[str, float]] = []
-    avg_aurocs: Sequence[Tuple[str, float]] = []
-    avg_accs: Sequence[Tuple[str, float]] = []
-    avg_forgettings: Sequence[Tuple[str, float]] = []
+) -> Result:
+    avg_f1s: list[Tuple[str, float]] = []
+    avg_precisions: list[Tuple[str, float]] = []
+    avg_recalls: list[Tuple[str, float]] = []
+    avg_aurocs: list[Tuple[str, float]] = []
+    avg_accs: list[Tuple[str, float]] = []
+    avg_forgettings: list[Tuple[str, float]] = []
     for summary, label in zip(summaries, labels):
         for i in range(len(summary.avg_f1)):
             avg_f1s.append((label, np.mean(summary.avg_f1[i]).item()))

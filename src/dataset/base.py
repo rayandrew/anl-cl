@@ -1,22 +1,24 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from functools import cached_property
-from typing import (
-    Callable,
-    Generic,
-    Literal,
-    Sequence,
-    Tuple,
-    TypeVar,
-)
+from pathlib import Path
+from typing import Generic, Literal, TypeVar
 
 from torch.utils.data import Dataset
 
-from avalanche.benchmarks.utils.data import TAvalancheDataset
+from avalanche.benchmarks.utils.data import AvalancheDataset
 
+import numpy as np
 import pandas as pd
 
+from src.transforms import BaseTransform, apply_transforms
+from src.utils.general import read_dataframe
+
 TDatasetSubset = Literal["training", "testing", "all"]
+TDataset = TypeVar("TDataset", bound="BaseDataset")
+# TProcessor = TypeVar("TProcessor", bound="BaseDatasetPreprocessor")
+TAvalancheDataset = TypeVar(
+    "TAvalancheDataset", bound=AvalancheDataset
+)
 
 
 def assert_dataset_subset(subset: TDatasetSubset):
@@ -27,116 +29,130 @@ def assert_dataset_subset(subset: TDatasetSubset):
     ], "subset must be one of 'training', 'testing', 'all'"
 
 
-class BaseDataset(Dataset, metaclass=ABCMeta):
-    TRAIN_RATIO = 0.8
-
+class _BaseDataset(Dataset, metaclass=ABCMeta):
     @property
     @abstractmethod
     def input_size(self) -> int:
         raise NotImplementedError
 
+    @abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError
 
-TDataset = TypeVar("TDataset", bound=BaseDataset)
+
+class BaseDataset(_BaseDataset):
+    TRAIN_RATIO = 0.8
+
+    def __init__(
+        self,
+        features: pd.DataFrame,
+        targets: pd.Series,
+        tasks: pd.Series | None = None,
+    ):
+        self.features = features
+        self.targets = targets.values
+        self.tasks = tasks.values if tasks is not None else None
+
+    @property
+    def input_size(self) -> int:
+        if self.features is None:
+            raise ValueError("Dataset not loaded yet")
+        if len(self.features) == 0:
+            raise ValueError("Dataset is empty")
+        return self.features.shape[1]
+
+    def __len__(self):
+        return len(self.features)
+
+    def __getitem__(self, index: int):
+        if self.tasks is None:
+            return (
+                self.features.iloc[index].astype(np.float32).values,
+                self.targets[index],
+            )
+
+        return (
+            self.features.iloc[index].astype(np.float32).values,
+            self.targets[index],
+            self.tasks[index],
+        )
+
+
+# class BaseDatasetWithDrift(BaseDataset):
+#     def __init__(
+#         self,
+#         features: pd.DataFrame,
+#         targets: pd.Series,
+#         drifts: pd.Series,
+#     ):
+#         super().__init__(features, targets)
+#         self.drifts = drifts.values
+
+#     def __getitem__(self, index: int):
+#         return (
+#             self.features.iloc[index].astype(np.float32).values,
+#             self.targets[index],
+#             self.drifts[index],
+#         )
 
 
 @dataclass
-class BaseDatasetAccessor(
-    Generic[TDataset, TAvalancheDataset], metaclass=ABCMeta
-):
-    original_train_dataset: TDataset
-    original_test_dataset: TDataset
-    train_dataset: TAvalancheDataset
-    test_dataset: TAvalancheDataset
+class BaseDatasetAccessor(Generic[TDataset]):
+    train: TDataset
+    test: TDataset
+    # train_dataset: TAvalancheDataset
+    # test_dataset: TAvalancheDataset
 
 
-# TTransformInput = TypeVar("TTransformInput")
-# TTransformOutput = TypeVar("TTransformOutput")
-
-
-class BaseTransform(metaclass=ABCMeta):
-    def __init__(self, data: pd.DataFrame):
-        self.data = data
-
-    @abstractmethod
-    def __call__(self, df: pd.DataFrame) -> pd.DataFrame:
-        raise NotImplementedError
-
-    def transform(self) -> pd.DataFrame:
-        return self.__call__(self.data)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}()"
-
-    def __str__(self):
-        return self.__repr__()
-
-
-TTransform = Callable[[pd.DataFrame], pd.DataFrame] | BaseTransform
-
-
-class BaseDatasetPreprocessor(Generic[TDataset], metaclass=ABCMeta):
-    def __init__(
-        self,
-        data: pd.DataFrame,
-        y: str,
-        train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: TTransform | None = None,
-    ):
-        self.data: pd.DataFrame = data
-        self.train_ratio = train_ratio
-        self.y_var = y
-        self._transform = transform
-
-    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
-        if self._transform is None:
-            return df
-        return self._transform(df)
-
-    @property
-    def output_column(self):
-        return self.y_var
-
-    @abstractmethod
-    @cached_property
-    def preprocessed_data(self) -> pd.DataFrame:
-        raise NotImplementedError
-
-    @abstractmethod
-    def __call__(
-        self, shuffle: bool = False
-    ) -> Tuple[TDataset, TDataset]:
-        pass
-
-
-TAccessor = TypeVar(
-    "TAccessor",
-    bound=BaseDatasetAccessor | Sequence[BaseDatasetAccessor],
-)
-TProcessor = TypeVar("TProcessor", bound=BaseDatasetPreprocessor)
+TGeneratorReturn = TypeVar("TGeneratorReturn")
 
 
 class BaseDatasetGenerator(
-    Generic[TAccessor, TProcessor], metaclass=ABCMeta
+    Generic[TGeneratorReturn], metaclass=ABCMeta
 ):
-    accessor_cls: type[TAccessor]
-    preprocessor_cls: type[TProcessor]
+    def __init__(
+        self,
+        file: str | Path | pd.DataFrame,
+        target: str,
+        train_ratio: float = BaseDataset.TRAIN_RATIO,
+        transform: BaseTransform | list[BaseTransform] | None = None,
+    ):
+        self.data: pd.DataFrame = read_dataframe(file)
+        self.train_ratio = train_ratio
+        self._target = target
+        self._transform = transform
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        return apply_transforms(df, self._transform)
+
+    @property
+    def target(self):
+        return self._target
 
     @abstractmethod
-    def __call__(self) -> TAccessor:
-        raise NotImplementedError
+    def __call__(self, shuffle: bool = False) -> TGeneratorReturn:
+        pass
 
-    def generate(self) -> TAccessor:
-        return self.__call__()
+    def generate(self, shuffle: bool = False) -> TGeneratorReturn:
+        return self.__call__(shuffle=shuffle)
+
+
+# class BaseDatasetGenerator(Generic[TAccessor], metaclass=ABCMeta):
+#     @abstractmethod
+#     def __call__(self) -> TAccessor:
+#         raise NotImplementedError
+
+#     def generate(self) -> TAccessor:
+#         return self.__call__()
 
 
 __all__ = [
+    "_BaseDataset",
     "BaseDataset",
+    # "BaseDatasetWithDrift",
     "TDatasetSubset",
     "TDataset",
-    "TAccessor",
-    "TTransform",
     "assert_dataset_subset",
     "BaseDatasetAccessor",
-    "BaseDatasetPreprocessor",
     "BaseDatasetGenerator",
 ]

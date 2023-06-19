@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import partial
-from typing import List
+from typing import Any, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,10 +15,10 @@ _default_hazard_func = partial(constant_hazard, lam=250)
 
 class Detector:
     def __init__(self, dim: int):
-        self.theta = 0
-        self.CP = np.zeros(1)
-        self.R_old = [1]
-        self.maxes = []
+        self.theta: Tuple[float, float] = (0.0, 0.0)
+        self.CP: Any = np.zeros(1)
+        self.R_old: npt.NDArray | List[int] = [1]
+        self.maxes: npt.NDArray | List[int] = []
         self.curr_t = 0
         self.flag = False
         self.cnt = 0
@@ -39,7 +39,6 @@ class Detector:
 
         self.trac = 0
         self.T = 1000
-        self.CP_CDF = []
 
     def detect(
         self,
@@ -77,7 +76,6 @@ class Detector:
         self.R_old = R / np.sum(R)
 
         self.maxes = np.append(self.maxes, self.R_old.argmax())
-
         # print("   1")
 
         try:

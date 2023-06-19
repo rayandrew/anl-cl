@@ -9,7 +9,7 @@ conda install -c conda-forge mamba
 pip install gorilla semver ruptures git+https://github.com/ContinualAI/avalanche.git@c2601fccec29bfa2f4ed692cb9955526111d56be
 mamba install numpy=1.21 pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 mamba install numpy=1.21 pandas black matplotlib scikit-learn scikit-multiflow torchmetrics seaborn -c conda-forge
-pip install pydantic
+pip install pydantic simplejson
 
 # for pipeline
 mamba install -c conda-forge -c bioconda snakemake
@@ -117,6 +117,21 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
                   ./config/dataset/alibaba/alibaba.yaml \
                   ./config/model/mlp.yaml \
                   ./config/strategies/ewc/ewc.yaml
+```
+
+
+## Drift Detection
+
+
+```bash
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/drift-detection/no-retrain \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/drift_detection.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/no_retrain/no_retrain.yaml
 ```
 
 ## Analyzing dataset

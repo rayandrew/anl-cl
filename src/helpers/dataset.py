@@ -11,7 +11,7 @@ def _get_splitted_dataset(dataset: Dataset):
         case Dataset.GOOGLE:
             # TODO: @william change this
             from src.dataset.google import (
-                get_classification_google_machine_dataset_splitted as DatasetFactory,
+                get_classification_google_scheduler_dataset_splitted as DatasetFactory,
             )
         case _:
             raise ValueError("Unknown dataset")
@@ -26,7 +26,7 @@ def _get_dataset(dataset: Dataset):
         case Dataset.GOOGLE:
             # TODO: @william change this to get_classification_google_scheduler_dataset
             from src.dataset.google import (
-                get_classification_google_machine_dataset as DatasetFactory,
+                get_classification_google_scheduler_dataset as DatasetFactory,
             )
         case _:
             raise ValueError("Unknown dataset")

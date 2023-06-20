@@ -30,12 +30,14 @@ class CleanDataTransform(BaseTransform):
         "mem_max",
     ]
 
-    def __init__(self, target: str):
-        self.target = target
+    def __init__(self, exclude: str | list[str]):
+        if isinstance(exclude, str):
+            exclude = [exclude]
+        self.excludes = exclude
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
         non_feature_columns = filter(
-            lambda x: x in data.columns and x != self.target,
+            lambda x: x in data.columns and x not in self.excludes,
             self.NON_FEATURE_COLUMNS,
         )
         data = data.fillna(0)

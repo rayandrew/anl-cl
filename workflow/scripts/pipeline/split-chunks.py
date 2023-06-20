@@ -30,7 +30,7 @@ def get_dataset(config: Config, input_path: Path):
         n_split=config.scenario.num_split,  # type: ignore
         transform=[
             transforms.CleanDataTransform(
-                target=config.dataset.target,
+                exclude=config.dataset.target,
             ),
             transforms.AppendPrevFeatureTransform(
                 columns=["plan_cpu", "plan_mem", "instance_num"]

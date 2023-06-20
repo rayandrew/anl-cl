@@ -5,9 +5,7 @@ from snakemake.utils import min_version
 min_version("7.0")
 
 ###### load rules ######
-# include: "rules/drift_detection.smk"
-include: "rules/training.smk"
-include: "rules/evaluation.smk"
+include: "rules/pipeline.smk"
 include: "rules/test.smk"
 
 ###### target rules ######

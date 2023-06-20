@@ -8,12 +8,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from src.helpers.definitions import Snakemake
 from src.utils.general import set_seed
 from src.utils.logging import logging, setup_logging
 from src.utils.summary import TrainingSummary, generate_summary
 
 if TYPE_CHECKING:
-    snakemake: Any
+    snakemake: Snakemake
 
 setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)

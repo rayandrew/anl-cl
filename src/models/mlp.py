@@ -31,7 +31,6 @@ class MLP(torch.nn.Module, BaseModel):
 
         layers = nn.Sequential(
             *(
-                # nn.LayerNorm(input_size),
                 nn.Linear(input_size, hidden_size),
                 nn.ReLU(inplace=True),
                 nn.Dropout(p=drop_rate),

@@ -79,6 +79,9 @@ def assert_config_params(config: Config, params: Any):
     assert (
         Scenario(params.scenario) == config.scenario.name
     ), f"Scenario mismatch: got {params.scenario} instead of {config.scenario.name}"
+    assert (
+        Model(params.model) == config.model.name
+    ), f"Model mismatch: got {params.model} instead of {config.model.name}"
     if config.online:
         assert (
             params.training == Training.ONLINE

@@ -45,7 +45,12 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing <OUTPUT> \
                   <STRATEGY_CONFIG>
 
 # running evaluation
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/eval/alibaba/chunk-0/classification/batch/split-chunks
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/alibaba/chunk-0/classification/batch/split-chunks
+
+
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/analysis/alibaba/chunk-0
+
+# PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/alibaba/chunk-0/classification/batch/split-chunks
 ```
 
 ## Scenario
@@ -57,13 +62,24 @@ Default chunk = 8
 - No Retrain
 
 ```bash
-# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain
+# run model A
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain/A
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain/A \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/mlp.yaml \
+                  ./config/model/a.yaml \
+                  ./config/strategies/no_retrain/no_retrain.yaml
+
+# run model B
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain/B
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/no-retrain/B \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/b.yaml \
                   ./config/strategies/no_retrain/no_retrain.yaml
 ```
 
@@ -110,13 +126,23 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 
 ```bash
 # rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/ewc
+# PYTHONPATH=$PYTHONPATH:. snakemake \
+#     --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/ewc \
+#     --configfiles ./config/general.yaml \
+#                   ./config/scenario/split_chunks.yaml \
+#                   ./config/dataset/alibaba/alibaba.yaml \
+#                   ./config/model/mlp.yaml \
+#                   ./config/strategies/ewc/ewc.yaml
+
+# rm -rf out/training/alibaba/chunk-0/classification/batch/split-chunks/ewc/B
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/ewc \
+    --profile=swing out/training/alibaba/chunk-0/classification/batch/split-chunks/ewc/B \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/mlp.yaml \
+                  ./config/model/b.yaml \
                   ./config/strategies/ewc/ewc.yaml
+
 ```
 
 

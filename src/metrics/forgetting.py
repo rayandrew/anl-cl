@@ -73,7 +73,7 @@ def forgetting_metrics_with_tolerance(
 
 
 class ExperienceBWTWithTolerance(ExperienceForgettingWithTolerance):
-    def result(self, k=None) -> Union[float, None, Dict[int, float]]:
+    def result(self, k=None) -> float | None | Dict[int, float]:
         """
         See `Forgetting` documentation for more detailed information.
         k: optional key from which compute forgetting.
@@ -96,9 +96,7 @@ class StreamBWTWithTolerance(StreamForgettingWithTolerance):
     This metric is computed during the eval phase only.
     """
 
-    def exp_result(
-        self, k=None
-    ) -> Union[float, None, Dict[int, float]]:
+    def exp_result(self, k=None) -> float | None | Dict[int, float]:
         """
         Result for experience defined by a key.
         See `BWT` documentation for more detailed information.

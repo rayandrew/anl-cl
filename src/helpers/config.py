@@ -7,6 +7,7 @@ from pydantic import BaseModel, Extra
 
 from .definitions import (
     Dataset,
+    DriftDetector,
     Model,
     Optimizer,
     Scenario,
@@ -32,11 +33,15 @@ class ScenarioConfig(DynamicConfig):
 
 class DatasetConfig(DynamicConfig):
     name: Dataset
-    y: str
+    target: str
 
 
 class StrategyConfig(DynamicConfig):
     name: Strategy
+
+
+class DriftDetectionConfig(DynamicConfig):
+    name: DriftDetector
 
 
 class TuneConfig(DynamicConfig):
@@ -64,13 +69,27 @@ class Config(GeneralConfig):
     dataset: DatasetConfig
     strategy: StrategyConfig
     tune: TuneConfig = TuneConfig()
+    drift_detection: DriftDetectionConfig | None = None
 
 
 def assert_config_params(config: Config, params: Any):
-    assert Dataset(params.dataset) == config.dataset.name
-    assert Scenario(params.scenario) == config.scenario.name
+    assert (
+        Dataset(params.dataset) == config.dataset.name
+    ), f"Dataset mismatch: got {params.dataset} instead of {config.dataset.name}"
+    assert (
+        Scenario(params.scenario) == config.scenario.name
+    ), f"Scenario mismatch: got {params.scenario} instead of {config.scenario.name}"
+    assert (
+        Model(params.model) == config.model.name
+    ), f"Model mismatch: got {params.model} instead of {config.model.name}"
     if config.online:
-        assert params.training == Training.ONLINE
+        assert (
+            params.training == Training.ONLINE
+        ), f"Training mismatch: got {params.training} instead of {Training.ONLINE}"
+    else:
+        assert (
+            params.training == Training.BATCH
+        ), f"Training mismatch: Got {params.training} instead of {Training.BATCH}"
 
 
 __all__ = [

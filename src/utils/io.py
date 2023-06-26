@@ -7,9 +7,9 @@ class Transcriber:
     def __init__(
         self, file: str | Path | TextIO | None = None, out=sys.stdout
     ):
-        self.out = out
-        self.filename = None
-        self.file = None
+        self.out: TextIO = out
+        self.filename: str | None = None
+        self.file: TextIO | None = None
         if file is not None:
             self.__setup_file__(file)
 

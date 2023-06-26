@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 
 import torch
 
@@ -13,22 +12,22 @@ from .definitions import Strategy
 log = logging.getLogger(__name__)
 
 
-def get_offline_trainer(strategy: Strategy):
+def get_batch_trainer(strategy: Strategy):
     if strategy == Strategy.NO_RETRAIN:
-        from src.trainers import OfflineNoRetrainingTrainer
+        from src.trainers import BatchNoRetrainTrainer
 
-        return OfflineNoRetrainingTrainer
+        return BatchNoRetrainTrainer
 
-    from src.trainers import OfflineRetrainingTrainer
+    from src.trainers import BatchSimpleRetrainTrainer
 
-    return OfflineRetrainingTrainer
+    return BatchSimpleRetrainTrainer
 
 
 def get_trainer(config: Config):
     if config.online:
         raise ValueError("Online trainer not implemented yet")
 
-    return get_offline_trainer(config.strategy.name)
+    return get_batch_trainer(config.strategy.name)
 
 
 # def _get_benchmark(scenario: Scenario, dataset: Any):
@@ -52,15 +51,16 @@ def get_trainer(config: Config):
 def save_train_results(
     results: dict, output_folder: Path, model: torch.nn.Module
 ):
-    import json
+    import simplejson
 
     # Cleaning up ====
     with open(
         output_folder / "train_results.json", "w"
     ) as results_file:
-        json.dump(
+        simplejson.dump(
             results,
             results_file,
+            ignore_nan=True,
             default=lambda _: "<not serializable>",
         )
 
@@ -90,4 +90,4 @@ def save_train_results(
     out_file.close()
 
 
-__all__ = ["get_trainer", "get_offline_trainer", "save_train_results"]
+__all__ = ["get_trainer", "get_batch_trainer", "save_train_results"]

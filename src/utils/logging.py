@@ -34,4 +34,6 @@ def setup_logging(filename: str | Path = "snakemake.log"):
     sys.excepthook = handle_exception
 
 
-__all__ = ["setup_logging", "logging"]
+Logger = logging.Logger
+
+__all__ = ["setup_logging", "logging", "Logger"]

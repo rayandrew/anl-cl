@@ -1,7 +1,0 @@
-drift_detection:
-  ruptures:
-    enable: true
-    kernel: rbf 
-    min_size: 300
-    jump: 1
-    penalty: 25

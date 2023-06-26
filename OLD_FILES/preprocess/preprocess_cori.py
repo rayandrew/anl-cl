@@ -1,6 +1,7 @@
 import glob
+from collections.abc import Collection
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence, Union
+from typing import TYPE_CHECKING, Any, Union
 
 if TYPE_CHECKING:
     snakemake: Any = None
@@ -138,7 +139,7 @@ class DatasetPreprocessing(object):
     def one_hot_encode(
         encoder: OneHotEncoder,
         data: pd.DataFrame,
-        columns: Union[str, Sequence[str]],
+        columns: Union[str, Collection[str]],
     ):
         if isinstance(columns, str):
             columns = [columns]

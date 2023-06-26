@@ -1,7 +1,8 @@
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import cycle
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Sequence
+from typing import Any, Dict, Literal
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -59,8 +60,8 @@ def get_y_label(y_var: Literal["cpu", "mem", "disk"]):
 #     avg_forgetting: Sequence[Sequence[float]] = field(
 #         default_factory=list
 #     )
-#     ovr_avg_acc: Optional[float] = None
-#     ovr_avg_forgetting: Optional[float] = None
+#     ovr_avg_acc: float | None = None
+#     ovr_avg_forgetting: float | None = None
 #     raw_acc: Sequence[Sequence[float]] = field(default_factory=list)
 
 
@@ -72,12 +73,13 @@ class EvalResult:
     y_origs: np.ndarray
     y_preds: np.ndarray
     predict_proba: np.ndarray
-    train_results: Optional[TrainingSummary] = None
+    train_results: TrainingSummary | None = None
 
 
 def auc_roc(result: EvalResult, n_labels: int = 10):
-    fpr, tpr, roc_auc = dict(), dict(), dict()
-
+    fpr: Dict[int | str, np.ndarray] = dict()
+    tpr: Dict[int | str, np.ndarray] = dict()
+    roc_auc: Dict[int | str, float] = dict()
     y_onehot = label_binarizer(result.y_origs, n_labels)
 
     for i in range(n_labels):
@@ -155,7 +157,7 @@ def plot_diff(
     results: Sequence[EvalResult],
     output_folder: Path,
     config: Any,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     # assert len(results) >= 2
     print("Plotting diffs...")
@@ -220,7 +222,7 @@ def plot_prediction(
     output_folder: Path,
     changepoints: np.ndarray,
     config: Any,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     assert len(results) >= 1
     print("Plotting prediction...")
@@ -283,7 +285,7 @@ def plot_auc_roc(
     results: Sequence[EvalResult],
     output_folder: Path,
     config: Any,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     assert len(results) >= 1
     print("Plotting AUC ROC...")
@@ -314,7 +316,7 @@ def plot_avg_acc(
     output_folder: Path,
     n_exp: int,
     config: Any,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     assert len(results) >= 1
     print("Plotting average accuracy...")
@@ -367,7 +369,7 @@ def plot_avg_forgetting(
     output_folder: Path,
     n_exp: int,
     config: Any,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     assert len(results) >= 1
     print("Plotting average forgetting...")
@@ -420,7 +422,7 @@ def plot_end_acc(
     output_folder: Path,
     n_exp: int,
     config: Any,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     assert len(results) >= 2
     print("Plotting end acc...")
@@ -440,6 +442,11 @@ def plot_end_acc(
     legends = []
 
     for i, res in enumerate(results):
+        if (
+            res.train_results is None
+            or res.train_results.raw_acc is None
+        ):
+            continue
         offset = i * bar_width - (n_results - 1) / 2 * bar_width
         # offset = (i - n_results / 2) * bar_width
         raw_acc = np.array(res.train_results.raw_acc)
@@ -484,7 +491,7 @@ def plot_end_forgetting(
     output_folder: Path,
     n_exp: int,
     config: Any,
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     assert len(results) >= 2
     print("Plotting end forgetting...")
@@ -503,6 +510,12 @@ def plot_end_forgetting(
     x = np.arange(1, n_exp + 1)
 
     for i, res in enumerate(results):
+        if (
+            res.train_results is None
+            or res.train_results.avg_forgetting is None
+            or res.train_results.ovr_avg_forgetting is None
+        ):
+            continue
         ax.bar(
             # put x at the center of the bar
             x + width * (i - n_results / 2),

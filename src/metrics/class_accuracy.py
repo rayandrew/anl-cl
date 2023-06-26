@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Union, cast
 
 import torch
 from torch import Tensor
@@ -14,7 +14,7 @@ from avalanche.evaluation.metrics.class_accuracy import (
 class ClassAccuracyWithTolerance(ClassAccuracy):
     def __init__(
         self,
-        classes: Optional[TrackedClassesType] = None,
+        classes: TrackedClassesType | None = None,
         tolerance: int = 0,
     ):
         super().__init__(classes)
@@ -58,7 +58,7 @@ class ClassAccuracyWithTolerance(ClassAccuracy):
             )
 
         if isinstance(task_labels, int):
-            task_labels = [task_labels] * len(true_y)
+            task_labels = [task_labels] * len(true_y)  # type: ignore
 
         true_y = torch.as_tensor(true_y)
         predicted_y = torch.as_tensor(predicted_y)
@@ -72,7 +72,7 @@ class ClassAccuracyWithTolerance(ClassAccuracy):
             # Logits -> transform to labels
             true_y = torch.max(true_y, 1)[1]
 
-        for pred, true, t in zip(predicted_y, true_y, task_labels):
+        for pred, true, t in zip(predicted_y, true_y, task_labels):  # type: ignore
             t = int(t)
 
             if self.dynamic_classes:

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import src.transforms.alibaba_scheduler as transforms
+import src.transforms.alibaba_seventeen as transforms
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import (
     AvalancheClassificationDatasetAccessor,
@@ -18,25 +18,40 @@ setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
 
 
+def bucket_target_name(target: str):
+    return f"bucket_{target}"
+
+
 def get_dataset(config: Config, input_path: Path):
-    from src.dataset.alibaba import (
-        AlibabaSchedulerDatasetChunkGenerator,
+    from src.dataset.alibaba.container_seventeen import (
+        AlibabaContainerDatasetChunkGenerator,
     )
 
-    generator = AlibabaSchedulerDatasetChunkGenerator(
+    target_name = bucket_target_name(target=config.dataset.target)
+
+    non_feature_columns = list(
+        filter(
+            lambda x: x != config.dataset.target,
+            transforms.NON_FEATURE_COLUMNS,
+        )
+    )
+
+    generator = AlibabaContainerDatasetChunkGenerator(
         file=input_path,
-        target=config.dataset.target,
+        target=target_name,
         n_labels=config.num_classes,
         n_split=config.scenario.num_split,  # type: ignore
         transform=[
-            transforms.CleanDataTransform(
-                exclude=config.dataset.target,
+            transforms.CleanDataTransform(),
+            transforms.ColumnsDropTransform(
+                columns=non_feature_columns + ["cpu_set"],
             ),
-            transforms.AppendPrevFeatureTransform(
-                columns=["plan_cpu", "plan_mem", "instance_num"]
-            ),
-            transforms.DiscretizeOutputTransform(
-                target=config.dataset.target,
+            # transforms.AppendPrevFeatureTransform(
+            #     columns=["plan_cpu", "plan_mem", "instance_num"]
+            # ),
+            transforms.DiscretizeColumnTransform(
+                column=config.dataset.target,
+                new_column=target_name,
                 n_bins=config.num_classes,
             ),
         ],

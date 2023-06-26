@@ -40,28 +40,37 @@ class CleanDataTransform(BaseTransform):
             lambda x: x in data.columns and x not in self.excludes,
             self.NON_FEATURE_COLUMNS,
         )
-        data = data.fillna(0)
+        data = data.dropna()
+        data = data.reset_index(drop=True)
+        # data = data.fillna(0)
         data = data[(data.plan_cpu > 0) & (data.plan_mem > 0)]
         data = data.sort_values(by=["start_time"])
         data = data.drop(columns=non_feature_columns)
         return data
 
     def __repr__(self) -> str:
-        return (
-            f"CleanDataTransform(output_column={self.output_column})"
-        )
+        return f"CleanDataTransform()"
 
 
 class DiscretizeOutputTransform(BaseTransform):
-    def __init__(self, target: str, n_bins: int = 4):
+    def __init__(
+        self,
+        target: str,
+        rename_target: str | None = None,
+        n_bins: int = 4,
+    ):
         self.target = target
         self.n_bins = n_bins
+        self.rename_target = rename_target
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
         target_data = minmax_scale(data[self.target])
-        data[self.target] = discretize_column(
-            target_data, self.n_bins
+        name = (
+            self.target
+            if self.rename_target is None
+            else self.rename_target
         )
+        data[name] = discretize_column(target_data, self.n_bins)
         return data
 
     def __repr__(self) -> str:

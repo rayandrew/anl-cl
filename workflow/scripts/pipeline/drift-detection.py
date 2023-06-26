@@ -42,8 +42,8 @@ def add_dist_label(
 
 
 def get_dataset(config: Config, input_path: Path):
-    from src.dataset.alibaba import (
-        AlibabaSchedulerDatasetDistChunkGenerator,
+    from src.dataset.alibaba.container_seventeen import (
+        AlibabaContainerDatasetDistChunkGenerator,
     )
 
     df = pd.read_parquet(input_path)
@@ -59,7 +59,7 @@ def get_dataset(config: Config, input_path: Path):
     change_list = dd.predict(df[config.dataset.target].values)
     df = add_dist_label(df, change_list)
 
-    generator = AlibabaSchedulerDatasetDistChunkGenerator(
+    generator = AlibabaContainerDatasetDistChunkGenerator(
         file=df,
         target=config.dataset.target,
         n_labels=config.num_classes,

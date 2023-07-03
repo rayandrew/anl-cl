@@ -3,19 +3,14 @@
 - Dependencies
 
 ```bash
-conda create -n cl python=3.10 pip
-conda activate cl
-conda install -c conda-forge mamba
-pip install gorilla semver ruptures git+https://github.com/ContinualAI/avalanche.git@c2601fccec29bfa2f4ed692cb9955526111d56be
-mamba install numpy=1.21 pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
-mamba install numpy=1.21 pandas black matplotlib scikit-learn scikit-multiflow torchmetrics seaborn -c conda-forge
-pip install pydantic simplejson types-simplejson
+# inside conda `base` env
+conda install mamba -n base -c conda-forge
 
-# for pipeline
-mamba install -c conda-forge -c bioconda snakemake
-  
-# for development only
-pip install black isort
+mamba env create --file env-pinned.yaml
+# or
+# mamba env create --file env.yaml
+
+conda activate acl
 
 # If protobuf error from wandb
 pip uninstall wandb protobuf
@@ -32,10 +27,9 @@ mypy .
 
 ## Running
 
-
 ### Training
 
-### Glossary
+#### Glossary
 
 **SUBJECT TO CHANGE**
 
@@ -43,12 +37,13 @@ See `workflow/rules/pipeline.smk`
 
 - `<DATASET>` = `alibaba|google|cori`
 - `<FILENAME>` = dataset filename that should exist in `raw_data/<DATASET>/<FILEPATH>.parquet`
-- `<FEATS>` = `Feats-*` can be anything depends on the dataset, see `src.helpers.feats`
+- `<FEATS>` = `feats-*` can be anything depends on the dataset, see `src.helpers.feats`
 - `<TRAINING>` = `batch|online`
 - `<TASK>` = `classification`
 - `<SCENARIO>` = `split-chunks|drift-detection`
 - `<STRATEGY>` = `no-retrain|naive|from-scratch|gss|agem|gem|ewc|mas|si|lwf|gdumb`
-- `<MODEL>` = `Model-A|Model-B`, see `src.helpers.model`
+- `<MODEL>` = `model-a|model-b`, see `src.helpers.model`
+- `<..._CONFIG>` = You can put arbitrary config files in YAML, it will be merged if you specify the same keys
 
 ```bash
 # running training
@@ -57,10 +52,11 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/training/<DATASET>/<FILEN
                   <DATASET_CONFIG> \
                   <SCENARIO_CONFIG> \
                   <MODEL_CONFIG> \
-                  <STRATEGY_CONFIG>
+                  <STRATEGY_CONFIG> \
+                  ...<ADDITIONAL_CONFIG>
 ```
 
-Example:
+#### Example
 
 ```bash
 # run model A on alibaba dataset with filename "container".parquet with no-retrain strategy and feature engineering A
@@ -76,24 +72,23 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 
 ### Evaluation
 
-### Scenario 
+#### Scenario
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>
 ```
 
-###  Model 
+#### Model
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>
 ```
 
-### Strategy 
+#### Strategy
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<STRATEGY>
 ```
-
 
 ```bash
 # run model A
@@ -118,7 +113,6 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 ```
 
 ## Drift Detection
-
 
 ```bash
 # rm -rf out/training/alibaba/container/classification/batch/split-chunks/no-retrain

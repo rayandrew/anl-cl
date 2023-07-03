@@ -187,7 +187,6 @@ class AlibabaContainerDatasetDistChunkGenerator(
 
 
 __all__ = [
-    "NON_FEATURE_COLUMNS",
     "AlibabaContainerDataset",
     "AlibabaContainerDataAccessor",
     "AlibabaContainerDatasetGenerator",

@@ -32,42 +32,68 @@ mypy .
 
 ## Running
 
+
+### Training
+
+### Glossary
+
+**SUBJECT TO CHANGE**
+
+See `workflow/rules/pipeline.smk`
+
+- `<DATASET>` = `alibaba|google|cori`
+- `<FILENAME>` = dataset filename that should exist in `raw_data/<DATASET>/<FILEPATH>.parquet`
+- `<FEATS>` = `Feats-*` can be anything depends on the dataset, see `src.helpers.feats`
+- `<TRAINING>` = `batch|online`
+- `<TASK>` = `classification`
+- `<SCENARIO>` = `split-chunks|drift-detection`
+- `<STRATEGY>` = `no-retrain|naive|from-scratch|gss|agem|gem|ewc|mas|si|lwf|gdumb`
+- `<MODEL>` = `Model-A|Model-B`, see `src.helpers.model`
+
 ```bash
-# Important for module not found!
-export PYTHONPATH=$PYTHONPATH:.
-snakemake -cN
-# change N to number of concurrency that you want
-```
-
-- Slurm
-
-```bash
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing --jobs 2 --directory `realpath -s .`
-
-# running scenario
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing <OUTPUT> \
+# running training
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/training/<DATASET>/<FILENAME>/<TRAINING>/<SCENARIO>/<MODEL>/<STRATEGY>/<FEATS> \
     --configfiles <GENERAL_CONFIG> \
                   <DATASET_CONFIG> \
                   <SCENARIO_CONFIG> \
                   <MODEL_CONFIG> \
                   <STRATEGY_CONFIG>
-
-# running evaluation
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/alibaba/container/classification/batch/split-chunks
-
-
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/analysis/alibaba/container/
-
-# PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/alibaba/container/classification/batch/split-chunks
 ```
 
-## Scenario
+Example:
 
-### Split Chunks
+```bash
+# run model A on alibaba dataset with filename "container".parquet with no-retrain strategy and feature engineering A
+# rm -rf out/training/alibaba/container/classification/batch/split-chunks/no-retrain/A
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/model-a/no-retrain/feats-a \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/a.yaml \
+                  ./config/strategies/no_retrain/no_retrain.yaml
+```
 
-Default chunk = 8
+### Evaluation
 
-- No Retrain
+### Scenario 
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>
+```
+
+###  Model 
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>
+```
+
+### Strategy 
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<STRATEGY>
+```
+
 
 ```bash
 # run model A
@@ -91,69 +117,6 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
                   ./config/strategies/no_retrain/no_retrain.yaml
 ```
 
-- Retrain from scratch each chunk
-
-```bash
-# rm -rf out/training/alibaba/container/classification/batch/split-chunks/from-scratch
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/from-scratch/A \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/a.yaml \
-                  ./config/strategies/from_scratch/from_scratch.yaml
-```
-
-- Retrain using GSS
-
-```bash
-# rm -rf out/training/alibaba/container/classification/batch/split-chunks/gss
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/gss \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/mlp.yaml \
-                  ./config/strategies/gss/gss.yaml
-```
-
-- Retrain using GDumb
-
-```bash
-# rm -rf out/training/alibaba/container/classification/batch/split-chunks/gdumb
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/gdumb/A \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/a.yaml \
-                  ./config/strategies/gdumb/gdumb.yaml
-```
-
-- Retrain using EWC
-
-```bash
-# rm -rf out/training/alibaba/container/classification/batch/split-chunks/ewc
-# PYTHONPATH=$PYTHONPATH:. snakemake \
-#     --profile=swing out/training/alibaba/container/classification/batch/split-chunks/ewc \
-#     --configfiles ./config/general.yaml \
-#                   ./config/scenario/split_chunks.yaml \
-#                   ./config/dataset/alibaba/alibaba.yaml \
-#                   ./config/model/mlp.yaml \
-#                   ./config/strategies/ewc/ewc.yaml
-
-# rm -rf out/training/alibaba/container/classification/batch/split-chunks/ewc/B
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/ewc/B \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/b.yaml \
-                  ./config/strategies/ewc/ewc.yaml
-
-```
-
-
 ## Drift Detection
 
 
@@ -166,10 +129,4 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 #                   ./config/dataset/alibaba/alibaba.yaml \
 #                   ./config/model/mlp.yaml \
 #                   ./config/strategies/no_retrain/no_retrain.yaml
-```
-
-## Analyzing dataset
-
-```
-python -m src.preprocess.analyze_dataset
 ```

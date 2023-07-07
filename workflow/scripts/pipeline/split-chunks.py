@@ -1,5 +1,8 @@
+# pyright: reportUndefinedVariable=false
+# noqa: F821
+
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import src.transforms.alibaba_seventeen as transforms
 from src.helpers.config import Config, assert_config_params
@@ -12,7 +15,7 @@ from src.helpers.scenario import train_classification_scenario
 from src.utils.logging import logging, setup_logging
 
 if TYPE_CHECKING:
-    snakemake: Snakemake
+    snakemake: Snakemake = Snakemake()
 
 setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
@@ -27,34 +30,14 @@ def get_dataset(config: Config, input_path: Path):
         AlibabaContainerDatasetChunkGenerator,
     )
 
-    target_name = bucket_target_name(target=config.dataset.target)
-
-    non_feature_columns = list(
-        filter(
-            lambda x: x != config.dataset.target,
-            transforms.NON_FEATURE_COLUMNS,
-        )
-    )
+    data_transformer = transforms.FeatureA_TransformSet(config)
 
     generator = AlibabaContainerDatasetChunkGenerator(
         file=input_path,
-        target=target_name,
+        target=data_transformer.target_name,
         n_labels=config.num_classes,
         n_split=config.scenario.num_split,  # type: ignore
-        transform=[
-            transforms.CleanDataTransform(),
-            transforms.ColumnsDropTransform(
-                columns=non_feature_columns + ["cpu_set"],
-            ),
-            # transforms.AppendPrevFeatureTransform(
-            #     columns=["plan_cpu", "plan_mem", "instance_num"]
-            # ),
-            transforms.DiscretizeColumnTransform(
-                column=config.dataset.target,
-                new_column=target_name,
-                n_bins=config.num_classes,
-            ),
-        ],
+        transform=data_transformer,
     )
     dataset = generator()
     if len(dataset) == 0:
@@ -70,8 +53,8 @@ def get_benchmark(
 ):
     from avalanche.benchmarks.generators import dataset_benchmark
 
-    train_subsets = [subset.train for subset in dataset]
-    test_subsets = [subset.test for subset in dataset]
+    train_subsets: list[Any] = [subset.train for subset in dataset]
+    test_subsets: list[Any] = [subset.test for subset in dataset]
     benchmark = dataset_benchmark(train_subsets, test_subsets)
     return benchmark
 

@@ -15,6 +15,9 @@ conda activate acl
 # If protobuf error from wandb
 pip uninstall wandb protobuf
 pip install wandb protobuf
+
+# update deps
+# mamba env update --file=env.yaml
 ```
 
 ## Development

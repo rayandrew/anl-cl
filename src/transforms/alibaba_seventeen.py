@@ -1,9 +1,10 @@
 import pandas as pd
 from sklearn.preprocessing import minmax_scale
 
+from src.helpers.config import Config
 from src.utils.general import append_prev_feature, discretize_column
 
-from .base import BaseTransform
+from .base import BaseTransform, apply_transforms
 
 
 class CleanDataTransform(BaseTransform):
@@ -144,12 +145,45 @@ NON_FEATURE_COLUMNS = [
 ]
 
 
+class FeatureA_TransformSet(BaseTransform):
+    def __init__(self, config: Config) -> None:
+        super().__init__()
+        self._target_name = f"bucket_{config.dataset.target}"
+        self._non_feature_columns = list(
+            filter(
+                lambda x: x != config.dataset.target,
+                NON_FEATURE_COLUMNS,
+            )
+        )
+        self._transforms: list[BaseTransform] = [
+            CleanDataTransform(),
+            ColumnsDropTransform(
+                columns=self._non_feature_columns + ["cpu_set"]
+            ),
+            DiscretizeColumnTransform(
+                column=config.dataset.target,
+                new_column=self._target_name,
+            ),
+        ]
+
+    @property
+    def target_name(self) -> str:
+        return self._target_name
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        return apply_transforms(data, self._transforms)
+
+    def __repr__(self) -> str:
+        return "FeatureA_TransformSet()"
+
+
 __all__ = [
     "CleanDataTransform",
-    "DiscretizeOutputTransform",
+    "DiscretizeColumnTransform",
     "AppendPrevFeatureTransform",
-    "ColumnDropperTransform",
+    "ColumnsDropTransform",
     "StrCountTransform",
     "EnumColumnTransform",
     "NON_FEATURE_COLUMNS",
+    "FeatureA_TransformSet",
 ]

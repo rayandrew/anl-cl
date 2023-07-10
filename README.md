@@ -23,7 +23,7 @@ pip install wandb protobuf
 ```
 
 ## Running
-
+Note: If running google dataset, change num_classes in general.config to 2!
 ```bash
 # Important for module not found!
 export PYTHONPATH=$PYTHONPATH:.
@@ -61,7 +61,7 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
                   ./config/strategies/no_retrain/no_retrain.yaml
 
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    out/training/google/mapped_nog/classification/online/split-chunks/no-retrain \
+    out/training/google/tes/classification/online/split-chunks/no-retrain \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/google/google.yaml \

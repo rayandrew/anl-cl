@@ -23,12 +23,12 @@ from src.utils.general import split_dataset
 
 from .base import GoogleDataset
 
-TGoogleSchedulerOutput = Literal["cpu_95", "util_cpu"]
+TGoogleSchedulerOutput = Literal["util_cpu"]
 
 
 def assert_google_scheduler_output(output: TGoogleSchedulerOutput):
     assert output in [
-        "cpu_95",
+        # "cpu_95",
         "util_cpu",
     ], "output must cpu_95 or util_cpu"
 
@@ -229,7 +229,6 @@ class GoogleSchedulerDatasetGenerator:
     def raw_data(self):
         if self.dataframe is not None:
             return self.dataframe
-        print("1 mil")
         data = pd.read_parquet(
             self.filename, engine="fastparquet", nrows=1000000
         )
@@ -252,6 +251,7 @@ class GoogleSchedulerDatasetGenerator:
         )
 
         # Print the frequency of values
+        print("Bucket distribution: ")
         frequency = data[self.output_column].value_counts()
         print(frequency)
 
@@ -297,6 +297,8 @@ class GoogleSchedulerDatasetGenerator:
         data[feature_columns] = scaler.fit_transform(
             data[feature_columns]
         )
+        print(data.head(5))
+        print(data.dtypes)
         return data
 
     def __call__(self):
@@ -345,7 +347,6 @@ def get_classification_google_scheduler_dataset(
     n_historical: int = 4,
 ):
     assert_google_scheduler_output(y)
-
     generator = GoogleSchedulerDatasetGenerator(
         filename=filename,
         n_labels=n_labels,
@@ -410,7 +411,6 @@ def get_classification_google_scheduler_dataset_splitted(
             data = raw_data.iloc[
                 i * split_size : (i + 1) * split_size
             ]
-
         generator = GoogleSchedulerDatasetGenerator(
             dataframe=data,
             n_labels=n_labels,

@@ -1,4 +1,3 @@
 dataset: 
   name: google
-  y: cpu_95
-  
+  y: util_cpu

@@ -293,9 +293,10 @@ class GoogleSchedulerDatasetGenerator:
         data = data.drop(columns=non_feature_columns)
 
         # scaler = Normalizer()
+        pd.set_option("display.expand_frame_repr", False)
         scaler = StandardScaler()
-        data[feature_columns] = scaler.fit_transform(
-            data[feature_columns]
+        data[feature_columns_mix] = scaler.fit_transform(
+            data[feature_columns_mix]
         )
         print(data.head(5))
         print(data.dtypes)

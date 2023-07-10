@@ -23,23 +23,119 @@ from src.utils.general import split_dataset
 
 from .base import GoogleDataset
 
-TGoogleSchedulerOutput = Literal["cpu_95"]
+TGoogleSchedulerOutput = Literal["cpu_95", "util_cpu"]
 
 
 def assert_google_scheduler_output(output: TGoogleSchedulerOutput):
-    assert output in ["cpu_95"], "output must cpu_95"
+    assert output in [
+        "cpu_95",
+        "util_cpu",
+    ], "output must cpu_95 or util_cpu"
 
 
 def discretize_column(series: pd.Series, n_bins: int = 4):
     # return pd.cut(series, bins=n_bins, labels=list(range(n_bins)))
-    return pd.cut(series, bins=n_bins, labels=False)
+    bin_edges = [
+        -float("inf"),
+        1,
+        float("inf"),
+    ]  # Specify the custom bin edges
+    return pd.cut(series, bins=bin_edges, labels=False)
 
 
 def append_prev_feature(df, num, colname):
+    feature_name = []
     for i in range(1, num + 1):
         df["prev_" + colname + "_" + str(i)] = (
             df[colname].shift(i).values
         )
+        feature_name.append("prev_" + colname + "_" + str(i))
+    return feature_name
+
+
+def append_history_time(df, colname):
+    """colname = column to group the history on
+    This function will map jobs with duration >= ~6 minutes as 1, otherwise 0.
+    Used to add duration information to a job.
+    """
+    long_duration_name = str(colname) + "_history_duration_long"
+    short_duration_name = str(colname) + "_history_duration_short"
+
+    df[long_duration_name] = 0
+    df[short_duration_name] = 0
+
+    histogram_map = {}
+
+    for index, row in df.iterrows():
+        group_name = row[colname]
+        duration_classification = (
+            1 if row["duration"] >= 412000000 else 0
+        )
+
+        group_hist = histogram_map.get(
+            group_name, {"long": 0, "short": 0}
+        )
+
+        total_rows = max(
+            group_hist["long"] + group_hist["short"],
+            1,
+        )
+
+        df.at[index, long_duration_name] = (
+            group_hist["long"] / total_rows
+        )
+        df.at[index, short_duration_name] = (
+            group_hist["short"] / total_rows
+        )
+
+        if duration_classification == 1:
+            group_hist["long"] += 1
+        else:
+            group_hist["short"] += 1
+
+        # Update the dictionary with the modified histogram for the collection_logical_name
+        histogram_map[group_name] = group_hist
+
+
+def append_history(df, colname):
+    """colname = column name to group on
+    Will make a history of throttled/non-throttled jobs based on colname
+    """
+    throttle_name = str(colname) + "_history_throttle"
+    non_throttle_name = str(colname) + "_history_non_throttle"
+
+    df[throttle_name] = 0
+    df[non_throttle_name] = 0
+
+    histogram_map = {}
+
+    for index, row in df.iterrows():
+        collection_name = row[colname]
+        cpu_classification = 1 if row["util_cpu"] > 1 else 0
+
+        collection_hist = histogram_map.get(
+            collection_name, {"throttle": 0, "non_throttle": 0}
+        )
+
+        total_rows = max(
+            collection_hist["throttle"]
+            + collection_hist["non_throttle"],
+            1,
+        )
+        df.at[index, throttle_name] = (
+            collection_hist["throttle"] / total_rows
+        )
+        df.at[index, non_throttle_name] = (
+            collection_hist["non_throttle"] / total_rows
+        )
+
+        if cpu_classification == 1:
+            collection_hist["throttle"] += 1
+        else:
+            collection_hist["non_throttle"] += 1
+
+        # Update the dictionary with the modified histogram for the collection_logical_name
+        histogram_map[collection_name] = collection_hist
 
 
 class GoogleSchedulerDataset(GoogleDataset):
@@ -149,47 +245,58 @@ class GoogleSchedulerDatasetGenerator:
         data = self.raw_data
         data = data.fillna(-1)
         data = data.sort_values(by=["start_time"])
-        # append_prev_feature(data, self.n_historical, "req_cpu")
-        # append_prev_feature(data, self.n_historical, "req_mem")
 
-        data[self.y_var] = minmax_scale(data[self.y_var])
+        # data[self.y_var] = minmax_scale(data[self.y_var])
         data[self.output_column] = discretize_column(
             data[self.y_var], n_bins=self.n_labels
         )
-        frequency = data[self.output_column].value_counts()
+
         # Print the frequency of values
+        frequency = data[self.output_column].value_counts()
         print(frequency)
 
-        data = data.dropna()
+        data = data.fillna(-1)
         data = data.reset_index(drop=True)
+
+        # Additional features after mapping
+        additional_features = [
+            "constraint_mapped_history_throttle",
+            "collection_logical_name_mapped_history_throttle",
+            "constraint_mapped_history_non_throttle",
+            "collection_logical_name_mapped_history_non_throttle",
+            "constraint_mapped_history_duration_long",
+            "collection_logical_name_mapped_history_duration_long",
+            "constraint_mapped_history_duration_short",
+            "collection_logical_name_mapped_history_duration_short",
+        ]
 
         feature_columns = [
             "sched_class",
+            # "duration",
+            # "collection_max_per_machine",
+            # "collection_max_per_switch",
+            "collection_vertical_scaling",
+            "collection_scheduler",
             "priority",
             "req_cpu",
             "req_mem",
             "constraint_mapped",
             "collection_logical_name_mapped",
-            "collection_max_per_machine",
-            "collection_max_per_switch",
-            "collection_vertical_scaling",
-            "collection_scheduler",
         ]
+        feature_columns_mix = feature_columns + additional_features
 
         non_feature_columns = [
             col
             for col in data.columns
-            if col not in feature_columns + [self.output_column]
+            if col not in feature_columns_mix + [self.output_column]
         ]
         data = data.drop(columns=non_feature_columns)
 
         # scaler = Normalizer()
         scaler = StandardScaler()
-        print(data.columns)
         data[feature_columns] = scaler.fit_transform(
             data[feature_columns]
         )
-
         return data
 
     def __call__(self):
@@ -268,10 +375,32 @@ def get_classification_google_scheduler_dataset_splitted(
     assert_google_scheduler_output(y)
 
     raw_data = pd.read_parquet(filename, engine="fastparquet")
-    raw_data = raw_data.head(1000000)
+    raw_data.sort_values(by="start_time", inplace=True)
+    # Cut the data here
+    raw_data = raw_data.head(200000)
     size = len(raw_data)
-    print("SAIZE " + str(size))
+
+    print("SIZE of dataset: " + str(size))
     split_size = size // num_split
+
+    raw_data["duration"] = (
+        raw_data["end_time"] - raw_data["start_time"]
+    )
+
+    # Append history based on grouping columns on duration (Whether they exceed 6 minutes or not)
+    append_history_time(raw_data, "constraint_mapped")
+    append_history_time(raw_data, "collection_logical_name_mapped")
+
+    # Append history based on grouping columns on previous throttle/non_throttle
+    append_history(raw_data, "collection_logical_name_mapped")
+    append_history(raw_data, "constraint_mapped")
+
+    # one_hot = [
+    #     "sched_class",
+    #     "collection_scheduler",
+    #     "collection_vertical_scaling",
+    # ]
+    # raw_data = pd.get_dummies(raw_data, columns=one_hot)
 
     subsets = []
     for i in range(num_split):

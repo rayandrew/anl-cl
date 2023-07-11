@@ -6,7 +6,7 @@ from avalanche.training.templates import SupervisedTemplate
 from src.trainers.base import BaseTrainer
 
 
-class OfflineNoRetrainingTrainer(BaseTrainer):
+class BatchNoRetrainTrainer(BaseTrainer):
     def __init__(
         self,
         strategy: SupervisedTemplate,
@@ -20,7 +20,7 @@ class OfflineNoRetrainingTrainer(BaseTrainer):
     def train(self) -> Dict[int, Dict[str, float]]:
         assert (
             len(self.benchmark.train_stream) > 1
-        ), "OfflineNoRetrainingTrainer requires at least 2 experiences"
+        ), "BatchNoRetrainTrainer requires at least 2 experiences"
 
         first_experience = self.benchmark.train_stream[0]
         results = {}
@@ -33,7 +33,7 @@ class OfflineNoRetrainingTrainer(BaseTrainer):
         return results
 
 
-class OfflineRetrainingTrainer(OfflineNoRetrainingTrainer):
+class BatchSimpleRetrainTrainer(BatchNoRetrainTrainer):
     def train(self) -> Dict[int, Dict[str, float]]:
         results = {}
         for experience in self.benchmark.train_stream:
@@ -47,6 +47,6 @@ class OfflineRetrainingTrainer(OfflineNoRetrainingTrainer):
 
 
 __all__ = [
-    "OfflineNoRetrainingTrainer",
-    "OfflineRetrainingTrainer",
+    "BatchNoRetrainTrainer",
+    "BatchSimpleRetrainTrainer",
 ]

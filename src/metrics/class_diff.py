@@ -1,5 +1,5 @@
 from collections import OrderedDict, defaultdict
-from typing import Dict, Iterable, List, Optional, Set, Union
+from typing import Dict, Iterable, List, Set, Union, cast
 
 import torch
 from torch import Tensor
@@ -27,13 +27,11 @@ class ClassPredictionDiff(Metric[Dict[int, Dict[int, int]]]):
 
     def __init__(
         self,
-        classes: Optional[TrackedClassesType] = None,
+        classes: TrackedClassesType | None = None,
     ):
         self.classes: Dict[int, Set[int]] = defaultdict(set)
         self.dynamic_classes = False
-        self._class_diffs: Dict[int, Dict[int, int]] = defaultdict(
-            lambda: defaultdict(0)
-        )
+        self._class_diffs = defaultdict(lambda: defaultdict(0))  # type: ignore
 
         if classes is not None:
             if isinstance(classes, dict):
@@ -85,7 +83,7 @@ class ClassPredictionDiff(Metric[Dict[int, Dict[int, int]]]):
             )
 
         if isinstance(task_labels, int):
-            task_labels = [task_labels] * len(true_y)
+            task_labels = [task_labels] * len(true_y)  # type: ignore
 
         true_y = torch.as_tensor(true_y)
         predicted_y = torch.as_tensor(predicted_y)
@@ -99,7 +97,7 @@ class ClassPredictionDiff(Metric[Dict[int, Dict[int, int]]]):
             # Logits -> transform to labels
             true_y = torch.max(true_y, 1)[1]
 
-        for pred, true, t in zip(predicted_y, true_y, task_labels):
+        for pred, true, t in zip(predicted_y, true_y, task_labels):  # type: ignore
             t = int(t)
 
             if self.dynamic_classes:
@@ -115,14 +113,14 @@ class ClassPredictionDiff(Metric[Dict[int, Dict[int, int]]]):
             self._class_diffs[t][int(diff.item())] += 1
 
     def result(self) -> Dict[int, Dict[int, int]]:
-        running_class_diffs = OrderedDict()
+        running_class_diffs: Dict[int, Dict[int, int]] = OrderedDict()
         for task_label in sorted(self._class_diffs.keys()):
             task_dict = self._class_diffs[task_label]
             running_class_diffs[task_label] = OrderedDict()
             for class_id in sorted(task_dict.keys()):
-                running_class_diffs[task_label][
+                running_class_diffs[task_label][class_id] = task_dict[
                     class_id
-                ] = task_dict[class_id]
+                ]
 
         return running_class_diffs
 
@@ -132,7 +130,7 @@ class ClassPredictionDiff(Metric[Dict[int, Dict[int, int]]]):
 
         :return: None.
         """
-        self._class_diffs = defaultdict(lambda: defaultdict(0))
+        self._class_diffs = defaultdict(lambda: defaultdict(0))  # type: ignore
         self.__init_diffs_for_known_classes()
 
 

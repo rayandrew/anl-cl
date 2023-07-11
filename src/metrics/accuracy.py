@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List
+from typing import Any, Dict, List
 
 import torch
 from torch import Tensor
@@ -72,9 +72,9 @@ class AccuracyWithTolerance(Accuracy):
 class TaskAwareAccuracyWithTolerance(TaskAwareAccuracy):
     def __init__(self, tolerance: int = 0):
         self.tolerance = tolerance
-        self._mean_accuracy = defaultdict(
-            lambda: AccuracyWithTolerance(self.tolerance)
-        )
+        self._mean_accuracy: Dict[
+            Any, AccuracyWithTolerance
+        ] = defaultdict(lambda: AccuracyWithTolerance(self.tolerance))
 
     def reset(self, task_label=None) -> None:
         """

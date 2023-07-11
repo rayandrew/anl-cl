@@ -1,44 +1,42 @@
-from .config import DatasetConfig
-from .definitions import Dataset
+from collections.abc import Sequence
+
+from avalanche.benchmarks.utils import (
+    AvalancheDataset,
+    make_classification_dataset,
+)
+
+from src.dataset import BaseDatasetAccessor
 
 
-def _get_splitted_dataset(dataset: Dataset):
-    match dataset:
-        case Dataset.ALIBABA:
-            from src.dataset.alibaba import (
-                get_classification_alibaba_scheduler_dataset_splitted as DatasetFactory,  # get_classification_alibaba_machine_dataset_splitted as Dataset,
-            )
-        case Dataset.GOOGLE:
-            # TODO: @william change this
-            from src.dataset.google import (
-                get_classification_google_scheduler_dataset_splitted as DatasetFactory,
-            )
-        case _:
-            raise ValueError("Unknown dataset")
-    return DatasetFactory
-
-def _get_dataset(dataset: Dataset):
-    match dataset:
-        case Dataset.ALIBABA:
-            from src.dataset.alibaba import (
-                get_classification_alibaba_scheduler_dataset as DatasetFactory,
-            )
-        case Dataset.GOOGLE:
-            # TODO: @william change this to get_classification_google_scheduler_dataset
-            from src.dataset.google import (
-                get_classification_google_scheduler_dataset as DatasetFactory,
-            )
-        case _:
-            raise ValueError("Unknown dataset")
-    return DatasetFactory
-
-def get_splitted_dataset(cfg: DatasetConfig):
-    return _get_splitted_dataset(cfg.name)
+class AvalancheClassificationDatasetAccessor(
+    BaseDatasetAccessor[AvalancheDataset]
+):
+    pass
 
 
-def get_dataset(cfg: DatasetConfig):
-    return _get_dataset(cfg.name)
+def create_avalanche_classification_dataset(
+    dataset: BaseDatasetAccessor,
+) -> AvalancheClassificationDatasetAccessor:
+    return AvalancheClassificationDatasetAccessor(
+        train=make_classification_dataset(
+            dataset.train,
+        ),
+        test=make_classification_dataset(
+            dataset.test,
+        ),
+    )
+
+
+def create_avalanche_classification_datasets(
+    datasets: Sequence[BaseDatasetAccessor],
+) -> Sequence[AvalancheClassificationDatasetAccessor]:
+    return [
+        create_avalanche_classification_dataset(d) for d in datasets
+    ]
+
 
 __all__ = [
-    "Dataset", "get_dataset", "get_splitted_dataset", "_get_dataset", "_get_splitted_dataset"
+    "AvalancheClassificationDatasetAccessor",
+    "create_avalanche_classification_dataset",
+    "create_avalanche_classification_datasets",
 ]

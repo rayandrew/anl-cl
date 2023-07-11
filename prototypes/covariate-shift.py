@@ -1,5 +1,5 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler, Normalizer
+from sklearn.preprocessing import Normalizer, StandardScaler
 
 N_CHUNKS = 20
 # COLORS = ["red", "blue"]
@@ -46,7 +46,7 @@ non_feature_columns = [
 ]
 
 
-def create_output_dir(path: str, clean: bool = True) -> Path:
+def create_output_dir(path: str | Path, clean: bool = True) -> Path:
     output_dir = Path(path)
 
     if clean and output_dir.exists() and output_dir.is_dir():
@@ -395,7 +395,7 @@ def plot_cdf(subsets: List[pd.DataFrame]):
         plt.close(fig)
 
 
-def main():
+def main() -> None:
     subsets = generate_data_chunks(
         "/lcrc/project/FastBayes/rayandrew/trace-utils/generated-task/chunk-0.csv",
         "./cov-shift/alibaba/chunks-norm",

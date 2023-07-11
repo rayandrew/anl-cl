@@ -1,6 +1,9 @@
 from collections import deque
-from numbers import Number
-from typing import Sequence
+from collections.abc import Collection
+
+from skmultiflow.drift_detection.base_drift_detector import (
+    BaseDriftDetector,
+)
 
 
 class VotingDriftDetector:
@@ -10,18 +13,20 @@ class VotingDriftDetector:
         threshold: int,
         verbose=True,
     ):
-        self.methods = []
-        self.weights = []
-        self.drifts = []
-        self.vote_drifts = []
+        self.methods: list[BaseDriftDetector] = []
+        self.weights: list[float] = []
+        self.drifts: list[deque[int]] = []
+        self.vote_drifts: list[int] = []
         self.window_size = window_size
         self.threshold = threshold
         self.verbose = verbose
 
-    def add_method(self, method, weight=1):
+    def add_method(
+        self, method: BaseDriftDetector, weight: float = 1.0
+    ):
         self.methods.append(method)
         self.weights.append(weight)
-        self.drifts.append(deque())
+        self.drifts.append(deque[int]())
 
     def _get_drift_point(self, data):
         for pos, ele in enumerate(data):
@@ -51,7 +56,7 @@ class VotingDriftDetector:
                 vote_drifts.append(mean_pos)
         return vote_drifts
 
-    def predict(self, data) -> Sequence[int]:
+    def predict(self, data) -> Collection[int]:
         for method_idx in range(len(self.drifts)):
             self.drifts[method_idx] = deque()
         self._get_drift_point(data)
@@ -61,8 +66,8 @@ class VotingDriftDetector:
 
 
 def get_offline_voting_drift_detector(
-    window_size: int,
-    threshold: int,
+    window_size: int = 75,
+    threshold: int = 300,
     adwin: bool = True,
     ddm: bool = True,
     eddm: bool = True,

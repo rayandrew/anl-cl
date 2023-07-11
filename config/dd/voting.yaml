@@ -1,5 +1,0 @@
-drift_detection:
-  voting:
-    enable: true
-    threshold: 300
-    window_size: 75

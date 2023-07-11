@@ -1,7 +1,8 @@
+from collections.abc import Collection
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Literal, Optional, Sequence, Union
+from typing import Literal, Union
 
 import torch
 
@@ -64,7 +65,7 @@ class GoogleMachineDatasetGenerator:
         filename: Union[str, Path] = None,
         n_labels: int = 10,
         train_ratio: float = GoogleDataset.TRAIN_RATIO,
-        dataframe: Optional[pd.DataFrame] = None,
+        dataframe: pd.DataFrame | None = None,
         y: TGoogleOutput = "cpu",
     ):
         assert_google_output(y)
@@ -183,7 +184,7 @@ def get_classification_google_machine_dataset_splitted(
     n_labels: int = 10,
     y: TGoogleOutput = "cpu",
     num_split: int = 4,
-) -> Sequence[ClassificationGoogleMachineDataAccessor]:
+) -> Collection[ClassificationGoogleMachineDataAccessor]:
     assert_google_output(y)
 
     raw_data = pd.read_csv(filename)

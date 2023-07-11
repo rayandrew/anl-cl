@@ -112,7 +112,7 @@ def compute_perf(results: dict):
         raw_acc.append(raw_acc_temp)
 
     # initialize a dictionary to store the forgetting values for each task
-    forgetting = {}
+    forgetting: dict[int | str, float] = {}
     for task in results.keys():
         if task == "0":
             forgetting[task] = 0

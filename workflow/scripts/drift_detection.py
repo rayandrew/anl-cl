@@ -1,6 +1,8 @@
-from src.utils.general import head, set_seed
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
+
+from src.utils.general import head, set_seed
 
 if TYPE_CHECKING:
     snakemake: Any = None
@@ -125,7 +127,7 @@ def main():
                 ) 
         case "online":
             from src.drift_detection.online import (
-                get_online_drift_detector
+                get_online_drift_detector,
             )
             dd = get_online_drift_detector()
         case _:
@@ -160,7 +162,7 @@ def main():
     )
 
     data = add_dist_label(orig_data, change_list, start_from=0)
-    data.to_csv(output_path / f"{base_output_filename}.csv", index=False)
+    data.to_parquet(output_path / f"{base_output_filename}.parquet", index=False)
 
     changes = np.zeros((len(change_list), 2))
     changes[:, 0] = change_list

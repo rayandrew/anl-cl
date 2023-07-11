@@ -181,3 +181,4 @@ sacred_runs
 logs
 wandb
 cov-shift
+*.out

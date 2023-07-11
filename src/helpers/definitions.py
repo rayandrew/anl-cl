@@ -1,9 +1,15 @@
-from enum import Enum
+from abc import ABCMeta
+from typing import Any, Dict
 
+from snakemake.io import (
+    InputFiles,
+    Log,
+    OutputFiles,
+    Params,
+    Wildcards,
+)
 
-class StrEnum(str, Enum):
-    def __str__(self):
-        return self.value
+from src.utils.ds import StrEnum
 
 
 class Dataset(StrEnum):
@@ -43,12 +49,29 @@ class Task(StrEnum):
 
 
 class Model(StrEnum):
-    MLP = "mlp"
+    A: str = "A"
+    B: str = "B"
+    # MLP = "mlp"
 
 
 class Training(StrEnum):
     ONLINE = "online"
     BATCH = "batch"
+
+
+class DriftDetector(StrEnum):
+    VOTING = "voting"
+    RUPTURES = "ruptures"
+    ONLINE = "online"
+
+
+class Snakemake(metaclass=ABCMeta):
+    input: InputFiles
+    output: OutputFiles
+    log: Log
+    params: Params
+    wildcards: Wildcards
+    config: Dict[str, Any]
 
 
 __all__ = [
@@ -60,4 +83,6 @@ __all__ = [
     "Task",
     "Model",
     "Training",
+    "DriftDetector",
+    "Snakemake",
 ]

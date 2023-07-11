@@ -1,5 +1,4 @@
 from pathlib import Path
-import itertools
 
 from helper import DATASETS, EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS, MODELS, get_all_dataset_files, get_all_dataset_files_as_dict
 
@@ -30,7 +29,7 @@ rule:
     input:
         "raw_data/{dataset}/{filename}.parquet",
     output:
-        directory("out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{strategy}/{feats}"),
+        directory("out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}"),
     params:
         dataset="{dataset}",
         filename="{filename}",
@@ -39,8 +38,9 @@ rule:
         model="{model}",
         training="{training}",
         feats="{feats}",
+        strategy="{strategy}",
     log:
-        "logs/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{strategy}/{feats}.log",
+        "logs/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}.log",
     script: "../scripts/pipeline/{wildcards.scenario}.py"
 
 rule:
@@ -64,15 +64,27 @@ rule:
     script: "../scripts/evaluation/plot-bar.py"
 
 rule:
+    name: f"eval_feats"
+    input:
+        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}",
+    output:
+        directory("out/evaluation/feats/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}"),
+    log:
+        "logs/evaluation/feats/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}.log",
+    script: "../scripts/evaluation/plot-bar.py"
+
+rule:
     name: f"eval_strategy"
     input:
-        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{strategy}",
+        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}",
     output:
-        directory("out/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{strategy}"),
+        directory("out/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}"),
     log:
-        "logs/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{strategy}.log",
+        "logs/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}.log",
     script: "../scripts/evaluation/plot-bar.py"
 
 def get_pipeline_output():
     final_output = []
     return final_output
+
+# vim: set ft=snakemake:python:

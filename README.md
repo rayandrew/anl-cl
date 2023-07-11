@@ -38,7 +38,7 @@ mypy .
 
 See `workflow/rules/pipeline.smk`
 
-- `<DATASET>` = `alibaba|google|cori`
+- `<DATASET>` = `alibaba|google|cori|azure`
 - `<FILENAME>` = dataset filename that should exist in `raw_data/<DATASET>/<FILEPATH>.parquet`
 - `<FEATS>` = `feats-*` can be anything depends on the dataset, see `src.helpers.feats`
 - `<TRAINING>` = `batch|online`

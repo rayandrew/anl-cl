@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Generic, Literal, TypeVar
 
 from torch.utils.data import Dataset
@@ -11,14 +10,11 @@ import numpy as np
 import pandas as pd
 
 from src.transforms import BaseTransform, apply_transforms
-from src.utils.general import read_dataframe
 
 TDatasetSubset = Literal["training", "testing", "all"]
 TDataset = TypeVar("TDataset", bound="BaseDataset")
 # TProcessor = TypeVar("TProcessor", bound="BaseDatasetPreprocessor")
-TAvalancheDataset = TypeVar(
-    "TAvalancheDataset", bound=AvalancheDataset
-)
+TAvalancheDataset = TypeVar("TAvalancheDataset", bound=AvalancheDataset)
 
 
 def assert_dataset_subset(subset: TDatasetSubset):
@@ -78,52 +74,33 @@ class BaseDataset(_BaseDataset):
         )
 
 
-# class BaseDatasetWithDrift(BaseDataset):
-#     def __init__(
-#         self,
-#         features: pd.DataFrame,
-#         targets: pd.Series,
-#         drifts: pd.Series,
-#     ):
-#         super().__init__(features, targets)
-#         self.drifts = drifts.values
-
-#     def __getitem__(self, index: int):
-#         return (
-#             self.features.iloc[index].astype(np.float32).values,
-#             self.targets[index],
-#             self.drifts[index],
-#         )
-
-
 @dataclass
 class BaseDatasetAccessor(Generic[TDataset]):
     train: TDataset
     test: TDataset
-    # train_dataset: TAvalancheDataset
-    # test_dataset: TAvalancheDataset
 
 
 TGeneratorReturn = TypeVar("TGeneratorReturn")
 
 
-class BaseDatasetGenerator(
-    Generic[TGeneratorReturn], metaclass=ABCMeta
-):
+class BaseDatasetGenerator(Generic[TGeneratorReturn], metaclass=ABCMeta):
     def __init__(
         self,
-        file: str | Path | pd.DataFrame,
         target: str,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        self.data: pd.DataFrame = read_dataframe(file)
         self.train_ratio = train_ratio
         self._target = target
         self._transform = transform
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         return apply_transforms(df, self._transform)
+
+    @property
+    @abstractmethod
+    def data(self) -> pd.DataFrame:
+        raise NotImplementedError
 
     @property
     def target(self):
@@ -137,19 +114,9 @@ class BaseDatasetGenerator(
         return self.__call__(shuffle=shuffle)
 
 
-# class BaseDatasetGenerator(Generic[TAccessor], metaclass=ABCMeta):
-#     @abstractmethod
-#     def __call__(self) -> TAccessor:
-#         raise NotImplementedError
-
-#     def generate(self) -> TAccessor:
-#         return self.__call__()
-
-
 __all__ = [
     "_BaseDataset",
     "BaseDataset",
-    # "BaseDatasetWithDrift",
     "TDatasetSubset",
     "TDataset",
     "assert_dataset_subset",

@@ -4,7 +4,8 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import src.transforms.alibaba_seventeen as transforms
+# import src.transforms.alibaba_seventeen as transforms
+import src.transforms.azure_vmcpu as transforms
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import (
     AvalancheClassificationDatasetAccessor,
@@ -26,13 +27,22 @@ def bucket_target_name(target: str):
 
 
 def get_dataset(config: Config, input_path: Path):
-    from src.dataset.alibaba.container_seventeen import (
-        AlibabaContainerDatasetChunkGenerator,
-    )
+    # from src.dataset.alibaba.container_seventeen import (
+    #     AlibabaContainerDatasetChunkGenerator,
+    # )
+    from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
 
     data_transformer = transforms.FeatureA_TransformSet(config)
 
-    generator = AlibabaContainerDatasetChunkGenerator(
+    # generator = AlibabaContainerDatasetChunkGenerator(
+    #     file=input_path,
+    #     target=data_transformer.target_name,
+    #     n_labels=config.num_classes,
+    #     n_split=config.scenario.num_split,  # type: ignore
+    #     transform=data_transformer,
+    # )
+
+    generator = AzureVMDatasetChunkGenerator(
         file=input_path,
         target=data_transformer.target_name,
         n_labels=config.num_classes,

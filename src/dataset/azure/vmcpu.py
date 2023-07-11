@@ -13,33 +13,28 @@ from src.transforms import BaseTransform
 from src.utils.general import read_dataframe
 from src.utils.general import split_dataset as split_dataset_fn
 
-TAlibabaContainerDataset = TypeVar(
-    "TAlibabaContainerDataset", bound="AlibabaContainerDataset"
-)
+TAzureVMDataset = TypeVar("TAzureVMDataset", bound="AzureVMDataset")
 TAccessor = TypeVar("TAccessor", bound=BaseDatasetAccessor)
 TAccessorReturn = TypeVar(
     "TAccessorReturn",
-    bound="AlibabaContainerDataAccessor"
-    | Sequence["AlibabaContainerDataAccessor"],
+    bound="AzureVMDataAccessor" | Sequence["AzureVMDataAccessor"],
 )
 
 
-class AlibabaContainerDataset(BaseDataset):
+class AzureVMDataset(BaseDataset):
     pass
 
 
 @dataclass
-class AlibabaContainerDataAccessor(
-    BaseDatasetAccessor[AlibabaContainerDataset]
-):
+class AzureVMDataAccessor(BaseDatasetAccessor[AzureVMDataset]):
     pass
 
 
-class BaseAlibabaContainerDatasetGenerator(
-    Generic[TAccessorReturn, TAccessor, TAlibabaContainerDataset],
+class BaseAzureVMDatasetGenerator(
+    Generic[TAccessorReturn, TAccessor, TAzureVMDataset],
     BaseDatasetGenerator[TAccessorReturn],
 ):
-    dataset_cls: type[TAlibabaContainerDataset]
+    dataset_cls: type[TAzureVMDataset]
     accessor_cls: type[TAccessor]
 
     def __init__(
@@ -47,16 +42,17 @@ class BaseAlibabaContainerDatasetGenerator(
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
         n_labels: int = 4,
+        n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        super(BaseAlibabaContainerDatasetGenerator, self).__init__(
+        super(BaseAzureVMDatasetGenerator, self).__init__(
             target=target,
             train_ratio=train_ratio,
             transform=transform,
         )
         self._file = file
-        self.n_labels = n_labels
+        self.n_split = n_split
 
     @property
     def data(self) -> pd.DataFrame:
@@ -80,26 +76,26 @@ class BaseAlibabaContainerDatasetGenerator(
         return cast(TAccessorReturn, self.__base_call__(self.data, shuffle))
 
 
-class AlibabaContainerDatasetGenerator(
-    BaseAlibabaContainerDatasetGenerator[
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataset,
+class AzureVMDatasetGenerator(
+    BaseAzureVMDatasetGenerator[
+        AzureVMDataAccessor,
+        AzureVMDataAccessor,
+        AzureVMDataset,
     ]
 ):
-    dataset_cls = AlibabaContainerDataset
-    accessor_cls = AlibabaContainerDataAccessor
+    dataset_cls = AzureVMDataset
+    accessor_cls = AzureVMDataAccessor
 
 
-class AlibabaContainerDatasetChunkGenerator(
-    BaseAlibabaContainerDatasetGenerator[
-        list[AlibabaContainerDataAccessor],
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataset,
+class AzureVMDatasetChunkGenerator(
+    BaseAzureVMDatasetGenerator[
+        list[AzureVMDataAccessor],
+        AzureVMDataAccessor,
+        AzureVMDataset,
     ]
 ):
-    dataset_cls = AlibabaContainerDataset
-    accessor_cls = AlibabaContainerDataAccessor
+    dataset_cls = AzureVMDataset
+    accessor_cls = AzureVMDataAccessor
 
     def __init__(
         self,
@@ -110,7 +106,7 @@ class AlibabaContainerDatasetChunkGenerator(
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        super(AlibabaContainerDatasetChunkGenerator, self).__init__(
+        super(AzureVMDatasetChunkGenerator, self).__init__(
             file=file,
             n_labels=n_labels,
             target=target,
@@ -119,12 +115,10 @@ class AlibabaContainerDatasetChunkGenerator(
         )
         self.n_split = n_split
 
-    def __call__(
-        self, shuffle: bool = False
-    ) -> list[AlibabaContainerDataAccessor]:
+    def __call__(self, shuffle: bool = False) -> list[AzureVMDataAccessor]:
         size = len(self.data)
         split_size = size // self.n_split
-        subsets: list[AlibabaContainerDataAccessor] = []
+        subsets: list[AzureVMDataAccessor] = []
 
         for i in range(self.n_split):
             if i == self.n_split - 1:
@@ -137,15 +131,15 @@ class AlibabaContainerDatasetChunkGenerator(
         return subsets
 
 
-class AlibabaContainerDatasetDistChunkGenerator(
-    BaseAlibabaContainerDatasetGenerator[
-        list[AlibabaContainerDataAccessor],
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataset,
+class AzureVMDatasetDistChunkGenerator(
+    BaseAzureVMDatasetGenerator[
+        list[AzureVMDataAccessor],
+        AzureVMDataAccessor,
+        AzureVMDataset,
     ]
 ):
-    dataset_cls = AlibabaContainerDataset
-    accessor_cls = AlibabaContainerDataAccessor
+    dataset_cls = AzureVMDataset
+    accessor_cls = AzureVMDataAccessor
 
     def __init__(
         self,
@@ -156,7 +150,7 @@ class AlibabaContainerDatasetDistChunkGenerator(
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        super(AlibabaContainerDatasetDistChunkGenerator, self).__init__(
+        super(AzureVMDatasetDistChunkGenerator, self).__init__(
             file=file,
             n_labels=n_labels,
             target=target,
@@ -165,10 +159,8 @@ class AlibabaContainerDatasetDistChunkGenerator(
         )
         self.dist_col = dist_col
 
-    def __call__(
-        self, shuffle: bool = False
-    ) -> list[AlibabaContainerDataAccessor]:
-        subsets: list[AlibabaContainerDataAccessor] = []
+    def __call__(self, shuffle: bool = False) -> list[AzureVMDataAccessor]:
+        subsets: list[AzureVMDataAccessor] = []
         grouped = self.data.groupby(self.dist_col)
 
         for _, data in grouped:
@@ -180,9 +172,9 @@ class AlibabaContainerDatasetDistChunkGenerator(
 
 
 __all__ = [
-    "AlibabaContainerDataset",
-    "AlibabaContainerDataAccessor",
-    "AlibabaContainerDatasetGenerator",
-    "AlibabaContainerDatasetChunkGenerator",
-    "AlibabaContainerDatasetDistChunkGenerator",
+    "AzureVMDataset",
+    "AzureVMDataAccessor",
+    "AzureVMDatasetGenerator",
+    "AzureVMDatasetChunkGenerator",
+    "AzureVMDatasetDistChunkGenerator",
 ]

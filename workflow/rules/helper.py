@@ -17,7 +17,7 @@ SCENARIOS = [e.value for e in Scenario]
 STRATEGIES = [e.value for e in Strategy]
 TRAININGS = [e.value for e in Training]
 TASKS = [e.value for e in Task]
-MODELS = [e.value for e in Model]
+MODELS = [f"model-{e.value}" for e in Model]
 DRIFT_DETECTORS = [e.value for e in DriftDetector]
 EXTENSIONS = ["csv", "parquet"]
 

@@ -2,9 +2,7 @@ from collections.abc import Collection
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Literal, Union
-
-import torch
+from typing import Literal
 
 from avalanche.benchmarks.utils import make_classification_dataset
 from avalanche.benchmarks.utils.classification_dataset import (
@@ -14,7 +12,6 @@ from avalanche.benchmarks.utils.classification_dataset import (
 import numpy as np
 import pandas as pd
 
-from src.dataset.base import TDatasetSubset, assert_dataset_subset
 from src.utils.general import split_evenly_by_classes
 
 from .base import GoogleDataset
@@ -33,7 +30,7 @@ class GoogleMachineDataset(GoogleDataset):
         targets: pd.Series,
         timestamps: pd.DataFrame,
     ):
-        super().__init__()
+        super().__init__()  # type: ignore # noqa # NOTE: @william fix this
         self.features = features
         self.targets = targets.values
         self.timestamps = timestamps
@@ -62,7 +59,7 @@ class GoogleMachineDataset(GoogleDataset):
 class GoogleMachineDatasetGenerator:
     def __init__(
         self,
-        filename: Union[str, Path] = None,
+        filename: str | Path | None = None,
         n_labels: int = 10,
         train_ratio: float = GoogleDataset.TRAIN_RATIO,
         dataframe: pd.DataFrame | None = None,
@@ -87,9 +84,7 @@ class GoogleMachineDatasetGenerator:
         data = data.reset_index(drop=True)
 
         # remove invalid values (negative or > 100) because this is a percentage
-        data = data[
-            (data[self.y_var] >= 0) & (data[self.y_var] <= 100)
-        ]
+        data = data[(data[self.y_var] >= 0) & (data[self.y_var] <= 100)]
 
         return data
 
@@ -167,9 +162,7 @@ def get_classification_google_machine_dataset(
         y=y,
     )
     train_dataset, test_dataset = generator()
-    avalanche_train_dataset = make_classification_dataset(
-        train_dataset
-    )
+    avalanche_train_dataset = make_classification_dataset(train_dataset)
     avalanche_test_dataset = make_classification_dataset(test_dataset)
     return ClassificationGoogleMachineDataAccessor(
         original_train_dataset=train_dataset,
@@ -196,9 +189,7 @@ def get_classification_google_machine_dataset_splitted(
         if i == num_split - 1:
             data = raw_data.iloc[i * split_size :]
         else:
-            data = raw_data.iloc[
-                i * split_size : (i + 1) * split_size
-            ]
+            data = raw_data.iloc[i * split_size : (i + 1) * split_size]
 
         generator = GoogleMachineDatasetGenerator(
             dataframe=data,
@@ -206,12 +197,8 @@ def get_classification_google_machine_dataset_splitted(
             y=y,
         )
         train_dataset, test_dataset = generator()
-        avalanche_train_dataset = make_classification_dataset(
-            train_dataset
-        )
-        avalanche_test_dataset = make_classification_dataset(
-            test_dataset
-        )
+        avalanche_train_dataset = make_classification_dataset(train_dataset)
+        avalanche_test_dataset = make_classification_dataset(test_dataset)
         subsets.append(
             ClassificationGoogleMachineDataAccessor(
                 original_train_dataset=train_dataset,
@@ -230,82 +217,3 @@ __all__ = [
     "get_classification_google_machine_dataset",
     "get_classification_google_machine_dataset_splitted",
 ]
-
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-
-    parser = ArgumentParser()
-    # parser.add_argument("-d", "--data", type=str, default="data/mu_dist/m_25.csv")
-    parser.add_argument(
-        "-d",
-        "--data",
-        type=str,
-        default="out_preprocess/m_25/m_25.csv",
-    )
-    parser.add_argument("-n", "--n_labels", type=int, default=10)
-    parser.add_argument(
-        "-m",
-        "--subset",
-        type=str,
-        choices=["training", "testing", "all"],
-        default="training",
-    )
-    parser.add_argument(
-        "-y",
-        type=str,
-        choices=[
-            "cpu_util_percent",
-            "mem_util_percent",
-            "disk_io_percent",
-        ],
-        default="cpu",
-    )
-    parser.add_argument(
-        "-s",
-        "--seq",
-        action="store_true",
-    )
-    parser.add_argument(
-        "-w",
-        "--seq_len",
-        type=int,
-        default=5,
-    )
-    parser.add_argument(
-        "--univariate",
-        action="store_true",
-    )
-    args = parser.parse_args()
-
-    if args.seq:
-        dataset, raw_dataset = AlibabaMachineSequenceDataset(
-            filename=args.data,
-            n_labels=args.n_labels,
-            y=args.y,
-            subset=args.subset,
-            seq_len=args.seq_len,
-            univariate=args.univariate,
-        )
-    else:
-        dataset, raw_dataset = AlibabaMachineDataset(
-            filename=args.data,
-            n_labels=args.n_labels,
-            y=args.y,
-            subset=args.subset,
-        )
-    print("INPUT SIZE", raw_dataset.input_size)
-    print("N EXPERIENCES", raw_dataset.n_experiences)
-    # print("TARGETS", np.unique(dataset.targets))
-    # print("OUTPUTS", np.unique(dataset.outputs))
-    print("LENGTH", len(dataset))
-    for d in dataset:
-        print(d)
-        break
-
-    # print(dataset[3911])
-    # print(dataset[3912])
-    # print(dataset[3913])
-    # print(dataset[3914])
-    # print(dataset[3915])
-    # print(dataset[3916])
-    # print(dataset[3917])

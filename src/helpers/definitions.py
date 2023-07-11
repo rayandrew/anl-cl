@@ -1,13 +1,7 @@
 from abc import ABCMeta
 from typing import Any, Dict
 
-from snakemake.io import (
-    InputFiles,
-    Log,
-    OutputFiles,
-    Params,
-    Wildcards,
-)
+from snakemake.io import InputFiles, Log, OutputFiles, Params, Wildcards
 
 from src.utils.ds import StrEnum
 
@@ -15,8 +9,8 @@ from src.utils.ds import StrEnum
 class Dataset(StrEnum):
     ALIBABA = "alibaba"
     GOOGLE = "google"
-    # CORI = "cori"
-    # AZURE = "azure"
+    CORI = "cori"
+    AZURE = "azure"
 
 
 class Optimizer(StrEnum):
@@ -49,8 +43,8 @@ class Task(StrEnum):
 
 
 class Model(StrEnum):
-    A: str = "A"
-    B: str = "B"
+    A: str = "a"
+    B: str = "b"
     # MLP = "mlp"
 
 

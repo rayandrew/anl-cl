@@ -1,9 +1,8 @@
-# from types import SimpleNamespace
 from abc import ABCMeta
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, Extra, field_validator
 
 from .definitions import (
     Dataset,
@@ -34,6 +33,13 @@ class ScenarioConfig(DynamicConfig):
 class DatasetConfig(DynamicConfig):
     name: Dataset
     target: str
+    feature: str
+
+    @field_validator("feature")
+    def check_feature_prefix(cls, v: str):
+        if not v.startswith("feature-"):
+            raise ValueError("Feature must start with 'feature-'")
+        return v
 
 
 class StrategyConfig(DynamicConfig):
@@ -73,23 +79,27 @@ class Config(GeneralConfig):
 
 
 def assert_config_params(config: Config, params: Any):
-    assert (
-        Dataset(params.dataset) == config.dataset.name
-    ), f"Dataset mismatch: got {params.dataset} instead of {config.dataset.name}"
-    assert (
-        Scenario(params.scenario) == config.scenario.name
-    ), f"Scenario mismatch: got {params.scenario} instead of {config.scenario.name}"
+    assert Dataset(params.dataset) == config.dataset.name, (
+        f"Dataset mismatch: got {params.dataset} instead of "
+        f"{config.dataset.name}"
+    )
+    assert Scenario(params.scenario) == config.scenario.name, (
+        f"Scenario mismatch: got {params.scenario} instead of "
+        f"{config.scenario.name}"
+    )
     assert (
         Model(params.model) == config.model.name
     ), f"Model mismatch: got {params.model} instead of {config.model.name}"
     if config.online:
-        assert (
-            params.training == Training.ONLINE
-        ), f"Training mismatch: got {params.training} instead of {Training.ONLINE}"
+        assert params.training == Training.ONLINE, (
+            f"Training mismatch: got {params.training} instead of "
+            f"{Training.ONLINE}"
+        )
     else:
-        assert (
-            params.training == Training.BATCH
-        ), f"Training mismatch: Got {params.training} instead of {Training.BATCH}"
+        assert params.training == Training.BATCH, (
+            f"Training mismatch: Got {params.training} instead of "
+            f"{Training.BATCH}"
+        )
 
 
 __all__ = [

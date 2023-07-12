@@ -1,4 +1,4 @@
-dataset: 
+dataset:
   name: azure
   target: p95maxcpu
-  
+  feature: no-feats

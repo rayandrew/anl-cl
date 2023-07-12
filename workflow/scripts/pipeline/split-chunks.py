@@ -4,14 +4,13 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# import src.transforms.alibaba_seventeen as transforms
-import src.transforms.azure_vmcpu as transforms
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import (
     AvalancheClassificationDatasetAccessor,
     create_avalanche_classification_datasets,
 )
-from src.helpers.definitions import Snakemake
+from src.helpers.definitions import Dataset, Snakemake
+from src.helpers.features import get_features
 from src.helpers.scenario import train_classification_scenario
 from src.utils.logging import logging, setup_logging
 
@@ -22,33 +21,34 @@ setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
 
 
-def bucket_target_name(target: str):
-    return f"bucket_{target}"
-
-
 def get_dataset(config: Config, input_path: Path):
-    # from src.dataset.alibaba.container_seventeen import (
-    #     AlibabaContainerDatasetChunkGenerator,
-    # )
-    from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
+    data_transformer = get_features(config)
+    match config.dataset.name:
+        case Dataset.ALIBABA:
+            from src.dataset.alibaba.container_seventeen import (
+                AlibabaContainerDatasetChunkGenerator,
+            )
 
-    data_transformer = transforms.FeatureA_TransformSet(config)
+            generator = AlibabaContainerDatasetChunkGenerator(
+                file=input_path,
+                target=data_transformer.target_name,
+                n_labels=config.num_classes,
+                n_split=config.scenario.num_split,  # type: ignore
+                transform=data_transformer,
+            )
+        case Dataset.AZURE:
+            from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
 
-    # generator = AlibabaContainerDatasetChunkGenerator(
-    #     file=input_path,
-    #     target=data_transformer.target_name,
-    #     n_labels=config.num_classes,
-    #     n_split=config.scenario.num_split,  # type: ignore
-    #     transform=data_transformer,
-    # )
+            generator = AzureVMDatasetChunkGenerator(
+                file=input_path,
+                target=data_transformer.target_name,
+                n_labels=config.num_classes,
+                n_split=config.scenario.num_split,  # type: ignore
+                transform=data_transformer,
+            )
+        case _:
+            raise ValueError(f"Unknown dataset: {config.dataset.name}")
 
-    generator = AzureVMDatasetChunkGenerator(
-        file=input_path,
-        target=data_transformer.target_name,
-        n_labels=config.num_classes,
-        n_split=config.scenario.num_split,  # type: ignore
-        transform=data_transformer,
-    )
     dataset = generator()
     if len(dataset) == 0:
         raise ValueError("Dataset is empty")

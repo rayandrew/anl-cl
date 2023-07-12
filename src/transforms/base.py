@@ -47,7 +47,15 @@ def apply_transforms(
     return transforms(data)
 
 
+class BaseFeatureTransformSet(BaseTransform, metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def target_name(self) -> str:
+        raise NotImplementedError
+
+
 __all__ = [
     "BaseTransform",
+    "BaseFeatureTransformSet",
     "apply_transforms",
 ]

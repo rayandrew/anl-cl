@@ -1,0 +1,31 @@
+name: acl
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - matplotlib
+  - scikit-learn
+  - numpy
+  - pip
+  - torchvision
+  - torchmetrics
+  - seaborn
+  - pytorch
+  - simplejson
+  - types-simplejson
+  - mamba
+  - bioconda::snakemake
+  - pandas
+  - jupyterlab
+  - fastparquet
+  - pip:
+    - typing_extensions==4.5.0
+    - pydantic==2.0a3
+    - git+https://github.com/ContinualAI/avalanche.git@2b7fa26f0ca98603b057a2eee992a4dc3a55abe1
+    - mypy
+    - black
+    - isort
+    - ipython
+    - pre-commit
+    - flake8

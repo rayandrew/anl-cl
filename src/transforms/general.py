@@ -117,7 +117,7 @@ class OneHotColumnTransform(BaseTransform):
 
 
 class OneHotColumnsTransform(BaseTransform):
-    def __init__(self, columns: str, drop_first: bool = True):
+    def __init__(self, columns: list[str], drop_first: bool = True):
         self.columns = columns
         self.drop_first = drop_first
 

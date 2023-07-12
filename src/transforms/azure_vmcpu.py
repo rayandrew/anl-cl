@@ -3,7 +3,7 @@ import pandas as pd
 
 from src.helpers.config import Config
 
-from .base import BaseTransform, apply_transforms
+from .base import BaseFeatureTransformSet, BaseTransform, apply_transforms
 from .general import (
     ColumnsDropTransform,
     DiscretizeColumnTransform,
@@ -11,7 +11,7 @@ from .general import (
 )
 
 
-class BucketCPUPercentTransform(BaseTransform):
+class BucketSubscriptionCPUPercentTransform(BaseTransform):
     def __init__(self, target_name: str):
         self.target_name = target_name
 
@@ -32,51 +32,66 @@ class BucketCPUPercentTransform(BaseTransform):
         return df
 
     def __repr__(self) -> str:
-        return f"BucketCPUPercentTransform(target_name={self.target_name})"
+        return (
+            "BucketSubscriptionCPUPercentTransform(target_name="
+            + f"{self.target_name})"
+        )
 
 
-class FeatureA_TransformSet(BaseTransform):
+NON_FEATURE_COLUMNS = [
+    "vmid",
+    "subscriptionid",
+    "deploymentid",
+    "vmcreated",
+    "vmdeleted",
+    "maxcpu",
+    "p95maxcpu",
+    "avgcpu",
+    "vmcategory",
+    "vmcorecountbucket",
+    "vmmemorybucket",
+    "lifetime",
+    "corehour",
+]
+
+
+class NoFeats(BaseFeatureTransformSet):
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._target_name = f"bucket_{config.dataset.target}"
         self._non_feature_columns = list(
-            filter(
-                lambda x: x != config.dataset.target,
-                [
-                    "vmid",
-                    "subscriptionid",
-                    "deploymentid",
-                    "vmcreated",
-                    "vmdeleted",
-                    "maxcpu",
-                    "p95maxcpu",
-                    "avgcpu",
-                    "vmcategory",
-                    "vmcorecountbucket",
-                    "vmmemorybucket",
-                    "lifetime",
-                    "corehour",
-                ],
-            )
+            filter(lambda x: x != config.dataset.target, NON_FEATURE_COLUMNS)
         )
         self._transforms: list[BaseTransform] = [
-            BucketCPUPercentTransform(),
-            ColumnsDropTransform(
-                columns=[
-                    "vmid",
-                    "subscriptionid",
-                    "deploymentid",
-                    "vmcreated",
-                    "vmdeleted",
-                    "maxcpu",
-                    "avgcpu",
-                    "vmcategory",
-                    "vmcorecountbucket",
-                    "vmmemorybucket",
-                    "lifetime",
-                    "corehour",
-                ]
+            ColumnsDropTransform(columns=self._non_feature_columns),
+            DiscretizeColumnTransform(
+                column=config.dataset.target,
+                new_column=self._target_name,
+                n_bins=4,
             ),
+        ]
+
+    @property
+    def target_name(self) -> str:
+        return self._target_name
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        return apply_transforms(data, self._transforms)
+
+    def __repr__(self) -> str:
+        return "NoFeats()"
+
+
+class FeatureA_TransformSet(BaseFeatureTransformSet):
+    def __init__(self, config: Config) -> None:
+        super().__init__()
+        self._target_name = f"bucket_{config.dataset.target}"
+        self._non_feature_columns = list(
+            filter(lambda x: x != config.dataset.target, NON_FEATURE_COLUMNS)
+        )
+        self._transforms: list[BaseTransform] = [
+            BucketSubscriptionCPUPercentTransform(config.dataset.target),
+            ColumnsDropTransform(columns=self._non_feature_columns),
             OneHotColumnsTransform(
                 columns=[
                     "vmcategory",
@@ -102,4 +117,4 @@ class FeatureA_TransformSet(BaseTransform):
         return "FeatureA_TransformSet()"
 
 
-__all__ = ["BucketCPUPercentTransform", "FeatureA_TransformSet"]
+__all__ = ["BucketSubscriptionCPUPercentTransform", "FeatureA_TransformSet"]

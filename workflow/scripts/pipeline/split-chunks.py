@@ -4,8 +4,6 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# import src.transforms.alibaba_seventeen as transforms
-import src.transforms.azure_vmcpu as transforms
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import (
     AvalancheClassificationDatasetAccessor,
@@ -27,28 +25,58 @@ def bucket_target_name(target: str):
 
 
 def get_dataset(config: Config, input_path: Path):
-    # from src.dataset.alibaba.container_seventeen import (
-    #     AlibabaContainerDatasetChunkGenerator,
-    # )
-    from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
+    generator = None
+    print(config.dataset.name)
+    match config.dataset.name:
+        case "alibaba":
+            from src.dataset.alibaba.container_seventeen import (
+                AlibabaContainerDatasetChunkGenerator,
+            )
+            import src.transforms.alibaba_seventeen as transforms
 
-    data_transformer = transforms.FeatureA_TransformSet(config)
+            data_transformer = transforms.FeatureA_TransformSet(config)
 
-    # generator = AlibabaContainerDatasetChunkGenerator(
-    #     file=input_path,
-    #     target=data_transformer.target_name,
-    #     n_labels=config.num_classes,
-    #     n_split=config.scenario.num_split,  # type: ignore
-    #     transform=data_transformer,
-    # )
+            generator = AlibabaContainerDatasetChunkGenerator(
+                file=input_path,
+                target=data_transformer.target_name,
+                n_labels=config.num_classes,
+                n_split=config.scenario.num_split,  # type: ignore
+                transform=data_transformer,
+            )
+        case "azure":
+            from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
+            import src.transforms.azure_vmcpu as transforms
 
-    generator = AzureVMDatasetChunkGenerator(
-        file=input_path,
-        target=data_transformer.target_name,
-        n_labels=config.num_classes,
-        n_split=config.scenario.num_split,  # type: ignore
-        transform=data_transformer,
-    )
+            data_transformer = transforms.FeatureA_TransformSet(config)
+
+            generator = AzureVMDatasetChunkGenerator(
+                file=input_path,
+                target=data_transformer.target_name,
+                n_labels=config.num_classes,
+                n_split=config.scenario.num_split,  # type: ignore
+                transform=data_transformer,
+            )
+        case "google":
+            from src.dataset.google.scheduler2 import (
+                GoogleSchedulerDatasetChunkGenerator,
+            )
+            import src.transforms.google_scheduler as transforms
+
+            data_transformer = transforms.FeatureA_TransformSet(config)
+            print("DH DIPANGGIL LOM")
+            generator = GoogleSchedulerDatasetChunkGenerator(
+                file=input_path,
+                target=data_transformer.target_name,
+                n_labels=config.num_classes,
+                n_split=config.scenario.num_split,  # type: ignore
+                transform=data_transformer,
+            )
+        case _:
+            raise ValueError("Unrecognized dataset")
+
+    if generator is None:
+        raise ValueError("Dataset error")
+
     dataset = generator()
     if len(dataset) == 0:
         raise ValueError("Dataset is empty")
@@ -72,6 +100,7 @@ def get_benchmark(
 def main():
     params = snakemake.params
     config = snakemake.config
+    print(config)
     config = Config(**config)
     assert_config_params(config, params)
 

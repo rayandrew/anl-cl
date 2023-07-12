@@ -43,8 +43,8 @@ class Task(StrEnum):
 
 
 class Model(StrEnum):
-    A: str = "a"
-    B: str = "b"
+    A: str = "A"
+    B: str = "B"
     # MLP = "mlp"
 
 

@@ -72,28 +72,18 @@ def get_metrics(
             avg_precisions.append(
                 (label, np.mean(summary.avg_precision[i]).item())
             )
-            avg_recalls.append(
-                (label, np.mean(summary.avg_recall[i]).item())
-            )
-            avg_aurocs.append(
-                (label, np.mean(summary.avg_auroc[i]).item())
-            )
+            avg_recalls.append((label, np.mean(summary.avg_recall[i]).item()))
+            avg_aurocs.append((label, np.mean(summary.avg_auroc[i]).item()))
             avg_accs.append((label, summary.ovr_avg_acc))
-            avg_forgettings.append(
-                (label, summary.ovr_avg_forgetting)
-            )
+            avg_forgettings.append((label, summary.ovr_avg_forgetting))
 
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=["label", "value"]),
-        precision=pd.DataFrame(
-            avg_precisions, columns=["label", "value"]
-        ),
+        precision=pd.DataFrame(avg_precisions, columns=["label", "value"]),
         recall=pd.DataFrame(avg_recalls, columns=["label", "value"]),
         auroc=pd.DataFrame(avg_aurocs, columns=["label", "value"]),
         acc=pd.DataFrame(avg_accs, columns=["label", "value"]),
-        forgetting=pd.DataFrame(
-            avg_forgettings, columns=["label", "value"]
-        ),
+        forgetting=pd.DataFrame(avg_forgettings, columns=["label", "value"]),
     )
 
 
@@ -121,9 +111,10 @@ def main():
     config = snakemake.config
 
     set_seed(config.get("seed", 0))
-    input_paths = Path(str(snakemake.input)).glob(
-        "**/train_results.json"
-    )
+    print("HIIII")
+    print(str(snakemake.input))
+    input_paths = Path(str(snakemake.input)).glob("**/train_results.json")
+    print(input_paths)
     output_folder = Path(str(snakemake.output))
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -131,6 +122,7 @@ def main():
     summaries = []
 
     for input in input_paths:
+        print(input)
         label = label_from_path(input)
         labels.append(label)
         summary = generate_summary(input)

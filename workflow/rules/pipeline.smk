@@ -1,15 +1,16 @@
 from pathlib import Path
 
-from helper import DATASETS, EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS, MODELS, get_all_dataset_files, get_all_dataset_files_as_dict
+from helper import DATASETS, EXTENSIONS, SCENARIOS, STRATEGIES, TRAININGS, TASKS, MODELS
+# from helper import get_all_dataset_files, get_all_dataset_files_as_dict
 
-wildcard_constraints:
-    dataset = "|".join(DATASETS),
-    ext = "|".join(EXTENSIONS),
-    scenario = "|".join(SCENARIOS),
-    strategy = "|".join(STRATEGIES),
-    training = "|".join(TRAININGS),
-    task = "|".join(TASKS),
-    model = "|".join(MODELS)
+# wildcard_constraints:
+#     dataset = "|".join(DATASETS),
+#     ext = "|".join(EXTENSIONS),
+#     scenario = "|".join(SCENARIOS),
+#     strategy = "|".join(STRATEGIES),
+#     training = "|".join(TRAININGS),
+#     task = "|".join(TASKS),
+#     model = "|".join(MODELS)
 
 rule:
     name: f"analysis_dataset"
@@ -46,7 +47,7 @@ rule:
 rule:
     name: f"eval_scenario"
     input:
-        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}",
+        # "out/training/{dataset}/{filename}/{task}/{training}/{scenario}",
     output:
         directory("out/evaluation/scenario/{dataset}/{filename}/{task}/{training}/{scenario}"),
     log:
@@ -83,8 +84,8 @@ rule:
         "logs/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}.log",
     script: "../scripts/evaluation/plot-bar.py"
 
-def get_pipeline_output():
-    final_output = []
-    return final_output
+# def get_pipeline_output():
+#     final_output = []
+#     return final_output
 
 # vim: set ft=snakemake:python:

@@ -40,7 +40,7 @@ See `workflow/rules/pipeline.smk`
 
 - `<DATASET>` = `alibaba|google|cori|azure`
 - `<FILENAME>` = dataset filename that should exist in `raw_data/<DATASET>/<FILEPATH>.parquet`
-- `<FEATS>` = `no-feats|feats-*` can be anything depends on the dataset, see `src.helpers.feats`
+- `<FEATURE_ENGINEERING>` = `no-feature|feature-*` can be anything depends on the dataset, see `src.helpers.features`
 - `<TRAINING>` = `batch|online`
 - `<TASK>` = `classification`
 - `<SCENARIO>` = `split-chunks|drift-detection`
@@ -50,7 +50,7 @@ See `workflow/rules/pipeline.smk`
 
 ```bash
 # running training
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/training/<DATASET>/<FILENAME>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATS>/<STRATEGY> \
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/training/<DATASET>/<FILENAME>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>/<STRATEGY> \
     --configfiles <GENERAL_CONFIG> \
                   <DATASET_CONFIG> \
                   <SCENARIO_CONFIG> \
@@ -65,7 +65,7 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/training/<DATASET>/<FILEN
 # run model A on `azure` dataset with filename "vmcpu.parquet" with no-retrain strategy and feature engineering A
 # rm -rf out/training/azure/vmcpu/classification/batch/split-chunks/model-a/feats-a/no-retrain
 PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/azure/vmcpu/classification/batch/split-chunks/model-a/feats-a/no-retrain \
+    --profile=swing out/training/azure/vmcpu/classification/batch/split-chunks/model-a/feature-a/no-retrain \
     --configfiles ./config/general.yaml \
                   ./config/scenario/split_chunks.yaml \
                   ./config/dataset/azure/azure.yaml \
@@ -87,14 +87,14 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATA
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/model/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>
 ```
 
-#### Feats
+#### Feature Engineering
 
 ```bash
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/feats/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATS>
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/feats/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>
 ```
 
 #### Strategy
 
 ```bash
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/strategy/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<STRATEGY>
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/strategy/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>/<STRATEGY>
 ```

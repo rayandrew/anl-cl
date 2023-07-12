@@ -2,7 +2,7 @@ from src.helpers.config import Config
 from src.helpers.definitions import Dataset
 from src.transforms.base import BaseFeatureTransformSet
 
-NO_FEATS = "no-feats"
+NO_FEATS = "no-feature"
 
 
 def get_features(config: Config) -> BaseFeatureTransformSet:

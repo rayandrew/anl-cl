@@ -75,26 +75,26 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 
 ### Evaluation
 
-#### Scenario
+#### Compare Strategy + Feature Engineering + Model  (same scenario)
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>
 ```
 
-#### Model
+#### Compare Strategy + Feature Engineering (same scenario and model)
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/model/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>
 ```
 
-#### Feature Engineering
+#### Compare Strategy (same scenario, model and feature engineering) 
 
 ```bash
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/feats/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/feature/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>
 ```
 
-#### Strategy
+#### Single Plot
 
 ```bash
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/strategy/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>/<STRATEGY>
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/single/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>/<STRATEGY>
 ```

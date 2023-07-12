@@ -14,7 +14,7 @@ def get_features(config: Config) -> BaseFeatureTransformSet:
             from src.transforms.azure_vmcpu import NoFeats
 
             return NoFeats(config)
-        elif feature == "feats-a":
+        elif feature == "feature-a":
             from src.transforms.azure_vmcpu import FeatureA_TransformSet
 
             return FeatureA_TransformSet(config)

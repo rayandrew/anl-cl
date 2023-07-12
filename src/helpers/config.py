@@ -37,6 +37,8 @@ class DatasetConfig(DynamicConfig):
 
     @field_validator("feature")
     def check_feature_prefix(cls, v: str):
+        if v == "no-feature":
+            return v
         if not v.startswith("feature-"):
             raise ValueError("Feature must start with 'feature-'")
         return v
@@ -90,6 +92,10 @@ def assert_config_params(config: Config, params: Any):
     assert (
         Model(params.model) == config.model.name
     ), f"Model mismatch: got {params.model} instead of {config.model.name}"
+    assert params.feature == config.dataset.feature, (
+        f"Feature mismatch: got {params.feature} instead of "
+        f"{config.dataset.feature}"
+    )
     if config.online:
         assert params.training == Training.ONLINE, (
             f"Training mismatch: got {params.training} instead of "

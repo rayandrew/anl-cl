@@ -1,4 +1,4 @@
 dataset:
   name: alibaba
   target: cpu_util_percent
-  feature: no-feats
+  feature: no-feature

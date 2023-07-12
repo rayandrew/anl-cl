@@ -97,13 +97,10 @@ def get_metrics(
     )
 
 
-def plot_bar(data: pd.DataFrame, label: str):
+def plot_bar(ax: Any, data: pd.DataFrame, label: str):
     label = label.upper()
-    fig, ax = plt.subplots(figsize=(5, 5))
-    sns.barplot(x="label", y="value", data=data)
+    sns.barplot(x="label", y="value", data=data, ax=ax)
     # sns.barplot(x="label", y="value", data=df, ax=ax)
-    ax.set_ylim(0, 1)
-    ax.set_ybound(0, 1)
     ax.set_ylabel(label)
     ax.set_title(label)
     ax.set_xticklabels(
@@ -113,8 +110,6 @@ def plot_bar(data: pd.DataFrame, label: str):
     )
     ax.set_xlabel("")
     # ax.set_xticklabels(bars, rotation=90)
-    fig.tight_layout()
-    return fig
 
 
 def main():
@@ -140,7 +135,13 @@ def main():
 
     for metric in result.__annotations__.keys():
         data: pd.DataFrame = getattr(result, metric)
-        fig = plot_bar(data, metric.replace("avg_", ""))
+        metric_name = metric.replace("avg_", "")
+        fig, ax = plt.subplots(figsize=(5, 5))
+        plot_bar(ax, data=data, label=metric_name)
+        if metric_name not in ["forgetting"]:
+            ax.set_ybound(0, 1)
+            ax.set_ylim(0, 1)
+        fig.tight_layout()
         data.to_csv(output_folder / f"{metric}.csv", index=False)
         fig.savefig(output_folder / f"{metric}.png", dpi=300)
         plt.close(fig)

@@ -91,7 +91,6 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
         )
         self._transforms: list[BaseTransform] = [
             BucketSubscriptionCPUPercentTransform(config.dataset.target),
-            ColumnsDropTransform(columns=self._non_feature_columns),
             OneHotColumnsTransform(
                 columns=[
                     "vmcategory",
@@ -99,6 +98,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
                     "vmmemorybucket",
                 ],
             ),
+            ColumnsDropTransform(columns=self._non_feature_columns),
             DiscretizeColumnTransform(
                 column=config.dataset.target,
                 new_column=self._target_name,

@@ -29,7 +29,7 @@ rule:
     input:
         "raw_data/{dataset}/{filename}.parquet",
     output:
-        directory("out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}"),
+        directory("out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}/{strategy}"),
     params:
         dataset="{dataset}",
         filename="{filename}",
@@ -37,14 +37,14 @@ rule:
         task="{task}",
         model="{model}",
         training="{training}",
-        feats="{feats}",
+        feature="{feature}",
         strategy="{strategy}",
     log:
-        "logs/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}.log",
+        "logs/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}/{strategy}.log",
     script: "../scripts/pipeline/{wildcards.scenario}.py"
 
 rule:
-    name: f"eval_scenario"
+    name: f"eval_compare_stategies_features_models"
     input:
         "out/training/{dataset}/{filename}/{task}/{training}/{scenario}",
     output:
@@ -54,7 +54,7 @@ rule:
     script: "../scripts/evaluation/plot-bar.py"
 
 rule:
-    name: f"eval_model"
+    name: f"eval_compare_stategies_features"
     input:
         "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}",
     output:
@@ -64,23 +64,23 @@ rule:
     script: "../scripts/evaluation/plot-bar.py"
 
 rule:
-    name: f"eval_feats"
+    name: f"eval_compare_strategies"
     input:
-        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}",
+        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}",
     output:
-        directory("out/evaluation/feats/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}"),
+        directory("out/evaluation/feature/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}"),
     log:
-        "logs/evaluation/feats/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}.log",
+        "logs/evaluation/feature/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}.log",
     script: "../scripts/evaluation/plot-bar.py"
 
 rule:
-    name: f"eval_strategy"
+    name: f"eval_single_result"
     input:
-        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}",
+        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}/{strategy}",
     output:
-        directory("out/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}"),
+        directory("out/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}/{strategy}"),
     log:
-        "logs/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feats}/{strategy}.log",
+        "logs/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}/{strategy}.log",
     script: "../scripts/evaluation/plot-bar.py"
 
 def get_pipeline_output():

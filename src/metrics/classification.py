@@ -1,22 +1,10 @@
-from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List, Literal, Set, Union
+from typing import TYPE_CHECKING, List, Literal, Union
 
 import torch
 
-from avalanche.evaluation import (
-    GenericPluginMetric,
-    Metric,
-    PluginMetric,
-    _ExtendedGenericPluginMetric,
-    _ExtendedPluginMetricValue,
-)
-from avalanche.evaluation.metric_utils import (
-    default_metric_name_template,
-    generic_get_metric_name,
-)
+from avalanche.evaluation import GenericPluginMetric, Metric, PluginMetric
 from avalanche.evaluation.metrics.mean import Mean
 
-import numpy as np
 import torchmetrics as tm
 
 if TYPE_CHECKING:
@@ -39,16 +27,12 @@ def assert_classification_metric(
     task_labels: Union[int, torch.Tensor],
 ) -> None:
     if len(true_y) != len(predicted_y):
-        raise ValueError(
-            "Size mismatch for true_y and predicted_y tensors"
-        )
+        raise ValueError("Size mismatch for true_y and predicted_y tensors")
 
-    if isinstance(task_labels, torch.Tensor) and len(
-        task_labels
-    ) != len(true_y):
-        raise ValueError(
-            "Size mismatch for true_y and task_labels tensors"
-        )
+    if isinstance(task_labels, torch.Tensor) and len(task_labels) != len(
+        true_y
+    ):
+        raise ValueError("Size mismatch for true_y and task_labels tensors")
 
     # if not isinstance(task_labels, (int, torch.Tensor)):
     #     raise ValueError(
@@ -62,9 +46,7 @@ def convert_tensor_to_float_or_list(
 ) -> Union[float, List[float]]:
     if isinstance(tensor, torch.Tensor):
         if tensor.numel() == 1:
-            return (
-                tensor.item()
-            )  # Convert single-element tensor to float
+            return tensor.item()  # Convert single-element tensor to float
         else:
             return (
                 tensor.tolist()
@@ -122,7 +104,9 @@ class BaseClassificationMetric(Metric[TResult]):
         self._counter = 0
 
 
-class ClassificationPluginMetric(GenericPluginMetric[TResult]):
+class ClassificationPluginMetric(
+    GenericPluginMetric[TResult, BaseClassificationMetric]
+):
     """
     Base class for all accuracies plugin metrics
     """
@@ -152,14 +136,14 @@ class ClassificationPluginMetric(GenericPluginMetric[TResult]):
     def update(self, strategy: "SupervisedTemplate"):
         self._metric._metric.to(strategy.device)
         self._metric.update(
-            strategy.mb_output, strategy.mb_y, strategy.mb_task_id
+            strategy.mb_output,  # type: ignore
+            strategy.mb_y,
+            strategy.mb_task_id,
         )
 
 
 class AUROCMetrics(ClassificationPluginMetric):
-    def __init__(
-        self, num_classes: int = 10, average: TAverage = "macro"
-    ):
+    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
         metric = tm.AUROC(
             num_classes=num_classes,
             task="multiclass",
@@ -177,9 +161,7 @@ class AUROCMetrics(ClassificationPluginMetric):
 
 
 class PrecisionMetrics(ClassificationPluginMetric):
-    def __init__(
-        self, num_classes: int = 10, average: TAverage = "macro"
-    ):
+    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
         """
         Creates an instance of Accuracy metric
         """
@@ -200,9 +182,7 @@ class PrecisionMetrics(ClassificationPluginMetric):
 
 
 class RecallMetrics(ClassificationPluginMetric):
-    def __init__(
-        self, num_classes: int = 10, average: TAverage = "macro"
-    ):
+    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
         """
         Creates an instance of Accuracy metric
         """
@@ -223,9 +203,7 @@ class RecallMetrics(ClassificationPluginMetric):
 
 
 class F1Metrics(ClassificationPluginMetric):
-    def __init__(
-        self, num_classes: int = 10, average: TAverage = "macro"
-    ):
+    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
         """
         Creates an instance of Accuracy metric
         """
@@ -258,19 +236,13 @@ def classification_metrics(
     metrics = []
 
     if auroc:
-        metrics.append(
-            AUROCMetrics(num_classes=num_classes, average=average)
-        )
+        metrics.append(AUROCMetrics(num_classes=num_classes, average=average))
 
     if recall:
-        metrics.append(
-            RecallMetrics(num_classes=num_classes, average=average)
-        )
+        metrics.append(RecallMetrics(num_classes=num_classes, average=average))
 
     if f1:
-        metrics.append(
-            F1Metrics(num_classes=num_classes, average=average)
-        )
+        metrics.append(F1Metrics(num_classes=num_classes, average=average))
 
     if precision:
         metrics.append(

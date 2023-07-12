@@ -4,6 +4,7 @@ from typing import Callable, TypeAlias
 import pandas as pd
 
 TData: TypeAlias = pd.DataFrame
+TransformFn: TypeAlias = Callable[[TData], TData]
 
 
 class BaseTransform(metaclass=ABCMeta):
@@ -34,7 +35,10 @@ def transform(fn: Callable[[TData], TData]):
 
 def apply_transforms(
     data: TData,
-    transforms: list[BaseTransform] | BaseTransform | None = None,
+    transforms: list[BaseTransform | TransformFn]
+    | TransformFn
+    | BaseTransform
+    | None = None,
 ) -> TData:
     if transforms is None:
         return data
@@ -57,5 +61,6 @@ class BaseFeatureTransformSet(BaseTransform, metaclass=ABCMeta):
 __all__ = [
     "BaseTransform",
     "BaseFeatureTransformSet",
+    "TransformFn",
     "apply_transforms",
 ]

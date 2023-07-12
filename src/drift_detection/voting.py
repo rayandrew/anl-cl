@@ -1,6 +1,10 @@
 from collections import deque
 from collections.abc import Sequence
 
+import numpy as np
+
+np.float = float
+
 from skmultiflow.drift_detection.base_drift_detector import BaseDriftDetector
 
 

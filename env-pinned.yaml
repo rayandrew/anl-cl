@@ -424,3 +424,6 @@ dependencies:
   - ipython
   - pre-commit
   - flake8
+  - texttable 
+  - scikit-multiflow
+  - gorilla

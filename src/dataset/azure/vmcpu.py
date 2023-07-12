@@ -55,12 +55,9 @@ class BaseAzureVMDatasetGenerator(
 
     @property
     def data(self) -> pd.DataFrame:
-        # TODO: REMOVE THIS LIMIT
-        return read_dataframe(self._file)[0:500_000]
+        return read_dataframe(self._file)
 
     def __base_call__(self, data: pd.DataFrame, shuffle: bool) -> TAccessor:
-        data = self.transform(data)
-
         X_train, X_test, y_train, y_test = split_dataset_fn(
             data.drop(columns=[self.target]),
             data[self.target],
@@ -73,7 +70,8 @@ class BaseAzureVMDatasetGenerator(
         )
 
     def __call__(self, shuffle: bool = False) -> TAccessorReturn:
-        return cast(TAccessorReturn, self.__base_call__(self.data, shuffle))
+        data = self.transform(self.data)
+        return cast(TAccessorReturn, self.__base_call__(data, shuffle))
 
 
 class AzureVMDatasetGenerator(
@@ -114,19 +112,18 @@ class AzureVMDatasetChunkGenerator(
         self.n_split = n_split
 
     def __call__(self, shuffle: bool = False) -> list[AzureVMDataAccessor]:
-        # NOTE: for debugging
-        data = self.data.iloc[0:100_000]
+        data = self.transform(self.data)
         size = len(data)
         split_size = size // self.n_split
         subsets: list[AzureVMDataAccessor] = []
 
         for i in range(self.n_split):
             if i == self.n_split - 1:
-                data = data.iloc[i * split_size :]
+                chunk_data = data.iloc[i * split_size :]
             else:
-                data = data.iloc[i * split_size : (i + 1) * split_size]
+                chunk_data = data.iloc[i * split_size : (i + 1) * split_size]
             subsets.append(
-                self.__base_call__(data.reset_index(drop=True), shuffle)
+                self.__base_call__(chunk_data.reset_index(drop=True), shuffle)
             )
         return subsets
 
@@ -159,7 +156,8 @@ class AzureVMDatasetDistChunkGenerator(
 
     def __call__(self, shuffle: bool = False) -> list[AzureVMDataAccessor]:
         subsets: list[AzureVMDataAccessor] = []
-        grouped = self.data.groupby(self.dist_col)
+        data = self.transform(self.data)
+        grouped = data.groupby(self.dist_col)
 
         for _, data in grouped:
             subsets.append(

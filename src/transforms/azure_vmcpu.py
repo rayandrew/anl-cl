@@ -3,7 +3,12 @@ import pandas as pd
 
 from src.helpers.config import Config
 
-from .base import BaseFeatureTransformSet, BaseTransform, apply_transforms
+from .base import (
+    BaseFeatureTransformSet,
+    BaseTransform,
+    TransformFn,
+    apply_transforms,
+)
 from .general import (
     ColumnsDropTransform,
     DiscretizeColumnTransform,
@@ -67,7 +72,7 @@ class NoFeats(BaseFeatureTransformSet):
             DiscretizeColumnTransform(
                 column=config.dataset.target,
                 new_column=self._target_name,
-                n_bins=4,
+                n_bins=config.num_classes,
             ),
         ]
 
@@ -89,7 +94,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
         self._non_feature_columns = list(
             filter(lambda x: x != config.dataset.target, NON_FEATURE_COLUMNS)
         )
-        self._transforms: list[BaseTransform] = [
+        self._transforms: list[BaseTransform | TransformFn] = [
             BucketSubscriptionCPUPercentTransform(config.dataset.target),
             OneHotColumnsTransform(
                 columns=[
@@ -102,8 +107,9 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
             DiscretizeColumnTransform(
                 column=config.dataset.target,
                 new_column=self._target_name,
-                n_bins=4,
+                n_bins=config.num_classes,
             ),
+            lambda df: df.iloc[0:500_000],
         ]
 
     @property
@@ -111,6 +117,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
         return self._target_name
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        print("CALLED TRANSFORM SET")
         return apply_transforms(data, self._transforms)
 
     def __repr__(self) -> str:

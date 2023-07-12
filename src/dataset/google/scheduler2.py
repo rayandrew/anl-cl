@@ -72,6 +72,7 @@ class BaseGoogleSchedulerDatasetGenerator(
 
     def __base_call__(self, data: pd.DataFrame, shuffle: bool) -> TAccessor:
         # Print the frequency of values
+        print(data.columns)
         print("Bucket distribution: ")
         frequency = data[self.target].value_counts()
         print(frequency)
@@ -87,7 +88,7 @@ class BaseGoogleSchedulerDatasetGenerator(
             test=self.dataset_cls(X_test, y_test),
         )
 
-    def __call__(self, shuffle: bool = False) -> TAccessorReturn:
+    def __call__(self, shuffle: bool = True) -> TAccessorReturn:
         return cast(TAccessorReturn, self.__base_call__(self.data, shuffle))
 
 
@@ -132,7 +133,7 @@ class GoogleSchedulerDatasetChunkGenerator(
         self.n_split = n_split
 
     def __call__(
-        self, shuffle: bool = False
+        self, shuffle: bool = True
     ) -> list[GoogleSchedulerDataAccessor]:
         size = len(self.data)
         split_size = size // self.n_split
@@ -178,7 +179,7 @@ class GoogleSchedulerDatasetDistChunkGenerator(
         self.dist_col = dist_col
 
     def __call__(
-        self, shuffle: bool = False
+        self, shuffle: bool = True
     ) -> list[GoogleSchedulerDataAccessor]:
         subsets: list[GoogleSchedulerDataAccessor] = []
         grouped = self.data.groupby(self.dist_col)

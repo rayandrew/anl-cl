@@ -1,9 +1,7 @@
 from collections import deque
-from collections.abc import Collection
+from collections.abc import Sequence
 
-from skmultiflow.drift_detection.base_drift_detector import (
-    BaseDriftDetector,
-)
+from skmultiflow.drift_detection.base_drift_detector import BaseDriftDetector
 
 
 class VotingDriftDetector:
@@ -21,9 +19,7 @@ class VotingDriftDetector:
         self.threshold = threshold
         self.verbose = verbose
 
-    def add_method(
-        self, method: BaseDriftDetector, weight: float = 1.0
-    ):
+    def add_method(self, method: BaseDriftDetector, weight: float = 1.0):
         self.methods.append(method)
         self.weights.append(weight)
         self.drifts.append(deque[int]())
@@ -56,13 +52,11 @@ class VotingDriftDetector:
                 vote_drifts.append(mean_pos)
         return vote_drifts
 
-    def predict(self, data) -> Collection[int]:
+    def predict(self, data) -> Sequence[int]:
         for method_idx in range(len(self.drifts)):
             self.drifts[method_idx] = deque()
         self._get_drift_point(data)
-        return self._vote_drift(
-            data, self.window_size, self.threshold
-        )
+        return self._vote_drift(data, self.window_size, self.threshold)
 
 
 def get_offline_voting_drift_detector(
@@ -103,9 +97,7 @@ def get_offline_voting_drift_detector(
 
         dd.add_method(HDDM_W(), 1)
     if page_hinkley:
-        from skmultiflow.drift_detection.page_hinkley import (
-            PageHinkley,
-        )
+        from skmultiflow.drift_detection.page_hinkley import PageHinkley
 
         dd.add_method(PageHinkley(), 1)
     if kswin:

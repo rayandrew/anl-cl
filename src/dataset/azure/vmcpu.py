@@ -41,7 +41,6 @@ class BaseAzureVMDatasetGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
-        n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
@@ -68,8 +67,8 @@ class BaseAzureVMDatasetGenerator(
             shuffle=shuffle,
         )
         return self.accessor_cls(
-            train=self.dataset_cls(X_train, y_train),
-            test=self.dataset_cls(X_test, y_test),
+            train=self.dataset_cls(X_train, y_train),  # type: ignore
+            test=self.dataset_cls(X_test, y_test),  # type: ignore
         )
 
     def __call__(self, shuffle: bool = False) -> TAccessorReturn:
@@ -101,14 +100,12 @@ class AzureVMDatasetChunkGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
-        n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
         super(AzureVMDatasetChunkGenerator, self).__init__(
             file=file,
-            n_labels=n_labels,
             target=target,
             train_ratio=train_ratio,
             transform=transform,
@@ -116,15 +113,17 @@ class AzureVMDatasetChunkGenerator(
         self.n_split = n_split
 
     def __call__(self, shuffle: bool = False) -> list[AzureVMDataAccessor]:
-        size = len(self.data)
+        # NOTE: for debugging
+        data = self.data.iloc[0:100_000]
+        size = len(data)
         split_size = size // self.n_split
         subsets: list[AzureVMDataAccessor] = []
 
         for i in range(self.n_split):
             if i == self.n_split - 1:
-                data = self.data.iloc[i * split_size :]
+                data = data.iloc[i * split_size :]
             else:
-                data = self.data.iloc[i * split_size : (i + 1) * split_size]
+                data = data.iloc[i * split_size : (i + 1) * split_size]
             subsets.append(
                 self.__base_call__(data.reset_index(drop=True), shuffle)
             )
@@ -145,14 +144,12 @@ class AzureVMDatasetDistChunkGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str,
-        n_labels: int = 4,
         dist_col: str = "dist_id",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
         super(AzureVMDatasetDistChunkGenerator, self).__init__(
             file=file,
-            n_labels=n_labels,
             target=target,
             train_ratio=train_ratio,
             transform=transform,

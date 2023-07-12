@@ -5,19 +5,16 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pandas as pd
 
-from src.drift_detection.voting import (
-    get_offline_voting_drift_detector,
-)
+from src.drift_detection.voting import get_offline_voting_drift_detector
 from src.helpers.config import Config, assert_config_params
-from src.helpers.dataset import (
-    create_avalanche_classification_datasets,
-)
-from src.helpers.definitions import Snakemake
+from src.helpers.dataset import create_avalanche_classification_datasets
+from src.helpers.definitions import Dataset, Snakemake
+from src.helpers.features import get_features
 from src.helpers.scenario import train_classification_scenario
 from src.utils.logging import logging, setup_logging
 
 if TYPE_CHECKING:
-    snakemake: Snakemake
+    snakemake: Snakemake = Snakemake()
 
 DIST_COLUMN = "dist_id"
 
@@ -25,9 +22,7 @@ setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
 
 
-def add_dist_label(
-    data: pd.DataFrame, dist: Sequence[int], start_from=0
-):
+def add_dist_label(data: pd.DataFrame, dist: Sequence[int], start_from=0):
     distributions = np.zeros(len(data), dtype=int)
 
     log.info(f"Dist from 0 to {dist[0]}: 0")
@@ -42,11 +37,10 @@ def add_dist_label(
 
 
 def get_dataset(config: Config, input_path: Path):
-    from src.dataset.alibaba.container_seventeen import (
-        AlibabaContainerDatasetDistChunkGenerator,
-    )
+    data_transformer = get_features(config)
 
     df = pd.read_parquet(input_path)
+    df = df.iloc[0:500_000]
     dd_params = (
         {}
         if config.drift_detection is None
@@ -55,16 +49,33 @@ def get_dataset(config: Config, input_path: Path):
     dd = get_offline_voting_drift_detector(
         **dd_params,
     )
-
     change_list = dd.predict(df[config.dataset.target].values)
     df = add_dist_label(df, change_list)
 
-    generator = AlibabaContainerDatasetDistChunkGenerator(
-        file=df,
-        target=config.dataset.target,
-        n_labels=config.num_classes,
-        dist_col=DIST_COLUMN,
-    )
+    match config.dataset.name:
+        case Dataset.ALIBABA:
+            from src.dataset.alibaba.container_seventeen import (
+                AlibabaContainerDatasetDistChunkGenerator,
+            )
+
+            generator = AlibabaContainerDatasetDistChunkGenerator(
+                file=df,
+                target=data_transformer.target_name,
+                dist_col=DIST_COLUMN,
+                transform=data_transformer,
+            )
+        case Dataset.AZURE:
+            from src.dataset.azure.vmcpu import AzureVMDatasetDistChunkGenerator
+
+            generator = AzureVMDatasetDistChunkGenerator(  # type: ignore
+                file=df,
+                target=data_transformer.target_name,
+                dist_col=DIST_COLUMN,
+                transform=data_transformer,
+            )
+        case _:
+            raise ValueError(f"Unknown dataset: {config.dataset.name}")
+
     dataset = generator()
     if len(dataset) == 0:
         raise ValueError("Dataset is empty")

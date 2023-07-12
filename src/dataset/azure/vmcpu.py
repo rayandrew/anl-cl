@@ -55,7 +55,8 @@ class BaseAzureVMDatasetGenerator(
 
     @property
     def data(self) -> pd.DataFrame:
-        return read_dataframe(self._file)
+        # TODO: REMOVE THIS LIMIT
+        return read_dataframe(self._file)[0:500_000]
 
     def __base_call__(self, data: pd.DataFrame, shuffle: bool) -> TAccessor:
         data = self.transform(data)

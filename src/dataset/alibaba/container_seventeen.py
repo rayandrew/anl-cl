@@ -46,7 +46,6 @@ class BaseAlibabaContainerDatasetGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
-        n_labels: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
@@ -56,7 +55,6 @@ class BaseAlibabaContainerDatasetGenerator(
             transform=transform,
         )
         self._file = file
-        self.n_labels = n_labels
 
     @property
     def data(self) -> pd.DataFrame:
@@ -105,14 +103,12 @@ class AlibabaContainerDatasetChunkGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
-        n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
         super(AlibabaContainerDatasetChunkGenerator, self).__init__(
             file=file,
-            n_labels=n_labels,
             target=target,
             train_ratio=train_ratio,
             transform=transform,
@@ -151,14 +147,12 @@ class AlibabaContainerDatasetDistChunkGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str,
-        n_labels: int = 4,
         dist_col: str = "dist_id",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
         super(AlibabaContainerDatasetDistChunkGenerator, self).__init__(
             file=file,
-            n_labels=n_labels,
             target=target,
             train_ratio=train_ratio,
             transform=transform,

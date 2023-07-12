@@ -32,7 +32,6 @@ def get_dataset(config: Config, input_path: Path):
             generator = AlibabaContainerDatasetChunkGenerator(
                 file=input_path,
                 target=data_transformer.target_name,
-                n_labels=config.num_classes,
                 n_split=config.scenario.num_split,  # type: ignore
                 transform=data_transformer,
             )

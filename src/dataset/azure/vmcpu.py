@@ -41,7 +41,6 @@ class BaseAzureVMDatasetGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
-        n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
@@ -56,7 +55,8 @@ class BaseAzureVMDatasetGenerator(
 
     @property
     def data(self) -> pd.DataFrame:
-        return read_dataframe(self._file)
+        # TODO: REMOVE THIS LIMIT
+        return read_dataframe(self._file)[0:500_000]
 
     def __base_call__(self, data: pd.DataFrame, shuffle: bool) -> TAccessor:
         data = self.transform(data)
@@ -101,14 +101,12 @@ class AzureVMDatasetChunkGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
-        n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
         super(AzureVMDatasetChunkGenerator, self).__init__(
             file=file,
-            n_labels=n_labels,
             target=target,
             train_ratio=train_ratio,
             transform=transform,
@@ -145,14 +143,12 @@ class AzureVMDatasetDistChunkGenerator(
         self,
         file: str | Path | pd.DataFrame,
         target: str,
-        n_labels: int = 4,
         dist_col: str = "dist_id",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
         super(AzureVMDatasetDistChunkGenerator, self).__init__(
             file=file,
-            n_labels=n_labels,
             target=target,
             train_ratio=train_ratio,
             transform=transform,

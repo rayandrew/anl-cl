@@ -67,6 +67,8 @@ def get_metrics(
     avg_accs: list[Tuple[str, float]] = []
     avg_forgettings: list[Tuple[str, float]] = []
     for summary, label in zip(summaries, labels):
+        log.info(f"Label: {label}, summaries: {len(summaries)}")
+        log.info(summaries)
         for i in range(len(summary.avg_f1)):
             avg_f1s.append((label, np.mean(summary.avg_f1[i]).item()))
             avg_precisions.append(
@@ -89,7 +91,7 @@ def get_metrics(
 
 def plot_bar(data: pd.DataFrame, label: str):
     label = label.upper()
-    fig, ax = plt.subplots(figsize=(1.2 * len(data), 5))
+    fig, ax = plt.subplots(figsize=(0.2 * len(data), 5))
     sns.barplot(x="label", y="value", data=data, ax=ax)
     # sns.barplot(x="label", y="value", data=df, ax=ax)
     ax.set_ylabel(label)
@@ -167,6 +169,10 @@ def main():
 
     for metric in result.__annotations__.keys():
         data: pd.DataFrame = getattr(result, metric)
+
+        if len(data) == 0:
+            continue
+
         metric_name = metric.replace("avg_", "")
 
         fig = plot_bar(data=data, label=metric_name)

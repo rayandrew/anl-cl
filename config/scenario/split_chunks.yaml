@@ -1,3 +1,3 @@
 scenario: 
   name: split-chunks
-  num_split: 20
+  num_split: 50

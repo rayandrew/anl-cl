@@ -26,13 +26,11 @@ class BucketSubscriptionCPUPercentTransform(BaseTransform):
     ):
         self.target_name = target_name
         self.drop_percent = drop_percent
-        self.n_bins = n_bins
+        self.n_bins = n_bins if n_bins is not None else 100
         self.drop_first = drop_first
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
         """Convert an iterable of indices to one-hot encoded labels."""
-        if self.n_bins is None:
-            self.n_bins = 100
 
         df = data.copy()
         temp_column = f"{self.target_name}_percent"
@@ -41,10 +39,13 @@ class BucketSubscriptionCPUPercentTransform(BaseTransform):
 
         # one hot encoding but with number of class
         targets = np.array(df[temp_column].values).reshape(-1)
-        ohe = np.eye(self.n_bins)[targets]
+        ohe = np.eye(self.n_bins + 1)[targets]
+        percent_columns = [
+            f"{temp_column}_{i}" for i in range(0, self.n_bins + 1)
+        ]
         percent_df = pd.DataFrame(
             ohe,
-            columns=[f"{temp_column}_{i}" for i in range(0, self.n_bins + 1)],
+            columns=percent_columns,
         )
         if self.drop_first:
             percent_df = percent_df.drop(columns=[f"{temp_column}_0"])
@@ -53,7 +54,6 @@ class BucketSubscriptionCPUPercentTransform(BaseTransform):
         #     df[temp_column], prefix="percent", dtype=int
         # )
         df = pd.concat([df, percent_df], axis=1)
-        percent_columns = [f"percent_{i}" for i in range(0, 101)]
         df[percent_columns] = df.groupby(by=["subscriptionid"])[
             percent_columns
         ].transform(lambda x: x.cumsum())
@@ -132,6 +132,11 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
     def transform_set(self) -> list[BaseTransform | TransformFn]:
         return [
             PrintColumnsTransform("Original Columns"),
+            lambda data: data.copy(),
+            lambda data: data.sort_values(by=["vmdeleted"]).reset_index(
+                drop=True
+            ),
+            lambda data: data.iloc[0:50_000],
             BucketSubscriptionCPUPercentTransform(self._config.dataset.target),
             OneHotColumnsTransform(
                 columns=[
@@ -148,7 +153,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
                 drop_original=True,
             ),
             PrintColumnsTransform("Final Columns"),
-            lambda df: df.iloc[0:500_000],
+            lambda data: data.iloc[0:50_000],
         ]
 
     @property

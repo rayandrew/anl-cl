@@ -28,10 +28,10 @@ def add_dist_label(data: pd.DataFrame, dist: Sequence[int], start_from=0):
 
     log.info(f"Number of distributions: {len(dist)}")
 
-    log.info(f"Dist from 0 to {dist[0]}: 0")
+    log.debug(f"Dist from 0 to {dist[0]}: 0")
     distributions[: dist[0]] = start_from
     for i in range(len(dist) - 1):
-        log.info(f"Dist from {dist[i]} to {dist[i+1]}: {i+1}")
+        log.debug(f"Dist from {dist[i]} to {dist[i+1]}: {i+1}")
         distributions[dist[i] : dist[i + 1]] = i + 1 + start_from
     distributions[dist[-1] :] = len(dist) + start_from
 
@@ -45,6 +45,7 @@ def dd_transform(config: Config, target_name: str):
         if config.drift_detection is None
         else config.drift_detection.dict(exclude={"name"})
     )
+    log.info("DD PARAMS: %s", dd_params)
     dd = get_offline_voting_drift_detector(
         **dd_params,
     )
@@ -52,6 +53,7 @@ def dd_transform(config: Config, target_name: str):
     def transform(data: pd.DataFrame) -> pd.DataFrame:
         change_list = dd.predict(data[target_name].values)
         data = add_dist_label(data, change_list)
+        return data
 
     return transform
 

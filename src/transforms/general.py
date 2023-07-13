@@ -103,7 +103,10 @@ class AppendPrevFeatureTransform(BaseTransform):
 
 class OneHotColumnTransform(BaseTransform):
     def __init__(
-        self, column: str, prefix: str | None = None, drop_first: bool = True
+        self,
+        column: str,
+        prefix: str | None = None,
+        drop_first: bool = True,
     ):
         self.column = column
         self.prefix = prefix

@@ -172,7 +172,12 @@ class AzureVMDatasetDistChunkGenerator(
 
         for _, data in grouped:
             subsets.append(
-                self.__base_call__(data.reset_index(drop=True), shuffle)
+                self.__base_call__(
+                    # TODO: find better way to achieve this
+                    # NOTE: this is post-transform (part of pre-processing)
+                    data.drop(columns=[self.dist_col]).reset_index(drop=True),
+                    shuffle,
+                )
             )
 
         return subsets

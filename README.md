@@ -3,6 +3,19 @@
 - Dependencies
 
 ```bash
+conda create -n cl python=3.10 pip
+conda activate cl
+conda install -c conda-forge mamba
+pip install gorilla semver ruptures git+https://github.com/ContinualAI/avalanche.git@c2601fccec29bfa2f4ed692cb9955526111d56be
+mamba install numpy=1.21 pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
+mamba install numpy=1.21 pandas black matplotlib scikit-learn scikit-multiflow torchmetrics seaborn -c conda-forge
+pip install pydantic simplejson types-simplejson fastparquet
+
+# for pipeline
+mamba install -c conda-forge -c bioconda snakemake
+  
+# for development only
+pip install black isort
 # inside conda `base` env
 conda install mamba -n base -c conda-forge
 
@@ -78,6 +91,45 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 #### Compare Strategy + Feature Engineering + Model  (same scenario)
 
 ```bash
+# rm -rf out/training/alibaba/container/classification/batch/split-chunks/from-scratch
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/from-scratch/A \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/a.yaml \
+                  ./config/strategies/from_scratch/from_scratch.yaml
+
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    out/training/google/mapped_nog/classification/online/split-chunks/from-scratch \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/google/google.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/from_scratch/from_scratch.yaml
+```
+
+
+
+- Retrain using GSS
+
+```bash
+# rm -rf out/training/alibaba/container/classification/batch/split-chunks/gss
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/gss \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/alibaba/alibaba.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/gss/gss.yaml
+
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    out/training/google/mapped_nog/classification/online/split-chunks/gss \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split_chunks.yaml \
+                  ./config/dataset/google/google.yaml \
+                  ./config/model/mlp.yaml \
+                  ./config/strategies/gss/gss_1k.yaml
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>
 ```
 

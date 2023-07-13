@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import torch
+import simplejson
 
 from src.utils.io import Transcriber
 from src.utils.logging import logging
@@ -51,12 +52,8 @@ def get_trainer(config: Config):
 def save_train_results(
     results: dict, output_folder: Path, model: torch.nn.Module
 ):
-    import simplejson
-
     # Cleaning up ====
-    with open(
-        output_folder / "train_results.json", "w"
-    ) as results_file:
+    with open(output_folder / "train_results.json", "w") as results_file:
         simplejson.dump(
             results,
             results_file,

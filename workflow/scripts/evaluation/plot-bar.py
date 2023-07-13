@@ -1,7 +1,7 @@
 from collections.abc import MutableSequence, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Tuple
+from typing import TYPE_CHECKING, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +14,7 @@ from src.utils.logging import logging, setup_logging
 from src.utils.summary import TrainingSummary, generate_summary
 
 if TYPE_CHECKING:
-    snakemake: Snakemake
+    snakemake: Snakemake = Snakemake()
 
 setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def label_from_path(path: Path, sep: str = "_"):
     path_str = path_str.replace("/train_results.json", "")
     paths = path_str.split("/")
     # return sep.join(paths[-3:])  # training_scenario_strategy
-    return sep.join(paths[-2:])  # training_scenario_strategy
+    return sep.join(paths[6:])  # training_scenario_strategy
 
 
 @dataclass
@@ -72,33 +72,24 @@ def get_metrics(
             avg_precisions.append(
                 (label, np.mean(summary.avg_precision[i]).item())
             )
-            avg_recalls.append(
-                (label, np.mean(summary.avg_recall[i]).item())
-            )
-            avg_aurocs.append(
-                (label, np.mean(summary.avg_auroc[i]).item())
-            )
-            avg_accs.append((label, summary.ovr_avg_acc))
-            avg_forgettings.append(
-                (label, summary.ovr_avg_forgetting)
-            )
+            avg_recalls.append((label, np.mean(summary.avg_recall[i]).item()))
+            avg_aurocs.append((label, np.mean(summary.avg_auroc[i]).item()))
+            avg_accs.append((label, np.mean(summary.avg_acc[i]).item()))
+            avg_forgettings.append((label, summary.ovr_avg_forgetting))
 
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=["label", "value"]),
-        precision=pd.DataFrame(
-            avg_precisions, columns=["label", "value"]
-        ),
+        precision=pd.DataFrame(avg_precisions, columns=["label", "value"]),
         recall=pd.DataFrame(avg_recalls, columns=["label", "value"]),
         auroc=pd.DataFrame(avg_aurocs, columns=["label", "value"]),
         acc=pd.DataFrame(avg_accs, columns=["label", "value"]),
-        forgetting=pd.DataFrame(
-            avg_forgettings, columns=["label", "value"]
-        ),
+        forgetting=pd.DataFrame(avg_forgettings, columns=["label", "value"]),
     )
 
 
-def plot_bar(ax: Any, data: pd.DataFrame, label: str):
+def plot_bar(data: pd.DataFrame, label: str):
     label = label.upper()
+    fig, ax = plt.subplots(figsize=(1.2 * len(data), 5))
     sns.barplot(x="label", y="value", data=data, ax=ax)
     # sns.barplot(x="label", y="value", data=df, ax=ax)
     ax.set_ylabel(label)
@@ -108,17 +99,58 @@ def plot_bar(ax: Any, data: pd.DataFrame, label: str):
         rotation=30,
         horizontalalignment="right",
     )
-    ax.set_xlabel("")
     # ax.set_xticklabels(bars, rotation=90)
+    ax.set_xlabel("")
+    fig.tight_layout()
+    return fig
+
+
+def plot_line(data: pd.DataFrame, label_title: str):
+    # Create figure and axis objects
+    fig, ax = plt.subplots(figsize=(15, 5))
+
+    # Transforming the DataFrame
+    unique_labels = data["label"].unique()
+    results = pd.DataFrame()
+
+    max_length = data.groupby("label")["value"].transform("count").max()
+
+    for label in unique_labels:
+        values = data[data["label"] == label]["value"].tolist()
+        # Ignore if 1 chunk
+        if len(values) == 1:
+            continue
+        elif len(values) < max_length:
+            # Pad with None for consistency
+            # if the plotted data has different chunks
+            values.extend([None] * (max_length - len(values)))
+        results[label] = values
+
+    # Plot the data
+    results.plot(ax=ax, marker="o", linestyle="-")
+    # legend = plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.xlabel("Chunk")
+    plt.ylabel("Value")
+    plt.title(label_title.upper())  # Add title to the plot
+    plt.xticks(range(len(results)))  # Make x-values discrete
+    ax.set_xticklabels(
+        results.index
+    )  # Set x-tick labels based on DataFrame index
+
+    # Adjust the layout to make room for the legend
+    plt.subplots_adjust(right=0.8)
+
+    fig.tight_layout()
+    return fig
 
 
 def main():
     config = snakemake.config
 
     set_seed(config.get("seed", 0))
-    input_paths = Path(str(snakemake.input)).glob(
-        "**/train_results.json"
-    )
+    print(str(snakemake.input))
+    input_paths = Path(str(snakemake.input)).glob("**/train_results.json")
+    print(input_paths)
     output_folder = Path(str(snakemake.output))
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -126,25 +158,24 @@ def main():
     summaries = []
 
     for input in input_paths:
+        print(input)
         label = label_from_path(input)
         labels.append(label)
         summary = generate_summary(input)
         summaries.append(summary)
-
     result = get_metrics(summaries, labels)
 
     for metric in result.__annotations__.keys():
         data: pd.DataFrame = getattr(result, metric)
         metric_name = metric.replace("avg_", "")
-        fig, ax = plt.subplots(figsize=(5, 5))
-        plot_bar(ax, data=data, label=metric_name)
-        if metric_name not in ["forgetting"]:
-            ax.set_ybound(0, 1)
-            ax.set_ylim(0, 1)
-        fig.tight_layout()
-        data.to_csv(output_folder / f"{metric}.csv", index=False)
+
+        fig = plot_bar(data=data, label=metric_name)
         fig.savefig(output_folder / f"{metric}.png", dpi=300)
         plt.close(fig)
+
+        fig_line = plot_line(data, metric_name)
+        fig_line.savefig(output_folder / f"{metric}_line.png", dpi=300)
+        plt.close(fig_line)
 
 
 if __name__ == "__main__":

@@ -41,6 +41,21 @@ def get_dataset(config: Config, input_path: Path):
             generator = AzureVMDatasetChunkGenerator(
                 file=input_path,
                 target=data_transformer.target_name,
+                n_labels=config.num_classes,
+                n_split=config.scenario.num_split,  # type: ignore
+                transform=data_transformer,
+            )
+        case "google":
+            import src.transforms.google_scheduler as transforms
+            from src.dataset.google.scheduler2 import (
+                GoogleSchedulerDatasetChunkGenerator,
+            )
+
+            data_transformer = transforms.FeatureA_TransformSet(config)
+            generator = GoogleSchedulerDatasetChunkGenerator(
+                file=input_path,
+                target=data_transformer.target_name,
+                n_labels=config.num_classes,
                 n_split=config.scenario.num_split,  # type: ignore
                 transform=data_transformer,
             )
@@ -70,6 +85,7 @@ def get_benchmark(
 def main():
     params = snakemake.params
     config = snakemake.config
+    print(config)
     config = Config(**config)
     assert_config_params(config, params)
 

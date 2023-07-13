@@ -2,7 +2,7 @@ import collections.abc
 import math
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, SupportsFloat, Tuple, TypeAlias, TypeVar
+from typing import SupportsFloat, Tuple, TypeAlias, TypeVar
 
 import numpy.typing as npt
 import pandas as pd
@@ -25,9 +25,7 @@ def split_evenly_by_classes(
     y: Sequence[Number],
     train_ratio: float,
     shuffle: bool = True,
-) -> Tuple[
-    npt.ArrayLike, npt.ArrayLike, npt.ArrayLike, npt.ArrayLike
-]:
+) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -73,20 +71,14 @@ def head(data: T_co | Sequence[T_co]) -> T_co:
     return data
 
 
-def discretize_column(
-    series: pd.Series, n_bins: int = 4
-) -> pd.Series:
+def discretize_column(series: pd.Series, n_bins: int = 4) -> pd.Series:
     # return pd.cut(series, bins=n_bins, labels=list(range(n_bins)))
     return pd.cut(series, bins=n_bins, labels=False)
 
 
-def append_prev_feature(
-    df: pd.DataFrame, num: int, colname: str
-) -> None:
+def append_prev_feature(df: pd.DataFrame, num: int, colname: str) -> None:
     for i in range(1, num + 1):
-        df["prev_" + colname + "_" + str(i)] = (
-            df[colname].shift(i).values
-        )
+        df["prev_" + colname + "_" + str(i)] = df[colname].shift(i).values
 
 
 def read_dataframe(file: str | Path | pd.DataFrame) -> pd.DataFrame:
@@ -99,9 +91,7 @@ def read_dataframe(file: str | Path | pd.DataFrame) -> pd.DataFrame:
     elif file.suffix == ".csv":
         return pd.read_csv(file)
     else:
-        raise ValueError(
-            "File must be either a parquet or a csv file"
-        )
+        raise ValueError("File must be either a parquet or a csv file")
 
 
 __all__ = [

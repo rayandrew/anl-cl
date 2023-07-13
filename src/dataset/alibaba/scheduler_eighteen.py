@@ -11,6 +11,7 @@ from src.dataset.base import (
 )
 from src.transforms import BaseTransform
 from src.utils.ds import StrEnum
+from src.utils.general import read_dataframe
 from src.utils.general import split_dataset as split_dataset_fn
 
 
@@ -60,9 +61,10 @@ NON_FEATURE_COLUMNS = [
 def assert_alibaba_scheduler_target(
     output: str | TAlibabaSchedulerTarget,
 ):
-    assert (
-        output in TAlibabaSchedulerTarget
-    ), "output must be one of 'mem_avg', 'mem_max', 'cpu_avg', 'cpu_max', 'duration'"
+    assert output in TAlibabaSchedulerTarget, (
+        "output must be one of 'mem_avg',"
+        " 'mem_max', 'cpu_avg', 'cpu_max', 'duration'"
+    )
 
 
 class AlibabaSchedulerDataset(BaseDataset):
@@ -93,16 +95,18 @@ class BaseAlibabaSchedulerDatasetGenerator(
     ):
         assert_alibaba_scheduler_target(target)
         super(BaseAlibabaSchedulerDatasetGenerator, self).__init__(
-            file=file,
             target=target,
             train_ratio=train_ratio,
             transform=transform,
         )
+        self._file = file
         self.n_labels = n_labels
 
-    def __base_call__(
-        self, data: pd.DataFrame, shuffle: bool
-    ) -> TAccessor:
+    @property
+    def data(self) -> pd.DataFrame:
+        return read_dataframe(self._file)
+
+    def __base_call__(self, data: pd.DataFrame, shuffle: bool) -> TAccessor:
         data = self.transform(data)
 
         X_train, X_test, y_train, y_test = split_dataset_fn(
@@ -117,9 +121,7 @@ class BaseAlibabaSchedulerDatasetGenerator(
         )
 
     def __call__(self, shuffle: bool = False) -> TAccessorReturn:
-        return cast(
-            TAccessorReturn, self.__base_call__(self.data, shuffle)
-        )
+        return cast(TAccessorReturn, self.__base_call__(self.data, shuffle))
 
 
 class AlibabaSchedulerDatasetGenerator(
@@ -172,13 +174,9 @@ class AlibabaSchedulerDatasetChunkGenerator(
             if i == self.n_split - 1:
                 data = self.data.iloc[i * split_size :]
             else:
-                data = self.data.iloc[
-                    i * split_size : (i + 1) * split_size
-                ]
+                data = self.data.iloc[i * split_size : (i + 1) * split_size]
             subsets.append(
-                self.__base_call__(
-                    data.reset_index(drop=True), shuffle
-                )
+                self.__base_call__(data.reset_index(drop=True), shuffle)
             )
         return subsets
 
@@ -202,9 +200,7 @@ class AlibabaSchedulerDatasetDistChunkGenerator(
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        super(
-            AlibabaSchedulerDatasetDistChunkGenerator, self
-        ).__init__(
+        super(AlibabaSchedulerDatasetDistChunkGenerator, self).__init__(
             file=file,
             n_labels=n_labels,
             target=target,
@@ -221,9 +217,7 @@ class AlibabaSchedulerDatasetDistChunkGenerator(
 
         for _, data in grouped:
             subsets.append(
-                self.__base_call__(
-                    data.reset_index(drop=True), shuffle
-                )
+                self.__base_call__(data.reset_index(drop=True), shuffle)
             )
 
         return subsets

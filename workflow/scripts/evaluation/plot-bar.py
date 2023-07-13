@@ -35,7 +35,7 @@ def label_from_path(path: Path, sep: str = "_"):
     path_str = path_str.replace("/train_results.json", "")
     paths = path_str.split("/")
     # return sep.join(paths[-3:])  # training_scenario_strategy
-    return sep.join(paths[-2:])  # training_scenario_strategy
+    return sep.join(paths[6:])  # training_scenario_strategy
 
 
 @dataclass
@@ -72,28 +72,18 @@ def get_metrics(
             avg_precisions.append(
                 (label, np.mean(summary.avg_precision[i]).item())
             )
-            avg_recalls.append(
-                (label, np.mean(summary.avg_recall[i]).item())
-            )
-            avg_aurocs.append(
-                (label, np.mean(summary.avg_auroc[i]).item())
-            )
-            avg_accs.append((label, summary.ovr_avg_acc))
-            avg_forgettings.append(
-                (label, summary.ovr_avg_forgetting)
-            )
+            avg_recalls.append((label, np.mean(summary.avg_recall[i]).item()))
+            avg_aurocs.append((label, np.mean(summary.avg_auroc[i]).item()))
+            avg_accs.append((label, np.mean(summary.avg_acc[i]).item()))
+            avg_forgettings.append((label, summary.ovr_avg_forgetting))
 
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=["label", "value"]),
-        precision=pd.DataFrame(
-            avg_precisions, columns=["label", "value"]
-        ),
+        precision=pd.DataFrame(avg_precisions, columns=["label", "value"]),
         recall=pd.DataFrame(avg_recalls, columns=["label", "value"]),
         auroc=pd.DataFrame(avg_aurocs, columns=["label", "value"]),
         acc=pd.DataFrame(avg_accs, columns=["label", "value"]),
-        forgetting=pd.DataFrame(
-            avg_forgettings, columns=["label", "value"]
-        ),
+        forgetting=pd.DataFrame(avg_forgettings, columns=["label", "value"]),
     )
 
 
@@ -117,13 +107,55 @@ def plot_bar(data: pd.DataFrame, label: str):
     return fig
 
 
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+def plot_line(data: pd.DataFrame, label_title: str):
+    # Create figure and axis objects
+    fig, ax = plt.subplots(figsize=(15, 5))
+
+    # Transforming the DataFrame
+    unique_labels = data['label'].unique()
+    results = pd.DataFrame()
+
+    max_length = data.groupby('label')['value'].transform('count').max()
+
+
+    for label in unique_labels:
+        values = data[data['label'] == label]['value'].tolist()
+        # Ignore if 1 chunk
+        if len(values) == 1: 
+            continue
+        elif len(values) < max_length:
+            values.extend([None] * (max_length - len(values)))  # Pad with None for consistency, if the plotted data has different chunks
+        results[label] = values
+
+    # Plot the data
+    results.plot(ax=ax, marker='o', linestyle='-')
+    legend = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.xlabel("Chunk")
+    plt.ylabel("Value")
+    plt.title(label_title.upper())  # Add title to the plot
+    plt.xticks(range(len(results)))  # Make x-values discrete
+    ax.set_xticklabels(results.index)  # Set x-tick labels based on DataFrame index
+    
+    # Adjust the layout to make room for the legend
+    plt.subplots_adjust(right=0.8)
+    
+    plt.show()
+    return fig
+
+
+
 def main():
     config = snakemake.config
 
     set_seed(config.get("seed", 0))
-    input_paths = Path(str(snakemake.input)).glob(
-        "**/train_results.json"
-    )
+    print("HIIII")
+    print(str(snakemake.input))
+    input_paths = Path(str(snakemake.input)).glob("**/train_results.json")
+    print(input_paths)
     output_folder = Path(str(snakemake.output))
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -131,19 +163,22 @@ def main():
     summaries = []
 
     for input in input_paths:
+        print(input)
         label = label_from_path(input)
         labels.append(label)
         summary = generate_summary(input)
         summaries.append(summary)
-
     result = get_metrics(summaries, labels)
 
     for metric in result.__annotations__.keys():
         data: pd.DataFrame = getattr(result, metric)
         fig = plot_bar(data, metric.replace("avg_", ""))
+        fig_line = plot_line(data, metric.replace("avg_", ""))
         data.to_csv(output_folder / f"{metric}.csv", index=False)
+        fig_line.savefig(output_folder / f"{metric}_line.png", dpi = 300)
         fig.savefig(output_folder / f"{metric}.png", dpi=300)
         plt.close(fig)
+        plt.close(fig_line)
 
 
 if __name__ == "__main__":

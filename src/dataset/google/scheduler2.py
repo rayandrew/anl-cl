@@ -13,44 +13,42 @@ from src.transforms import BaseTransform
 from src.utils.general import read_dataframe
 from src.utils.general import split_dataset as split_dataset_fn
 
-TAlibabaContainerDataset = TypeVar(
-    "TAlibabaContainerDataset", bound="AlibabaContainerDataset"
+TGoogleSchedulerDataset = TypeVar(
+    "TGoogleSchedulerDataset", bound="GoogleSchedulerDataset"
 )
 TAccessor = TypeVar("TAccessor", bound=BaseDatasetAccessor)
 TAccessorReturn = TypeVar(
     "TAccessorReturn",
-    bound="AlibabaContainerDataAccessor"
-    | Sequence["AlibabaContainerDataAccessor"],
+    bound="GoogleSchedulerDataAccessor"
+    | Sequence["GoogleSchedulerDataAccessor"],
 )
 
 
-class AlibabaContainerDataset(BaseDataset):
+class GoogleSchedulerDataset(BaseDataset):
     pass
 
 
 @dataclass
-class AlibabaContainerDataAccessor(
-    BaseDatasetAccessor[AlibabaContainerDataset]
-):
+class GoogleSchedulerDataAccessor(BaseDatasetAccessor[GoogleSchedulerDataset]):
     pass
 
 
-class BaseAlibabaContainerDatasetGenerator(
-    Generic[TAccessorReturn, TAccessor, TAlibabaContainerDataset],
+class BaseGoogleSchedulerDatasetGenerator(
+    Generic[TAccessorReturn, TAccessor, TGoogleSchedulerDataset],
     BaseDatasetGenerator[TAccessorReturn],
 ):
-    dataset_cls: type[TAlibabaContainerDataset]
+    dataset_cls: type[TGoogleSchedulerDataset]
     accessor_cls: type[TAccessor]
 
     def __init__(
         self,
         file: str | Path | pd.DataFrame,
-        target: str = "cpu_avg",
+        target: str = "util_cpu",
         n_labels: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        super(BaseAlibabaContainerDatasetGenerator, self).__init__(
+        super(BaseGoogleSchedulerDatasetGenerator, self).__init__(
             target=target,
             train_ratio=train_ratio,
             transform=transform,
@@ -60,10 +58,24 @@ class BaseAlibabaContainerDatasetGenerator(
 
     @property
     def data(self) -> pd.DataFrame:
-        return read_dataframe(self._file)
+        # Cache so no repeated reads / transforms
+        if hasattr(self, "_data"):
+            return self._data
+        data = read_dataframe(self._file)
+        data = data.sort_values(by=["start_time"])
+        data = data.head(200000)
+        # Move transform here to get better history
+        data = self.transform(data)
+        data = data.fillna(-1)
+        self._data = data
+        return data
 
     def __base_call__(self, data: pd.DataFrame, shuffle: bool) -> TAccessor:
-        data = self.transform(data)
+        # Print the frequency of values
+        print(data.columns)
+        print("Bucket distribution: ")
+        frequency = data[self.target].value_counts()
+        print(frequency)
 
         X_train, X_test, y_train, y_test = split_dataset_fn(
             data.drop(columns=[self.target]),
@@ -76,41 +88,42 @@ class BaseAlibabaContainerDatasetGenerator(
             test=self.dataset_cls(X_test, y_test),
         )
 
-    def __call__(self, shuffle: bool = False) -> TAccessorReturn:
+    def __call__(self, shuffle: bool = True) -> TAccessorReturn:
         return cast(TAccessorReturn, self.__base_call__(self.data, shuffle))
 
 
-class AlibabaContainerDatasetGenerator(
-    BaseAlibabaContainerDatasetGenerator[
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataset,
+class GoogleSchedulerDatasetGenerator(
+    BaseGoogleSchedulerDatasetGenerator[
+        GoogleSchedulerDataAccessor,
+        GoogleSchedulerDataAccessor,
+        GoogleSchedulerDataset,
     ]
 ):
-    dataset_cls = AlibabaContainerDataset
-    accessor_cls = AlibabaContainerDataAccessor
+    dataset_cls = GoogleSchedulerDataset
+    accessor_cls = GoogleSchedulerDataAccessor
 
 
-class AlibabaContainerDatasetChunkGenerator(
-    BaseAlibabaContainerDatasetGenerator[
-        list[AlibabaContainerDataAccessor],
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataset,
+class GoogleSchedulerDatasetChunkGenerator(
+    BaseGoogleSchedulerDatasetGenerator[
+        list[GoogleSchedulerDataAccessor],
+        GoogleSchedulerDataAccessor,
+        GoogleSchedulerDataset,
     ]
 ):
-    dataset_cls = AlibabaContainerDataset
-    accessor_cls = AlibabaContainerDataAccessor
+    dataset_cls = GoogleSchedulerDataset
+    accessor_cls = GoogleSchedulerDataAccessor
 
     def __init__(
         self,
         file: str | Path | pd.DataFrame,
-        target: str = "cpu_avg",
+        target: str = "util_cpu",
         n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        super(AlibabaContainerDatasetChunkGenerator, self).__init__(
+        print("DIPANGGIL NI CHUNK GENERATE")
+        super(GoogleSchedulerDatasetChunkGenerator, self).__init__(
             file=file,
             n_labels=n_labels,
             target=target,
@@ -120,11 +133,11 @@ class AlibabaContainerDatasetChunkGenerator(
         self.n_split = n_split
 
     def __call__(
-        self, shuffle: bool = False
-    ) -> list[AlibabaContainerDataAccessor]:
+        self, shuffle: bool = True
+    ) -> list[GoogleSchedulerDataAccessor]:
         size = len(self.data)
         split_size = size // self.n_split
-        subsets: list[AlibabaContainerDataAccessor] = []
+        subsets: list[GoogleSchedulerDataAccessor] = []
 
         for i in range(self.n_split):
             if i == self.n_split - 1:
@@ -137,15 +150,15 @@ class AlibabaContainerDatasetChunkGenerator(
         return subsets
 
 
-class AlibabaContainerDatasetDistChunkGenerator(
-    BaseAlibabaContainerDatasetGenerator[
-        list[AlibabaContainerDataAccessor],
-        AlibabaContainerDataAccessor,
-        AlibabaContainerDataset,
+class GoogleSchedulerDatasetDistChunkGenerator(
+    BaseGoogleSchedulerDatasetGenerator[
+        list[GoogleSchedulerDataAccessor],
+        GoogleSchedulerDataAccessor,
+        GoogleSchedulerDataset,
     ]
 ):
-    dataset_cls = AlibabaContainerDataset
-    accessor_cls = AlibabaContainerDataAccessor
+    dataset_cls = GoogleSchedulerDataset
+    accessor_cls = GoogleSchedulerDataAccessor
 
     def __init__(
         self,
@@ -156,7 +169,7 @@ class AlibabaContainerDatasetDistChunkGenerator(
         train_ratio: float = BaseDataset.TRAIN_RATIO,
         transform: BaseTransform | list[BaseTransform] | None = None,
     ):
-        super(AlibabaContainerDatasetDistChunkGenerator, self).__init__(
+        super(GoogleSchedulerDatasetDistChunkGenerator, self).__init__(
             file=file,
             n_labels=n_labels,
             target=target,
@@ -166,9 +179,9 @@ class AlibabaContainerDatasetDistChunkGenerator(
         self.dist_col = dist_col
 
     def __call__(
-        self, shuffle: bool = False
-    ) -> list[AlibabaContainerDataAccessor]:
-        subsets: list[AlibabaContainerDataAccessor] = []
+        self, shuffle: bool = True
+    ) -> list[GoogleSchedulerDataAccessor]:
+        subsets: list[GoogleSchedulerDataAccessor] = []
         grouped = self.data.groupby(self.dist_col)
 
         for _, data in grouped:
@@ -180,9 +193,9 @@ class AlibabaContainerDatasetDistChunkGenerator(
 
 
 __all__ = [
-    "AlibabaContainerDataset",
-    "AlibabaContainerDataAccessor",
-    "AlibabaContainerDatasetGenerator",
-    "AlibabaContainerDatasetChunkGenerator",
-    "AlibabaContainerDatasetDistChunkGenerator",
+    "GoogleSchedulerDataset",
+    "GoogleSchedulerDataAccessor",
+    "GoogleSchedulerDatasetGenerator",
+    "GoogleSchedulerDatasetChunkGenerator",
+    "GoogleSchedulerDatasetDistChunkGenerator",
 ]

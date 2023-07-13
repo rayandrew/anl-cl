@@ -8,7 +8,7 @@ min_version("7.0")
 include: "rules/pipeline.smk"
 include: "rules/test.smk"
 
-###### target rules ######
-rule all:
-    input:
-        get_pipeline_output()
+# ###### target rules ######
+# rule all:
+#     input:
+#         get_pipeline_output()

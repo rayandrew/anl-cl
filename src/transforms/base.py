@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Callable, TypeAlias, TypeVar
+from typing import Callable, TypeAlias
 
 import pandas as pd
 

@@ -5,7 +5,7 @@ from avalanche.benchmarks.utils import (
     make_classification_dataset,
 )
 
-from src.dataset import BaseDatasetAccessor
+from src.dataset.base import BaseDatasetAccessor
 
 
 class AvalancheClassificationDatasetAccessor(
@@ -30,9 +30,7 @@ def create_avalanche_classification_dataset(
 def create_avalanche_classification_datasets(
     datasets: Sequence[BaseDatasetAccessor],
 ) -> Sequence[AvalancheClassificationDatasetAccessor]:
-    return [
-        create_avalanche_classification_dataset(d) for d in datasets
-    ]
+    return [create_avalanche_classification_dataset(d) for d in datasets]
 
 
 __all__ = [

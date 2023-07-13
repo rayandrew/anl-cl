@@ -26,9 +26,7 @@ sns.color_palette("tab10")
 
 def cpu_util_percent(target: str):
     def _cpu_util_percent(data: pd.DataFrame):
-        data[f"percent_{target}"] = (
-            data[target] / data["plan_cpu"]
-        ) * 100
+        data[f"percent_{target}"] = (data[target] / data["plan_cpu"]) * 100
         return data
 
     return _cpu_util_percent
@@ -102,9 +100,7 @@ def plot_hist(
     # plt.close(fig)
 
 
-def plot_hist_bar(
-    dataset: pd.DataFrame, target: str, output_path: Path
-):
+def plot_hist_bar(dataset: pd.DataFrame, target: str, output_path: Path):
     fig, ax = plt.subplots()
     sns.countplot(
         x=target,
@@ -160,9 +156,7 @@ def main():
     output_path = Path(snakemake.output[0])
 
     if not input_path.exists():
-        raise FileNotFoundError(
-            f"Input path {input_path} does not exist"
-        )
+        raise FileNotFoundError(f"Input path {input_path} does not exist")
 
     targets = ["cpu_avg", "cpu_max"]
     dataset = get_dataset(

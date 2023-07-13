@@ -25,7 +25,6 @@ def get_dataset(config: Config, input_path: Path):
     data_transformer = get_features(config)
     match config.dataset.name:
         case Dataset.ALIBABA:
-            print("HERE ALIBABA")
             from src.dataset.alibaba.container_seventeen import (
                 AlibabaContainerDatasetChunkGenerator,
             )
@@ -37,7 +36,6 @@ def get_dataset(config: Config, input_path: Path):
                 transform=data_transformer,
             )
         case Dataset.AZURE:
-            print("HERE AZURE")
             from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
 
             generator = AzureVMDatasetChunkGenerator(

@@ -9,7 +9,7 @@ from src.dataset.base import (
     BaseDatasetAccessor,
     BaseDatasetGenerator,
 )
-from src.transforms import BaseTransform
+from src.transforms import TAcceptableTransform
 from src.utils.general import read_dataframe
 from src.utils.general import split_dataset as split_dataset_fn
 
@@ -47,7 +47,9 @@ class BaseAlibabaContainerDatasetGenerator(
         file: str | Path | pd.DataFrame,
         target: str = "cpu_avg",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(BaseAlibabaContainerDatasetGenerator, self).__init__(
             target=target,
@@ -105,7 +107,9 @@ class AlibabaContainerDatasetChunkGenerator(
         target: str = "cpu_avg",
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(AlibabaContainerDatasetChunkGenerator, self).__init__(
             file=file,
@@ -149,7 +153,9 @@ class AlibabaContainerDatasetDistChunkGenerator(
         target: str,
         dist_col: str = "dist_id",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(AlibabaContainerDatasetDistChunkGenerator, self).__init__(
             file=file,

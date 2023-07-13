@@ -11,6 +11,7 @@ from src.helpers.dataset import create_avalanche_classification_datasets
 from src.helpers.definitions import Dataset, Snakemake
 from src.helpers.features import get_features
 from src.helpers.scenario import train_classification_scenario
+from src.transforms import add_transform_to_transform_set
 from src.utils.logging import logging, setup_logging
 
 if TYPE_CHECKING:
@@ -25,6 +26,8 @@ log = logging.getLogger(__name__)
 def add_dist_label(data: pd.DataFrame, dist: Sequence[int], start_from=0):
     distributions = np.zeros(len(data), dtype=int)
 
+    log.info(f"Number of distributions: {len(dist)}")
+
     log.info(f"Dist from 0 to {dist[0]}: 0")
     distributions[: dist[0]] = start_from
     for i in range(len(dist) - 1):
@@ -36,11 +39,7 @@ def add_dist_label(data: pd.DataFrame, dist: Sequence[int], start_from=0):
     return data
 
 
-def get_dataset(config: Config, input_path: Path):
-    data_transformer = get_features(config)
-
-    df = pd.read_parquet(input_path)
-    df = df.iloc[0:500_000]
+def dd_transform(config: Config, target_name: str):
     dd_params = (
         {}
         if config.drift_detection is None
@@ -49,8 +48,21 @@ def get_dataset(config: Config, input_path: Path):
     dd = get_offline_voting_drift_detector(
         **dd_params,
     )
-    change_list = dd.predict(df[config.dataset.target].values)
-    df = add_dist_label(df, change_list)
+
+    def transform(data: pd.DataFrame) -> pd.DataFrame:
+        change_list = dd.predict(data[target_name].values)
+        data = add_dist_label(data, change_list)
+
+    return transform
+
+
+def get_dataset(config: Config, input_path: Path):
+    data_transformer = get_features(config)
+    dd_transformer = dd_transform(config, config.dataset.target)
+
+    data_transformer = add_transform_to_transform_set(
+        data_transformer, dd_transformer, pos="start"
+    )
 
     match config.dataset.name:
         case Dataset.ALIBABA:
@@ -59,7 +71,7 @@ def get_dataset(config: Config, input_path: Path):
             )
 
             generator = AlibabaContainerDatasetDistChunkGenerator(
-                file=df,
+                file=input_path,
                 target=data_transformer.target_name,
                 dist_col=DIST_COLUMN,
                 transform=data_transformer,
@@ -68,7 +80,7 @@ def get_dataset(config: Config, input_path: Path):
             from src.dataset.azure.vmcpu import AzureVMDatasetDistChunkGenerator
 
             generator = AzureVMDatasetDistChunkGenerator(  # type: ignore
-                file=df,
+                file=input_path,
                 target=data_transformer.target_name,
                 dist_col=DIST_COLUMN,
                 transform=data_transformer,

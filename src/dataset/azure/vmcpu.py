@@ -9,9 +9,12 @@ from src.dataset.base import (
     BaseDatasetAccessor,
     BaseDatasetGenerator,
 )
-from src.transforms import BaseTransform
+from src.transforms import TAcceptableTransform
 from src.utils.general import read_dataframe
 from src.utils.general import split_dataset as split_dataset_fn
+from src.utils.logging import logging
+
+log = logging.getLogger(__name__)
 
 TAzureVMDataset = TypeVar("TAzureVMDataset", bound="AzureVMDataset")
 TAccessor = TypeVar("TAccessor", bound=BaseDatasetAccessor)
@@ -43,7 +46,9 @@ class BaseAzureVMDatasetGenerator(
         target: str = "cpu_avg",
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(BaseAzureVMDatasetGenerator, self).__init__(
             target=target,
@@ -98,10 +103,12 @@ class AzureVMDatasetChunkGenerator(
     def __init__(
         self,
         file: str | Path | pd.DataFrame,
-        target: str = "cpu_avg",
+        target: str,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(AzureVMDatasetChunkGenerator, self).__init__(
             file=file,
@@ -144,7 +151,9 @@ class AzureVMDatasetDistChunkGenerator(
         target: str,
         dist_col: str = "dist_id",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(AzureVMDatasetDistChunkGenerator, self).__init__(
             file=file,
@@ -158,6 +167,8 @@ class AzureVMDatasetDistChunkGenerator(
         subsets: list[AzureVMDataAccessor] = []
         data = self.transform(self.data)
         grouped = data.groupby(self.dist_col)
+
+        log.info(f"Number of groups: {len(grouped)}")
 
         for _, data in grouped:
             subsets.append(

@@ -2,23 +2,24 @@ import numpy as np
 import pandas as pd
 
 from src.helpers.config import Config
+from src.transforms.base import BaseTransform, TransformFn
+from src.utils.logging import logging
 
-from .base import (
-    BaseFeatureTransformSet,
-    BaseTransform,
-    TransformFn,
-    apply_transforms,
-)
+from .base import BaseFeatureTransformSet, BaseTransform, TransformFn
 from .general import (
     ColumnsDropTransform,
     DiscretizeColumnTransform,
     OneHotColumnsTransform,
+    PrintColumnsTransform,
 )
+
+log = logging.getLogger(__name__)
 
 
 class BucketSubscriptionCPUPercentTransform(BaseTransform):
-    def __init__(self, target_name: str):
+    def __init__(self, target_name: str, drop_percent: bool = True):
         self.target_name = target_name
+        self.drop_percent = drop_percent
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
         df = data.copy()
@@ -33,7 +34,8 @@ class BucketSubscriptionCPUPercentTransform(BaseTransform):
         df[percent_columns] = df.groupby(by=["subscriptionid"])[
             percent_columns
         ].transform(lambda x: x.cumsum())
-        df = df.drop(columns=[temp_column])
+        if self.drop_percent:
+            df = df.drop(columns=[temp_column])
         return df
 
     def __repr__(self) -> str:
@@ -63,25 +65,26 @@ NON_FEATURE_COLUMNS = [
 class NoFeats(BaseFeatureTransformSet):
     def __init__(self, config: Config) -> None:
         super().__init__()
+        self._config = config
         self._target_name = f"bucket_{config.dataset.target}"
         self._non_feature_columns = list(
             filter(lambda x: x != config.dataset.target, NON_FEATURE_COLUMNS)
         )
-        self._transforms: list[BaseTransform] = [
+
+    @property
+    def transform_set(self) -> list[BaseTransform | TransformFn]:
+        return [
             ColumnsDropTransform(columns=self._non_feature_columns),
             DiscretizeColumnTransform(
-                column=config.dataset.target,
+                column=self._config.dataset.target,
                 new_column=self._target_name,
-                n_bins=config.num_classes,
+                n_bins=self._config.num_classes,
             ),
         ]
 
     @property
     def target_name(self) -> str:
         return self._target_name
-
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        return apply_transforms(data, self._transforms)
 
     def __repr__(self) -> str:
         return "NoFeats()"
@@ -90,12 +93,20 @@ class NoFeats(BaseFeatureTransformSet):
 class FeatureA_TransformSet(BaseFeatureTransformSet):
     def __init__(self, config: Config) -> None:
         super().__init__()
+        self._config = config
         self._target_name = f"bucket_{config.dataset.target}"
         self._non_feature_columns = list(
-            filter(lambda x: x != config.dataset.target, NON_FEATURE_COLUMNS)
+            filter(
+                lambda x: x != config.dataset.target and x != "DIST_COL",
+                NON_FEATURE_COLUMNS,
+            )
         )
-        self._transforms: list[BaseTransform | TransformFn] = [
-            BucketSubscriptionCPUPercentTransform(config.dataset.target),
+
+    @property
+    def transform_set(self) -> list[BaseTransform | TransformFn]:
+        return [
+            PrintColumnsTransform("Original Columns"),
+            BucketSubscriptionCPUPercentTransform(self._config.dataset.target),
             OneHotColumnsTransform(
                 columns=[
                     "vmcategory",
@@ -105,20 +116,18 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
             ),
             ColumnsDropTransform(columns=self._non_feature_columns),
             DiscretizeColumnTransform(
-                column=config.dataset.target,
-                new_column=self._target_name,
-                n_bins=config.num_classes,
+                column=self._config.dataset.target,
+                new_column=self.target_name,
+                n_bins=self._config.num_classes,
+                drop_original=True,
             ),
+            PrintColumnsTransform("Final Columns"),
             lambda df: df.iloc[0:500_000],
         ]
 
     @property
     def target_name(self) -> str:
         return self._target_name
-
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        print("CALLED TRANSFORM SET")
-        return apply_transforms(data, self._transforms)
 
     def __repr__(self) -> str:
         return "FeatureA_TransformSet()"

@@ -425,5 +425,5 @@ dependencies:
   - pre-commit
   - flake8
   - texttable 
-  - scikit-multiflow
+  - river
   - gorilla

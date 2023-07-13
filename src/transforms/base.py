@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
-from typing import Callable, TypeAlias
+from typing import Callable, TypeAlias, TypeVar
 
 import pandas as pd
 
-TData: TypeAlias = pd.DataFrame
-TransformFn: TypeAlias = Callable[[TData], TData]
+TData = TypeVar("TData", bound=pd.DataFrame)
+TransformFn = Callable[[TData], TData]
+TAcceptableTransform: TypeAlias = TransformFn | "BaseTransform"
 
 
 class BaseTransform(metaclass=ABCMeta):
@@ -48,14 +49,25 @@ def apply_transforms(
             data = transform(data)
         return data
 
+    # if isinstance(transforms, Callable):
+    #     return transforms(data)
+
     return transforms(data)
 
 
 class BaseFeatureTransformSet(BaseTransform, metaclass=ABCMeta):
     @property
     @abstractmethod
+    def transform_set(self) -> list[BaseTransform | TransformFn]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def target_name(self) -> str:
         raise NotImplementedError
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        return apply_transforms(data, self.transform_set)
 
 
 __all__ = [
@@ -63,4 +75,5 @@ __all__ = [
     "BaseFeatureTransformSet",
     "TransformFn",
     "apply_transforms",
+    "TAcceptableTransform",
 ]

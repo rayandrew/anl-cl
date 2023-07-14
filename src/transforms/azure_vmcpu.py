@@ -162,8 +162,5 @@ class FeatureEngineering_A(BaseFeatureEngineering):
     def target_name(self) -> str:
         return self._target_name
 
-    def __repr__(self) -> str:
-        return "AzureVM_FeatureA()"
-
 
 __all__ = ["BucketSubscriptionCPUPercentTransform", "FeatureEngineering_A"]

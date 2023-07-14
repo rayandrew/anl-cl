@@ -106,7 +106,7 @@ class BaseFeatureEngineering(metaclass=ABCMeta):
     def __repr__(self) -> str:
         return (
             f"""{self.__class__.__name__}(
-            target_name={self.target_name},
+            target_name="{self.target_name}",
             preprocess_transform_set=[
         """
             + ",\n".join(

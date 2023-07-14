@@ -166,6 +166,8 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake -c4 \
     out/evaluation/feature/azure/vmcpu/classification/batch/split-chunks/model-a/feature-a \
+    out/evaluation/feature/azure/vmcpu/classification/batch/split-chunks/model-b/feature-a \
     out/evaluation/feature/azure/vmcpu/classification/batch/drift-detection/model-a/feature-a \
+    out/evaluation/feature/azure/vmcpu/classification/batch/drift-detection/model-b/feature-a \
     out/evaluation/dataset/azure/vmcpu/classification/batch
 ```

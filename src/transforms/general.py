@@ -1,11 +1,15 @@
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy.typing as npt
 import pandas as pd
 
+from src.transforms.base import BaseTransform, TransformFn
 from src.utils.general import append_prev_feature, discretize_column
+from src.utils.logging import logging
 
-from .base import BaseTransform
+from .base import BaseFeatureTransformSet, BaseTransform
+
+log = logging.getLogger(__name__)
 
 
 class ColumnsDropTransform(BaseTransform):
@@ -27,14 +31,18 @@ class DiscretizeColumnTransform(BaseTransform):
         column: str,
         new_column: str | None = None,
         n_bins: int = 4,
+        drop_original: bool = True,
     ):
         self.column = column
         self.n_bins = n_bins
         self.new_column = column if new_column is None else new_column
+        self.drop_original = drop_original
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
         column_data = data[self.column]
         data[self.new_column] = discretize_column(column_data, self.n_bins)
+        if self.drop_original and self.new_column != self.column:
+            data = data.drop(columns=[self.column], errors="ignore")
         return data
 
     def __repr__(self) -> str:
@@ -95,7 +103,10 @@ class AppendPrevFeatureTransform(BaseTransform):
 
 class OneHotColumnTransform(BaseTransform):
     def __init__(
-        self, column: str, prefix: str | None = None, drop_first: bool = True
+        self,
+        column: str,
+        prefix: str | None = None,
+        drop_first: bool = True,
     ):
         self.column = column
         self.prefix = prefix
@@ -117,7 +128,7 @@ class OneHotColumnTransform(BaseTransform):
 
 
 class OneHotColumnsTransform(BaseTransform):
-    def __init__(self, columns: str, drop_first: bool = True):
+    def __init__(self, columns: list[str], drop_first: bool = True):
         self.columns = columns
         self.drop_first = drop_first
 
@@ -134,6 +145,67 @@ class OneHotColumnsTransform(BaseTransform):
         return "OneHotColumnsTransform()"
 
 
+def add_transform_to_transform_set(
+    transform_set: BaseFeatureTransformSet,
+    transform: BaseTransform,
+    pos: int | Literal["start", "end"] = 0,
+):
+    class _AddTransformSet(BaseFeatureTransformSet):
+        def __init__(
+            self,
+        ):
+            super().__init__()
+
+        @property
+        def target_name(self) -> str:
+            return transform_set.target_name
+
+        @property
+        def transform_set(self) -> list[BaseTransform | TransformFn]:
+            if pos == "start":
+                return [transform] + transform_set.transform_set
+            elif pos == "end":
+                return transform_set.transform_set + [transform]
+            else:
+                transforms: list[
+                    BaseTransform | TransformFn
+                ] = transform_set.transform_set[:]
+                transforms.insert(pos, transform)
+                return transforms
+
+        def __repr__(self):
+            return transform_set.__repr__()
+
+    return _AddTransformSet()
+
+
+class PassThroughTransform(BaseTransform):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        return data
+
+    def __repr__(self) -> str:
+        return "PassThroughTransform()"
+
+
+class PrintColumnsTransform(BaseTransform):
+    def __init__(self, identifier: str = ""):
+        super().__init__()
+        self.identifier = identifier
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        if self.identifier != "":
+            log.info("%s: %s", self.identifier, list(data.columns))
+        else:
+            log.info("%s", list(data.columns))
+        return data
+
+    def __repr__(self) -> str:
+        return f"PrintColumnsTransform(identifier={self.identifier})"
+
+
 __all__ = [
     "ColumnsDropTransform",
     "DiscretizeColumnTransform",
@@ -142,4 +214,7 @@ __all__ = [
     "ApplyFnOnColumnTransform",
     "OneHotColumnTransform",
     "OneHotColumnsTransform",
+    "add_transform_to_transform_set",
+    "PassThroughTransform",
+    "PrintColumnsTransform",
 ]

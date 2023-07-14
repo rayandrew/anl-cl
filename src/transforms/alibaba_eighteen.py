@@ -1,7 +1,4 @@
 import pandas as pd
-from sklearn.preprocessing import minmax_scale
-
-from src.utils.general import append_prev_feature, discretize_column
 
 from .base import BaseTransform
 
@@ -49,52 +46,9 @@ class CleanDataTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return f"CleanDataTransform()"
-
-
-class DiscretizeOutputTransform(BaseTransform):
-    def __init__(
-        self,
-        target: str,
-        rename_target: str | None = None,
-        n_bins: int = 4,
-    ):
-        self.target = target
-        self.n_bins = n_bins
-        self.rename_target = rename_target
-
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        target_data = minmax_scale(data[self.target])
-        name = (
-            self.target
-            if self.rename_target is None
-            else self.rename_target
-        )
-        data[name] = discretize_column(target_data, self.n_bins)
-        return data
-
-    def __repr__(self) -> str:
-        return f"DiscretizeOutputTransform(n_bins={self.n_bins})"
-
-
-class AppendPrevFeatureTransform(BaseTransform):
-    def __init__(self, columns: list[str], n_historical: int = 4):
-        self.n_historical = n_historical
-        self.columns = columns
-
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        for column in self.columns:
-            append_prev_feature(data, self.n_historical, column)
-        data = data.dropna()
-        data = data.reset_index(drop=True)
-        return data
-
-    def __repr__(self) -> str:
-        return f"Feats_A_Transform(n_historical={self.n_historical})"
+        return "CleanDataTransform()"
 
 
 __all__ = [
     "CleanDataTransform",
-    "DiscretizeOutputTransform",
-    "AppendPrevFeatureTransform",
 ]

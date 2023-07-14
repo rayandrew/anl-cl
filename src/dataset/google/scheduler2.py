@@ -9,7 +9,7 @@ from src.dataset.base import (
     BaseDatasetAccessor,
     BaseDatasetGenerator,
 )
-from src.transforms import BaseTransform
+from src.transforms import TAcceptableTransform
 from src.utils.general import read_dataframe
 from src.utils.general import split_dataset as split_dataset_fn
 
@@ -46,7 +46,9 @@ class BaseGoogleSchedulerDatasetGenerator(
         target: str = "util_cpu",
         n_labels: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(BaseGoogleSchedulerDatasetGenerator, self).__init__(
             target=target,
@@ -55,6 +57,7 @@ class BaseGoogleSchedulerDatasetGenerator(
         )
         self._file = file
         self.n_labels = n_labels
+        self._data: pd.DataFrame | None = None
 
     @property
     def data(self) -> pd.DataFrame:
@@ -120,9 +123,10 @@ class GoogleSchedulerDatasetChunkGenerator(
         n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
-        print("DIPANGGIL NI CHUNK GENERATE")
         super(GoogleSchedulerDatasetChunkGenerator, self).__init__(
             file=file,
             n_labels=n_labels,
@@ -167,7 +171,9 @@ class GoogleSchedulerDatasetDistChunkGenerator(
         n_labels: int = 4,
         dist_col: str = "dist_id",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         super(GoogleSchedulerDatasetDistChunkGenerator, self).__init__(
             file=file,

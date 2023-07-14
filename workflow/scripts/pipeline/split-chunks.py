@@ -9,7 +9,8 @@ from src.helpers.dataset import (
     AvalancheClassificationDatasetAccessor,
     create_avalanche_classification_datasets,
 )
-from src.helpers.definitions import Snakemake
+from src.helpers.definitions import Dataset, Snakemake
+from src.helpers.features import get_features
 from src.helpers.scenario import train_classification_scenario
 from src.utils.logging import logging, setup_logging
 
@@ -20,50 +21,36 @@ setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
 
 
-def bucket_target_name(target: str):
-    return f"bucket_{target}"
-
-
 def get_dataset(config: Config, input_path: Path):
-    generator = None
-    print(config.dataset.name)
+    data_transformer = get_features(config)
     match config.dataset.name:
-        case "alibaba":
+        case Dataset.ALIBABA:
             from src.dataset.alibaba.container_seventeen import (
                 AlibabaContainerDatasetChunkGenerator,
             )
-            import src.transforms.alibaba_seventeen as transforms
-
-            data_transformer = transforms.FeatureA_TransformSet(config)
 
             generator = AlibabaContainerDatasetChunkGenerator(
                 file=input_path,
                 target=data_transformer.target_name,
-                n_labels=config.num_classes,
                 n_split=config.scenario.num_split,  # type: ignore
                 transform=data_transformer,
             )
-        case "azure":
+        case Dataset.AZURE:
             from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
-            import src.transforms.azure_vmcpu as transforms
-
-            data_transformer = transforms.FeatureA_TransformSet(config)
 
             generator = AzureVMDatasetChunkGenerator(
                 file=input_path,
                 target=data_transformer.target_name,
-                n_labels=config.num_classes,
                 n_split=config.scenario.num_split,  # type: ignore
                 transform=data_transformer,
             )
         case "google":
+            import src.transforms.google_scheduler as transforms
             from src.dataset.google.scheduler2 import (
                 GoogleSchedulerDatasetChunkGenerator,
             )
-            import src.transforms.google_scheduler as transforms
 
             data_transformer = transforms.FeatureA_TransformSet(config)
-            print("DH DIPANGGIL LOM")
             generator = GoogleSchedulerDatasetChunkGenerator(
                 file=input_path,
                 target=data_transformer.target_name,
@@ -72,10 +59,7 @@ def get_dataset(config: Config, input_path: Path):
                 transform=data_transformer,
             )
         case _:
-            raise ValueError("Unrecognized dataset")
-
-    if generator is None:
-        raise ValueError("Dataset error")
+            raise ValueError(f"Unknown dataset: {config.dataset.name}")
 
     dataset = generator()
     if len(dataset) == 0:

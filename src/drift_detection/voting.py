@@ -1,9 +1,7 @@
 from collections import deque
-from collections.abc import Collection
+from collections.abc import Sequence
 
-from skmultiflow.drift_detection.base_drift_detector import (
-    BaseDriftDetector,
-)
+from river.base import DriftDetector
 
 
 class VotingDriftDetector:
@@ -13,7 +11,7 @@ class VotingDriftDetector:
         threshold: int,
         verbose=True,
     ):
-        self.methods: list[BaseDriftDetector] = []
+        self.methods: list[DriftDetector] = []
         self.weights: list[float] = []
         self.drifts: list[deque[int]] = []
         self.vote_drifts: list[int] = []
@@ -21,19 +19,17 @@ class VotingDriftDetector:
         self.threshold = threshold
         self.verbose = verbose
 
-    def add_method(
-        self, method: BaseDriftDetector, weight: float = 1.0
-    ):
+    def add_method(self, method: DriftDetector, weight: float = 1.0):
         self.methods.append(method)
         self.weights.append(weight)
         self.drifts.append(deque[int]())
 
     def _get_drift_point(self, data):
-        for pos, ele in enumerate(data):
+        for i, val in enumerate(data):
             for method_index, method in enumerate(self.methods):
-                method.add_element(ele)
-                if method.detected_change():
-                    self.drifts[method_index].append(pos)
+                _ = method.update(val)
+                if method.drift_detected:
+                    self.drifts[method_index].append(i)
 
     def _vote_drift(self, data, window_size, threshold):
         vote_drifts = []
@@ -56,13 +52,11 @@ class VotingDriftDetector:
                 vote_drifts.append(mean_pos)
         return vote_drifts
 
-    def predict(self, data) -> Collection[int]:
+    def predict(self, data) -> Sequence[int]:
         for method_idx in range(len(self.drifts)):
             self.drifts[method_idx] = deque()
         self._get_drift_point(data)
-        return self._vote_drift(
-            data, self.window_size, self.threshold
-        )
+        return self._vote_drift(data, self.window_size, self.threshold)
 
 
 def get_offline_voting_drift_detector(
@@ -83,33 +77,31 @@ def get_offline_voting_drift_detector(
         verbose=verbose,
     )
     if adwin:
-        from skmultiflow.drift_detection.adwin import ADWIN
+        from river.drift import ADWIN
 
         dd.add_method(ADWIN(), 1)
-    if ddm:
-        from skmultiflow.drift_detection.ddm import DDM
+    # if ddm:
+    #     from river.drift.binary import DDM
 
-        dd.add_method(DDM(), 1)
-    if eddm:
-        from skmultiflow.drift_detection.eddm import EDDM
+    #     dd.add_method(DDM(), 1)
+    # if eddm:
+    #     from river.drift.binary import EDDM
 
-        dd.add_method(EDDM(), 1)
-    if hddm_a:
-        from skmultiflow.drift_detection.hddm_a import HDDM_A
+    #     dd.add_method(EDDM(), 1)
+    # if hddm_a:
+    #     from river.drift.binary import HDDM_A
 
-        dd.add_method(HDDM_A(), 1)
-    if hddm_w:
-        from skmultiflow.drift_detection.hddm_w import HDDM_W
+    #     dd.add_method(HDDM_A(), 1)
+    # if hddm_w:
+    #     from river.drift.binary import HDDM_W
 
-        dd.add_method(HDDM_W(), 1)
+    #     dd.add_method(HDDM_W(), 1)
     if page_hinkley:
-        from skmultiflow.drift_detection.page_hinkley import (
-            PageHinkley,
-        )
+        from river.drift import PageHinkley
 
         dd.add_method(PageHinkley(), 1)
     if kswin:
-        from skmultiflow.drift_detection.kswin import KSWIN
+        from river.drift import KSWIN
 
         dd.add_method(KSWIN(), 1)
     return dd

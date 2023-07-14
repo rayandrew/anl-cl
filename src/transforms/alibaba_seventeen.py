@@ -2,7 +2,7 @@ import pandas as pd
 
 from src.helpers.config import Config
 
-from .base import BaseTransform, apply_transforms
+from .base import BaseFeatureTransformSet, BaseTransform, apply_transforms
 from .general import ColumnsDropTransform, DiscretizeColumnTransform
 
 
@@ -85,7 +85,7 @@ NON_FEATURE_COLUMNS = [
 ]
 
 
-class FeatureA_TransformSet(BaseTransform):
+class FeatureA_TransformSet(BaseFeatureTransformSet):
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._target_name = f"bucket_{config.dataset.target}"

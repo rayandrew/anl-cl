@@ -9,7 +9,7 @@ from avalanche.benchmarks.utils.data import AvalancheDataset
 import numpy as np
 import pandas as pd
 
-from src.transforms import BaseTransform, apply_transforms
+from src.transforms import TAcceptableTransform, apply_transforms
 
 TDatasetSubset = Literal["training", "testing", "all"]
 TDataset = TypeVar("TDataset", bound="BaseDataset")
@@ -88,7 +88,9 @@ class BaseDatasetGenerator(Generic[TGeneratorReturn], metaclass=ABCMeta):
         self,
         target: str,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: BaseTransform | list[BaseTransform] | None = None,
+        transform: TAcceptableTransform
+        | list[TAcceptableTransform]
+        | None = None,
     ):
         self.train_ratio = train_ratio
         self._target = target

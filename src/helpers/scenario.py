@@ -4,15 +4,13 @@ from typing import Any, Callable, Tuple
 
 from torch.nn import CrossEntropyLoss
 
-from avalanche.benchmarks.scenarios import (
-    GenericCLScenario,
-    OnlineCLScenario,
-)
+from avalanche.benchmarks.scenarios import GenericCLScenario, OnlineCLScenario
 from avalanche.evaluation.metrics import confusion_matrix_metrics
 from avalanche.logging import TextLogger
 from avalanche.training.plugins import EvaluationPlugin
 
 from src.metrics import get_classification_default_metrics
+from src.patches import apply_patches
 from src.utils.general import set_seed
 from src.utils.logging import Logger
 from src.utils.time import get_current_time
@@ -39,14 +37,13 @@ def train_classification_scenario(
     snakemake: Snakemake,
 ):
     set_seed(config.seed)
+    apply_patches()
     input_path = Path(str(snakemake.input))
     log.info(f"Input path: {input_path}")
 
     current_time = get_current_time()
 
-    training_type = (
-        Training.ONLINE if config.online else Training.BATCH
-    )
+    training_type = Training.ONLINE if config.online else Training.BATCH
     run_name = f"{config.dataset.name}_{training_type}_{config.scenario.name}_{config.strategy.name}_{input_path.stem}_{current_time}"
     log.info(f"Run name: {run_name}")
 
@@ -69,9 +66,7 @@ def train_classification_scenario(
     if config.wandb is not None:
         from avalanche.logging.wandb_logger import WandBLogger
 
-        wandb_logger = WandBLogger(
-            project_name=config.wandb, run_name=run_name
-        )
+        wandb_logger = WandBLogger(project_name=config.wandb, run_name=run_name)
         wandb_logger.wandb.config.config = config.dict()
         loggers.append(wandb_logger)
 
@@ -99,14 +94,10 @@ def train_classification_scenario(
     criterion = CrossEntropyLoss()
 
     Optimizer = get_optimizer(config)
-    optimizer = Optimizer(
-        model.parameters(), lr=config.tune.learning_rate[0]
-    )
+    optimizer = Optimizer(model.parameters(), lr=config.tune.learning_rate[0])
 
     Strategy = get_strategy(config)
-    additional_strategy_params = config.strategy.dict(
-        exclude={"name"}
-    )
+    additional_strategy_params = config.strategy.dict(exclude={"name"})
     if config.strategy.name == StrategyEnum.GSS:
         additional_strategy_params["input_size"] = [input_size]
 
@@ -124,9 +115,7 @@ def train_classification_scenario(
 
     benchmark = get_benchmark(dataset)
     Trainer = get_trainer(config)
-    trainer = Trainer(
-        strategy, benchmark, num_workers=config.num_workers
-    )
+    trainer = Trainer(strategy, benchmark, num_workers=config.num_workers)
     log.info("Starting training")
     results = trainer.train()
     log.info("Training finished")

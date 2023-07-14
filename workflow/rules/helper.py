@@ -17,7 +17,8 @@ SCENARIOS = [e.value for e in Scenario]
 STRATEGIES = [e.value for e in Strategy]
 TRAININGS = [e.value for e in Training]
 TASKS = [e.value for e in Task]
-MODELS = [f"model-{e.value}" for e in Model]
+# MODELS = [f"model-{e.value}" for e in Model]
+MODELS = [e.value for e in Model]
 DRIFT_DETECTORS = [e.value for e in DriftDetector]
 EXTENSIONS = ["csv", "parquet"]
 
@@ -30,9 +31,7 @@ def get_dataset_files(
     for ext in EXTENSIONS:
         for file in (base_path / dataset).glob(f"**/*.{ext}"):
             if file.is_file():
-                files.append(
-                    file.with_suffix("") if remove_ext else file
-                )
+                files.append(file.with_suffix("") if remove_ext else file)
     return files
 
 
@@ -59,9 +58,7 @@ def get_all_dataset_files(
     for dataset in datasets:
         result += [
             file.stem if return_stem else file
-            for file in get_dataset_files(
-                base_path, dataset, remove_ext
-            )
+            for file in get_dataset_files(base_path, dataset, remove_ext)
         ]
     return result
 

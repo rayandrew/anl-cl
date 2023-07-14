@@ -1,4 +1,0 @@
-drift_detection:
-  name: voting
-  threshold: 300
-  window_size: 75

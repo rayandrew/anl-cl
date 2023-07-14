@@ -1,10 +1,12 @@
+from typing import Any
+
 import pandas as pd
 from sklearn.discriminant_analysis import StandardScaler
 
 from src.helpers.config import Config
 
-from .base import BaseTransform, apply_transforms
-from .general import ColumnsDropTransform, DiscretizeColumnTransform
+from .base import BaseTransform, TAcceptableTransform, apply_transforms
+from .general import ColumnsDropTransform
 
 
 class CleanDataTransform(BaseTransform):
@@ -68,8 +70,10 @@ class DurationHistoryTransform(BaseTransform):
         data: pd.DataFrame,
     ) -> pd.DataFrame:
         """colname = column to group the history on
-        This function will map jobs with duration >= ~6 minutes as 1, otherwise 0.
-        Used to add duration information to a job indirectly through historical data.
+        This function will map jobs with
+            duration >= ~6 minutes as 1, otherwise 0.
+        Used to add duration information to a
+            job indirectly through historical data.
         """
 
         long_duration_name = str(self.colname) + "_history_duration_long"
@@ -77,7 +81,7 @@ class DurationHistoryTransform(BaseTransform):
         data[long_duration_name] = 0
         data[short_duration_name] = 0
 
-        histogram_map = {}
+        histogram_map: dict[str, Any] = {}
 
         for index, row in data.iterrows():
             group_name = row[self.colname]
@@ -104,7 +108,8 @@ class DurationHistoryTransform(BaseTransform):
             else:
                 group_hist["short"] += 1
 
-            # Update the dictionary with the modified histogram for the collection_logical_name
+            # Update the dictionary with the modified histogram
+            # for the collection_logical_name
             histogram_map[group_name] = group_hist
         return data
 
@@ -131,7 +136,7 @@ class ThrottleHistoryTransform(BaseTransform):
         data[throttle_name] = 0
         data[non_throttle_name] = 0
 
-        histogram_map = {}
+        histogram_map: dict[str, Any] = {}
 
         for index, row in data.iterrows():
             collection_name = row[self.colname]
@@ -157,7 +162,8 @@ class ThrottleHistoryTransform(BaseTransform):
             else:
                 collection_hist["non_throttle"] += 1
 
-            # Update the dictionary with the modified histogram for the collection_logical_name
+            # Update the dictionary with the modified histogram
+            # for the collection_logical_name
             histogram_map[collection_name] = collection_hist
         return data
 
@@ -222,7 +228,7 @@ class Baseline_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[BaseTransform] = [
+        self._transforms: list[TAcceptableTransform] = [
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ColumnsDropTransform(columns=self._non_feature_columns),
@@ -248,7 +254,7 @@ class FeatureA_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[BaseTransform] = [
+        self._transforms: list[TAcceptableTransform] = [
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ThrottleHistoryTransform(colname="collection_logical_name_mapped"),
@@ -287,7 +293,7 @@ class FeatureB_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[BaseTransform] = [
+        self._transforms: list[TAcceptableTransform] = [
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ThrottleHistoryTransform(colname="collection_logical_name_mapped"),

@@ -182,3 +182,4 @@ logs
 wandb
 cov-shift
 *.out
+*-azure

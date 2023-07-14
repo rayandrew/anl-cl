@@ -1,5 +1,5 @@
 model:
-  name: B
+  name: model-b
   hidden_layers: 3
   hidden_size: 512
   drop_rate: 0.2

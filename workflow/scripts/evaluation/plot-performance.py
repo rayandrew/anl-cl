@@ -205,9 +205,13 @@ def main():
 
         metric_name = metric.replace("avg_", "")
 
-        fig_bar = plot_bar(data=data, label=metric_name, get_last=True)
-        fig_bar.savefig(output_folder / f"{metric}_bar.png", dpi=300)
-        plt.close(fig_bar)
+        fig_bar_stddev = plot_bar(data=data, label=metric_name, get_last=False)
+        fig_bar_stddev.savefig(output_folder / f"{metric}_bar.png", dpi=300)
+        plt.close(fig_bar_stddev)
+
+        fig_bar_last = plot_bar(data=data, label=metric_name, get_last=True)
+        fig_bar_last.savefig(output_folder / f"{metric}_bar.png", dpi=300)
+        plt.close(fig_bar_last)
 
         fig_line = plot_line(data, metric_name)
         fig_line.savefig(output_folder / f"{metric}_line.png", dpi=300)

@@ -52,7 +52,7 @@ rule:
         directory("out/evaluation/dataset/{dataset}/{filename}/{task}/{training}"),
     log:
         "logs/evaluation/dataset/{dataset}/{filename}/{task}/{training}.log",
-    script: "../scripts/evaluation/plot-bar.py"
+    script: "../scripts/evaluation/plot-performance.py"
 
 rule:
     name: f"eval_compare_stategies_features_models"
@@ -62,7 +62,7 @@ rule:
         directory("out/evaluation/scenario/{dataset}/{filename}/{task}/{training}/{scenario}"),
     log:
         "logs/evaluation/scenario/{dataset}/{filename}/{task}/{training}/{scenario}.log",
-    script: "../scripts/evaluation/plot-bar.py"
+    script: "../scripts/evaluation/plot-performance.py"
 
 rule:
     name: f"eval_compare_stategies_features"
@@ -72,7 +72,7 @@ rule:
         directory("out/evaluation/model/{dataset}/{filename}/{task}/{training}/{scenario}/{model}"),
     log:
         "logs/evaluation/model/{dataset}/{filename}/{task}/{training}/{scenario}/{model}.log",
-    script: "../scripts/evaluation/plot-bar.py"
+    script: "../scripts/evaluation/plot-performance.py"
 
 rule:
     name: f"eval_compare_strategies"
@@ -82,7 +82,7 @@ rule:
         directory("out/evaluation/feature/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}"),
     log:
         "logs/evaluation/feature/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}.log",
-    script: "../scripts/evaluation/plot-bar.py"
+    script: "../scripts/evaluation/plot-performance.py"
 
 rule:
     name: f"eval_single_result"
@@ -92,7 +92,7 @@ rule:
         directory("out/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}/{strategy}"),
     log:
         "logs/evaluation/strategy/{dataset}/{filename}/{task}/{training}/{scenario}/{model}/{feature}/{strategy}.log",
-    script: "../scripts/evaluation/plot-bar.py"
+    script: "../scripts/evaluation/plot-performance.py"
 
 # def get_pipeline_output():
 #     final_output = []

@@ -91,14 +91,33 @@ def get_metrics(
     )
 
 
-def plot_bar(data: pd.DataFrame, label: str):
+def plot_bar(data: pd.DataFrame, label: str, get_last: bool = False):
     label = label.upper()
     fig, ax = plt.subplots(figsize=(0.2 * len(data) + 2, 5))
-    temp_data = data.copy()
-    temp_data = temp_data.sort_values(
-        by=["value"], ascending=False
-    ).reset_index(drop=True)
-    sns.barplot(x="label", y="value", data=data, ax=ax)
+    if get_last:
+        temp_data = (
+            data.groupby("label")
+            .tail(1)
+            .sort_values(by="value", ascending=False)
+            .reset_index(drop=True)
+        )
+        sns.barplot(
+            x="label",
+            y="value",
+            data=temp_data,
+            ax=ax,
+        )
+    else:
+        sns.barplot(
+            x="label",
+            y="value",
+            data=data,
+            ax=ax,
+            order=data.groupby("label")["value"]
+            .mean()
+            .sort_values(ascending=False)
+            .index,
+        )
     # sns.barplot(x="label", y="value", data=df, ax=ax)
     ax.set_ylabel(label)
     ax.set_title(label)
@@ -152,6 +171,9 @@ def plot_line(data: pd.DataFrame, label_title: str):
     return fig
 
 
+# GET_LAST_ONLY = ["accuracy", "forgetting"]
+
+
 def main():
     config = snakemake.config
 
@@ -174,19 +196,24 @@ def main():
 
     for metric in result.__annotations__.keys():
         data: pd.DataFrame = getattr(result, metric)
+        # data = data.sort_values(by=["value"], ascending=False).reset_index(
+        #     drop=True
+        # )
 
         if len(data) == 0:
             continue
 
         metric_name = metric.replace("avg_", "")
 
-        fig = plot_bar(data=data, label=metric_name)
-        fig.savefig(output_folder / f"{metric}.png", dpi=300)
-        plt.close(fig)
+        fig_bar = plot_bar(data=data, label=metric_name, get_last=True)
+        fig_bar.savefig(output_folder / f"{metric}_bar.png", dpi=300)
+        plt.close(fig_bar)
 
         fig_line = plot_line(data, metric_name)
         fig_line.savefig(output_folder / f"{metric}_line.png", dpi=300)
         plt.close(fig_line)
+
+        data.to_csv(output_folder / f"{metric}.csv", index=False)
 
 
 if __name__ == "__main__":

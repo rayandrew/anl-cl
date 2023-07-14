@@ -1,46 +1,28 @@
 # ANL/CL
 
-## Install
+## Environment 
 
 - Dependencies
 
 ```bash
-conda create -n cl python=3.10 pip
-conda activate cl
-conda install -c conda-forge mamba
-pip install gorilla semver ruptures git+https://github.com/ContinualAI/avalanche.git@c2601fccec29bfa2f4ed692cb9955526111d56be
-mamba install numpy=1.21 pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
-mamba install numpy=1.21 pandas black matplotlib scikit-learn scikit-multiflow torchmetrics seaborn -c conda-forge
-pip install pydantic simplejson types-simplejson fastparquet
-
-# for pipeline
-mamba install -c conda-forge -c bioconda snakemake
-  
-# for development only
-pip install black isort
-# inside conda `base` env
 conda install mamba -n base -c conda-forge
 
-mamba env create --file env-pinned.yaml
+mamba env create --file env-pinned.yaml -n acl
 # or
-# mamba env create --file env.yaml
+# mamba env create --file env.yaml -n acl
 
 conda activate acl
 
 # If protobuf error from wandb
 pip uninstall wandb protobuf
 pip install wandb protobuf
-
-# update deps
-# mamba env update --file=env.yaml
 ```
 
-## Development
+- Update deps
 
-- Always check types!
-
-```
-mypy .
+```bash
+conda activate acl
+mamba env update --file=env.yaml
 ```
 
 ## Running
@@ -82,58 +64,13 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/training/<DATASET>/<FILEN
 PYTHONPATH=$PYTHONPATH:. snakemake \
     --profile=swing out/training/azure/vmcpu/classification/batch/split-chunks/model-a/feature-a/no-retrain \
     --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
+                  ./config/scenario/split-chunks/split-chunks.yaml \
                   ./config/dataset/azure/azure.yaml \
                   ./config/model/a.yaml \
-                  ./config/strategies/no_retrain/no_retrain.yaml
+                  ./config/strategies/no-retrain/no-retrain.yaml
 ```
 
 ### Evaluation
-
-#### Compare Strategy + Feature Engineering + Model  (same scenario)
-
-```bash
-# rm -rf out/training/alibaba/container/classification/batch/split-chunks/from-scratch
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/from-scratch/A \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/a.yaml \
-                  ./config/strategies/from_scratch/from_scratch.yaml
-
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    out/training/google/mapped_nog/classification/online/split-chunks/from-scratch \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/google/google.yaml \
-                  ./config/model/mlp.yaml \
-                  ./config/strategies/from_scratch/from_scratch.yaml
-```
-
-
-
-- Retrain using GSS
-
-```bash
-# rm -rf out/training/alibaba/container/classification/batch/split-chunks/gss
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    --profile=swing out/training/alibaba/container/classification/batch/split-chunks/gss \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/alibaba/alibaba.yaml \
-                  ./config/model/mlp.yaml \
-                  ./config/strategies/gss/gss.yaml
-
-PYTHONPATH=$PYTHONPATH:. snakemake \
-    out/training/google/mapped_nog/classification/online/split-chunks/gss \
-    --configfiles ./config/general.yaml \
-                  ./config/scenario/split_chunks.yaml \
-                  ./config/dataset/google/google.yaml \
-                  ./config/model/mlp.yaml \
-                  ./config/strategies/gss/gss_1k.yaml
-PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>
-```
 
 #### Compare Scenario + Model + Strategy + Feature Engineering
 
@@ -165,7 +102,66 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/feature/<DATAS
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/single/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>/<STRATEGY>
 ```
 
-#### Example
+## Development
+
+- Always check types!
+
+```
+mypy .
+```
+
+- Install `pre-commit`
+
+```
+pre-commit install
+```
+
+## Azure VMCPU
+
+### Run Training
+
+#### Split Chunks
+
+- No Retraining
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/azure/vmcpu/classification/batch/split-chunks/model-a/feature-a/no-retrain \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split-chunks/split-chunks.yaml \
+                  ./config/dataset/azure/azure.yaml \
+                  ./config/model/a.yaml \
+                  ./config/strategies/no-retrain/no-retrain.yaml
+```
+
+- GSS
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/azure/vmcpu/classification/batch/split-chunks/model-a/feature-a/gss \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split-chunks/split-chunks.yaml \
+                  ./config/dataset/azure/azure.yaml \
+                  ./config/model/a.yaml \
+                  ./config/strategies/gss/gss.yaml
+```
+
+#### Drift Detection
+
+- EWC + Voting
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    --profile=swing out/training/azure/vmcpu/classification/batch/drift-detection/model-a/feature-a/ewc \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/drift-detection.yaml \
+                  ./config/dataset/azure/azure.yaml \
+                  ./config/model/a.yaml \
+                  ./config/strategies/ewc/ewc.yaml \
+                  ./config/drift-detection/voting/azure-vmcpu.yaml
+```
+
+### Evaluation
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake -c4 \

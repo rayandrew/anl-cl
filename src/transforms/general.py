@@ -146,7 +146,7 @@ class OneHotColumnsTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return "OneHotColumnsTransform()"
+        return f"OneHotColumnsTransform(columns={self.columns})"
 
 
 class PassThroughTransform(BaseTransform):

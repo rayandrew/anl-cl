@@ -93,7 +93,7 @@ def get_metrics(
 
 def plot_bar(data: pd.DataFrame, label: str, get_last: bool = False):
     label = label.upper()
-    fig, ax = plt.subplots(figsize=(0.2 * len(data) + 2, 5))
+    fig, ax = plt.subplots(figsize=(0.15 * len(data) + 2, 5))
     if get_last:
         temp_data = (
             data.groupby("label")
@@ -206,11 +206,11 @@ def main():
         metric_name = metric.replace("avg_", "")
 
         fig_bar_stddev = plot_bar(data=data, label=metric_name, get_last=False)
-        fig_bar_stddev.savefig(output_folder / f"{metric}_bar.png", dpi=300)
+        fig_bar_stddev.savefig(output_folder / f"{metric}_bar_std.png", dpi=300)
         plt.close(fig_bar_stddev)
 
         fig_bar_last = plot_bar(data=data, label=metric_name, get_last=True)
-        fig_bar_last.savefig(output_folder / f"{metric}_bar.png", dpi=300)
+        fig_bar_last.savefig(output_folder / f"{metric}_bar_last.png", dpi=300)
         plt.close(fig_bar_last)
 
         fig_line = plot_line(data, metric_name)

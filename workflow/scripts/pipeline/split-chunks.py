@@ -44,13 +44,9 @@ def get_dataset(config: Config, input_path: Path):
                 n_split=config.scenario.num_split,  # type: ignore
                 transform=data_transformer,
             )
-        case "google":
-            import src.transforms.google_scheduler as transforms
-            from src.dataset.google.scheduler2 import (
-                GoogleSchedulerDatasetChunkGenerator,
-            )
+        case Dataset.GOOGLE:
+            from src.dataset.google.scheduler2 import GoogleSchedulerDatasetChunkGenerator
 
-            data_transformer = transforms.FeatureA_TransformSet(config)
             generator = GoogleSchedulerDatasetChunkGenerator(
                 file=input_path,
                 target=data_transformer.target_name,

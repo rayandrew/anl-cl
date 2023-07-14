@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Generic, Sequence, TypeVar, cast
+from functools import cached_property
 
 import pandas as pd
 
@@ -57,20 +58,17 @@ class BaseGoogleSchedulerDatasetGenerator(
         )
         self._file = file
         self.n_labels = n_labels
-        self._data: pd.DataFrame | None = None
 
-    @property
+    @cached_property
     def data(self) -> pd.DataFrame:
         # Cache so no repeated reads / transforms
-        if hasattr(self, "_data"):
-            return self._data
         data = read_dataframe(self._file)
         data = data.sort_values(by=["start_time"])
         data = data.head(200000)
+        data = data.reset_index(drop=True)
         # Move transform here to get better history
         data = self.transform(data)
         data = data.fillna(-1)
-        self._data = data
         return data
 
     def __base_call__(self, data: pd.DataFrame, shuffle: bool) -> TAccessor:

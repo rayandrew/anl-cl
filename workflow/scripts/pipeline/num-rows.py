@@ -23,47 +23,37 @@ setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
 
 
-def add_dist_label(data: pd.DataFrame, dist: Sequence[int], start_from=0):
+def add_dist_label_row(data: pd.DataFrame, num_rows:int, start_from=0):
     distributions = np.zeros(len(data), dtype=int)
 
-    log.info(f"Number of distributions: {len(dist)}")
-
-    log.debug(f"Dist from 0 to {dist[0]}: 0")
-    distributions[: dist[0]] = start_from
-    for i in range(len(dist) - 1):
-        log.debug(f"Dist from {dist[i]} to {dist[i+1]}: {i+1}")
-        distributions[dist[i] : dist[i + 1]] = i + 1 + start_from
-    distributions[dist[-1] :] = len(dist) + start_from
+    log.info(f"Number of distributions: {(len(data) + num_rows - 1) // num_rows}")
+    for idx in range(len(data)):
+        if idx % num_rows == 0 and idx != 0:
+            start_from += 1
+        distributions[idx] = start_from
 
     data[DIST_COLUMN] = pd.Series(distributions)
+    # distribution_counts = data.groupby('dist_id').size()
+    # print(distribution_counts.to_string(index=False))
     return data
 
 
-def dd_transform(config: Config, target_name: str):
-    dd_params = (
-        {}
-        if config.drift_detection is None
-        else config.drift_detection.dict(exclude={"name"})
-    )
-    log.info("DD PARAMS: %s", dd_params)
-    dd = get_offline_voting_drift_detector(
-        **dd_params,
-    )
 
+def num_rows_transform(config: Config, target_name: str):
     def transform(data: pd.DataFrame) -> pd.DataFrame:
-        change_list = dd.predict(data[target_name].values)
-        data = add_dist_label(data, change_list)
+        data = add_dist_label_row(data, config.scenario.period)
         return data
 
     return transform
 
 
 def get_dataset(config: Config, input_path: Path):
+
     data_transformer = get_features(config)
-    dd_transformer = dd_transform(config, config.dataset.target)
+    num_rows_transformer = num_rows_transform(config, config.dataset)
 
     data_transformer = add_transform_to_transform_set(
-        data_transformer, dd_transformer, pos=3
+        data_transformer, num_rows_transformer, 'start'
     )
 
     match config.dataset.name:
@@ -88,9 +78,7 @@ def get_dataset(config: Config, input_path: Path):
                 transform=data_transformer,
             )
         case Dataset.GOOGLE:
-            from src.dataset.google.scheduler2 import (
-                GoogleSchedulerDatasetDistChunkGenerator,
-            )
+            from src.dataset.google.scheduler2 import GoogleSchedulerDatasetDistChunkGenerator
 
             generator = GoogleSchedulerDatasetDistChunkGenerator(
                 file=input_path,
@@ -111,10 +99,6 @@ def get_dataset(config: Config, input_path: Path):
     )
 
 
-def assert_training(config: Config):
-    assert (
-        config.drift_detection is not None
-    ), "Drift detection must be specified in config"
 
 
 def get_benchmark(dataset: Sequence[Any]):

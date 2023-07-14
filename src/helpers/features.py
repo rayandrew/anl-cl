@@ -20,6 +20,11 @@ def get_features(config: Config) -> BaseFeatureTransformSet:
             return FeatureA_TransformSet(config)
         else:
             raise ValueError(f"[AZURE] Unknown feature: {feature}")
+    if dataset_name == Dataset.GOOGLE:
+        #TODO: add google feature
+        from src.transforms.google_scheduler import FeatureA_TransformSet
+
+        return FeatureA_TransformSet(config)
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 

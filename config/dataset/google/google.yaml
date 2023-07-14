@@ -1,4 +1,6 @@
 dataset: 
   name: google
   target: util_cpu
+  time_col: start_time
+  feature: feature-a
   

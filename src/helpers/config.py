@@ -34,6 +34,7 @@ class DatasetConfig(DynamicConfig):
     name: Dataset
     target: str
     feature: str
+    time_col: str
 
     @field_validator("feature")
     def check_feature_prefix(cls, v: str):

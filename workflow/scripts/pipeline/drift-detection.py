@@ -103,6 +103,23 @@ def get_dataset(config: Config, input_path: Path):
                 feature_engineering=feature_engineering,
                 train_ratio=config.train_ratio,
             )
+        case Dataset.GOOGLE:
+            from src.dataset.google.scheduler2 import (
+                GoogleSchedulerDataAccessor,
+                GoogleSchedulerDataset,
+                GoogleSchedulerDatasetPrototype,
+            )
+
+            generator: DistributionColumnBasedGenerator[
+                GoogleSchedulerDataset, GoogleSchedulerDataAccessor
+            ] = DistributionColumnBasedGenerator(
+                data=input_path,
+                prototype=GoogleSchedulerDatasetPrototype(),
+                target=feature_engineering.target_name,
+                dist_col=DD_DIST_COLUMN,
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
+            )
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
 

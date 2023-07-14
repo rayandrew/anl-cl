@@ -59,20 +59,23 @@ def get_dataset(config: Config, input_path: Path):
                 feature_engineering=feature_engineering,
                 train_ratio=config.train_ratio,
             )
-        # case "google":
-        #     import src.transforms.google_scheduler as transforms
-        #     from src.dataset.google.scheduler2 import (
-        #         GoogleSchedulerDatasetChunkGenerator,
-        #     )
+        case "google":
+            from src.dataset.google.scheduler2 import (
+                GoogleSchedulerDataAccessor,
+                GoogleSchedulerDataset,
+                GoogleSchedulerDatasetPrototype,
+            )
 
-        #     feature_engineering = transforms.FeatureA_TransformSet(config)
-        #     generator = GoogleSchedulerDatasetChunkGenerator(
-        #         file=input_path,
-        #         target=feature_engineering.target_name,
-        #         n_labels=config.num_classes,
-        #         n_split=config.scenario.num_split,  # type: ignore
-        #         transform=feature_engineering,
-        #     )
+            generator: SplitChunkGenerator[
+                GoogleSchedulerDataset, GoogleSchedulerDataAccessor
+            ] = SplitChunkGenerator(
+                data=input_path,
+                prototype=GoogleSchedulerDatasetPrototype(),
+                target=feature_engineering.target_name,
+                n_split=config.scenario.num_split,  # type: ignore
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
+            )
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
 

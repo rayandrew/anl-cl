@@ -128,7 +128,7 @@ class OneHotColumnTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return f"OneHotColumnTransform(column={self.column})"
+        return f'OneHotColumnTransform(column="{self.column}")'
 
 
 class OneHotColumnsTransform(BaseTransform):
@@ -173,7 +173,7 @@ class PrintColumnsTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return f"PrintColumnsTransform(identifier={self.identifier})"
+        return f'PrintColumnsTransform(identifier="{self.identifier}")'
 
 
 class NamedInjectTransform(BaseTransform):
@@ -189,8 +189,7 @@ class NamedInjectTransform(BaseTransform):
         return apply_transforms(data, self._transform_fn)
 
     def __repr__(self) -> str:
-        return f"""NamedInjectTransform(
-            identifier={self.identifier})"""
+        return f'NamedInjectTransform(identifier="{self.identifier}")'
 
 
 def add_transform_to_feature_engineering(

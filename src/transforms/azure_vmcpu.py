@@ -64,8 +64,8 @@ class BucketSubscriptionCPUPercentTransform(BaseTransform):
         return df
 
     def __repr__(self) -> str:
-        return """BucketSubscriptionCPUPercentTransform(
-                target_name=f"{self.target_name}",
+        return f"""BucketSubscriptionCPUPercentTransform(
+                target_name="{self.target_name}",
                 drop_percent={self.drop_percent},
                 n_bins={self.n_bins},
                 drop_first={self.drop_first}

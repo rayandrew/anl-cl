@@ -76,6 +76,7 @@ def get_dataset(config: Config, input_path: Path):
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
 
+    log.info("%s", feature_engineering)
     dataset = generator()
     if len(dataset) == 0:
         raise ValueError("Dataset is empty")

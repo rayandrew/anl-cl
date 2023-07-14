@@ -136,7 +136,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
             lambda data: data.sort_values(by=["vmdeleted"]).reset_index(
                 drop=True
             ),
-            lambda data: data.iloc[0:50_000],
+            lambda data: data.iloc[0:10_000],
             BucketSubscriptionCPUPercentTransform(self._config.dataset.target),
             OneHotColumnsTransform(
                 columns=[
@@ -153,7 +153,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
                 drop_original=True,
             ),
             PrintColumnsTransform("Final Columns"),
-            lambda data: data.iloc[0:50_000],
+            # lambda data: data.iloc[0:10_000],
         ]
 
     @property

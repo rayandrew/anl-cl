@@ -63,7 +63,7 @@ def get_dataset(config: Config, input_path: Path):
     dd_transformer = dd_transform(config, config.dataset.target)
 
     data_transformer = add_transform_to_transform_set(
-        data_transformer, dd_transformer, pos="start"
+        data_transformer, dd_transformer, pos=3
     )
 
     match config.dataset.name:

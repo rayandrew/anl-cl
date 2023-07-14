@@ -45,9 +45,19 @@ rule:
     script: "../scripts/pipeline/{wildcards.scenario}.py"
 
 rule:
+    name: f"eval_compare_stategies_features_models_scenarios"
+    input:
+        "out/training/{dataset}/{filename}/{task}/{training}",
+    output:
+        directory("out/evaluation/dataset/{dataset}/{filename}/{task}/{training}"),
+    log:
+        "logs/evaluation/dataset/{dataset}/{filename}/{task}/{training}.log",
+    script: "../scripts/evaluation/plot-bar.py"
+
+rule:
     name: f"eval_compare_stategies_features_models"
     input:
-        # "out/training/{dataset}/{filename}/{task}/{training}/{scenario}",
+        "out/training/{dataset}/{filename}/{task}/{training}/{scenario}",
     output:
         directory("out/evaluation/scenario/{dataset}/{filename}/{task}/{training}/{scenario}"),
     log:

@@ -1,3 +1,5 @@
+# ANL/CL
+
 ## Install
 
 - Dependencies
@@ -133,6 +135,18 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>
 ```
 
+#### Compare Scenario + Model + Strategy + Feature Engineering
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/dataset/<DATASET>/<FILEPATH>/<TRAINING>
+```
+
+#### Compare Model + Strategy + Feature Engineering (same scenario)
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/scenario/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>
+```
+
 #### Compare Strategy + Feature Engineering (same scenario and model)
 
 ```bash
@@ -149,4 +163,13 @@ PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/feature/<DATAS
 
 ```bash
 PYTHONPATH=$PYTHONPATH:. snakemake --profile=swing out/evaluation/single/<DATASET>/<FILEPATH>/<TRAINING>/<SCENARIO>/<MODEL>/<FEATURE_ENGINEERING>/<STRATEGY>
+```
+
+#### Example
+
+```bash
+PYTHONPATH=$PYTHONPATH:. snakemake -c4 \
+    out/evaluation/feature/azure/vmcpu/classification/batch/split-chunks/model-a/feature-a \
+    out/evaluation/feature/azure/vmcpu/classification/batch/drift-detection/model-a/feature-a \
+    out/evaluation/dataset/azure/vmcpu/classification/batch
 ```

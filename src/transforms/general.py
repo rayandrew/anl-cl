@@ -167,8 +167,11 @@ def add_transform_to_transform_set(
             elif pos == "end":
                 return transform_set.transform_set + [transform]
             else:
-                transform_set.transform_set.insert(pos, transform)
-                return transform_set.transform_set
+                transforms: list[
+                    BaseTransform | TransformFn
+                ] = transform_set.transform_set[:]
+                transforms.insert(pos, transform)
+                return transforms
 
         def __repr__(self):
             return transform_set.__repr__()

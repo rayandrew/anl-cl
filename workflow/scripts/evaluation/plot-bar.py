@@ -57,6 +57,9 @@ class Result:
     # auroc: float
 
 
+RESULT_COLUMNS = ["label", "value"]
+
+
 def get_metrics(
     summaries: Sequence[TrainingSummary], labels: Sequence[str]
 ) -> Result:
@@ -68,7 +71,6 @@ def get_metrics(
     avg_forgettings: list[Tuple[str, float]] = []
     for summary, label in zip(summaries, labels):
         log.info(f"Label: {label}, summaries: {len(summaries)}")
-        log.info(summaries)
         for i in range(len(summary.avg_f1)):
             avg_f1s.append((label, np.mean(summary.avg_f1[i]).item()))
             avg_precisions.append(
@@ -80,18 +82,22 @@ def get_metrics(
             avg_forgettings.append((label, summary.ovr_avg_forgetting))
 
     return Result(
-        f1=pd.DataFrame(avg_f1s, columns=["label", "value"]),
-        precision=pd.DataFrame(avg_precisions, columns=["label", "value"]),
-        recall=pd.DataFrame(avg_recalls, columns=["label", "value"]),
-        auroc=pd.DataFrame(avg_aurocs, columns=["label", "value"]),
-        acc=pd.DataFrame(avg_accs, columns=["label", "value"]),
-        forgetting=pd.DataFrame(avg_forgettings, columns=["label", "value"]),
+        f1=pd.DataFrame(avg_f1s, columns=RESULT_COLUMNS),
+        precision=pd.DataFrame(avg_precisions, columns=RESULT_COLUMNS),
+        recall=pd.DataFrame(avg_recalls, columns=RESULT_COLUMNS),
+        auroc=pd.DataFrame(avg_aurocs, columns=RESULT_COLUMNS),
+        acc=pd.DataFrame(avg_accs, columns=RESULT_COLUMNS),
+        forgetting=pd.DataFrame(avg_forgettings, columns=RESULT_COLUMNS),
     )
 
 
 def plot_bar(data: pd.DataFrame, label: str):
     label = label.upper()
-    fig, ax = plt.subplots(figsize=(0.2 * len(data), 5))
+    fig, ax = plt.subplots(figsize=(0.2 * len(data) + 2, 5))
+    temp_data = data.copy()
+    temp_data = temp_data.sort_values(
+        by=["value"], ascending=False
+    ).reset_index(drop=True)
     sns.barplot(x="label", y="value", data=data, ax=ax)
     # sns.barplot(x="label", y="value", data=df, ax=ax)
     ax.set_ylabel(label)
@@ -150,9 +156,8 @@ def main():
     config = snakemake.config
 
     set_seed(config.get("seed", 0))
-    print(str(snakemake.input))
+    log.info("Input path %s", str(snakemake.input))
     input_paths = Path(str(snakemake.input)).glob("**/train_results.json")
-    print(input_paths)
     output_folder = Path(str(snakemake.output))
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -160,7 +165,7 @@ def main():
     summaries = []
 
     for input in input_paths:
-        print(input)
+        log.info("Processing input: %s", input)
         label = label_from_path(input)
         labels.append(label)
         summary = generate_summary(input)

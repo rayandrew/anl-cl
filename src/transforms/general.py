@@ -190,8 +190,7 @@ class NamedInjectTransform(BaseTransform):
 
     def __repr__(self) -> str:
         return f"""NamedInjectTransform(
-            identifier={self.identifier},
-            transform={self.transform})"""
+            identifier={self.identifier})"""
 
 
 def add_transform_to_feature_engineering(

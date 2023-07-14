@@ -110,10 +110,7 @@ class BaseFeatureEngineering(metaclass=ABCMeta):
             preprocess_transform_set=[
         """
             + ",\n".join(
-                [
-                    f"                {transform}"
-                    for transform in self.preprocess_transform_set
-                ]
+                [f"{transform}" for transform in self.preprocess_transform_set]
             )
             if self.preprocess_transform_set is not None
             else ""
@@ -122,10 +119,7 @@ class BaseFeatureEngineering(metaclass=ABCMeta):
             chunk_transform_set=[
         """
             + ",\n".join(
-                [
-                    f"                {transform}"
-                    for transform in self.chunk_transform_set
-                ]
+                [f"{transform}" for transform in self.chunk_transform_set]
             )
             if self.chunk_transform_set is not None
             else ""
@@ -134,10 +128,7 @@ class BaseFeatureEngineering(metaclass=ABCMeta):
             postprocess_transform_set=[
         """
             + ",\n".join(
-                [
-                    f"                {transform}"
-                    for transform in self.postprocess_transform_set
-                ]
+                [f"{transform}" for transform in self.postprocess_transform_set]
             )
             if self.postprocess_transform_set is not None
             else ""

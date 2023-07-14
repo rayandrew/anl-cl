@@ -5,7 +5,7 @@ from sklearn.discriminant_analysis import StandardScaler
 
 from src.helpers.config import Config
 
-from .base import BaseTransform, TAcceptableTransform, apply_transforms
+from .base import BaseTransform, Transform, apply_transforms
 from .general import ColumnsDropTransform
 
 
@@ -228,7 +228,7 @@ class Baseline_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[TAcceptableTransform] = [
+        self._transforms: list[Transform] = [
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ColumnsDropTransform(columns=self._non_feature_columns),
@@ -254,7 +254,7 @@ class FeatureA_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[TAcceptableTransform] = [
+        self._transforms: list[Transform] = [
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ThrottleHistoryTransform(colname="collection_logical_name_mapped"),
@@ -293,7 +293,7 @@ class FeatureB_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[TAcceptableTransform] = [
+        self._transforms: list[Transform] = [
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ThrottleHistoryTransform(colname="collection_logical_name_mapped"),

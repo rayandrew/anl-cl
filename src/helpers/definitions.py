@@ -5,6 +5,9 @@ from snakemake.io import InputFiles, Log, OutputFiles, Params, Wildcards
 
 from src.utils.ds import StrEnum
 
+DD_ID = "drift-detection"
+DD_DIST_COLUMN = "dist_id"
+
 
 class Dataset(StrEnum):
     ALIBABA = "alibaba"
@@ -79,4 +82,6 @@ __all__ = [
     "Training",
     "DriftDetector",
     "Snakemake",
+    "DD_ID",
+    "DD_DIST_COLUMN",
 ]

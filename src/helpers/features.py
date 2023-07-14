@@ -1,11 +1,11 @@
 from src.helpers.config import Config
 from src.helpers.definitions import Dataset
-from src.transforms.base import BaseFeatureTransformSet
+from src.transforms.base import BaseFeatureEngineering
 
 NO_FEATS = "no-feature"
 
 
-def get_features(config: Config) -> BaseFeatureTransformSet:
+def get_features(config: Config) -> BaseFeatureEngineering:
     feature = config.dataset.feature
     dataset_name = config.dataset.name
 
@@ -15,9 +15,9 @@ def get_features(config: Config) -> BaseFeatureTransformSet:
 
             return NoFeats(config)
         elif feature == "feature-a":
-            from src.transforms.azure_vmcpu import FeatureA_TransformSet
+            from src.transforms.azure_vmcpu import FeatureEngineering_A
 
-            return FeatureA_TransformSet(config)
+            return FeatureEngineering_A(config)
         else:
             raise ValueError(f"[AZURE] Unknown feature: {feature}")
     else:

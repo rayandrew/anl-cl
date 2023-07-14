@@ -2,13 +2,15 @@ import numpy as np
 import pandas as pd
 
 from src.helpers.config import Config
-from src.transforms.base import BaseTransform, TransformFn
+from src.helpers.definitions import DD_ID
+from src.transforms.base import Transform
 from src.utils.logging import logging
 
-from .base import BaseFeatureTransformSet, BaseTransform, TransformFn
+from .base import BaseFeatureEngineering, BaseTransform, Transform
 from .general import (
     ColumnsDropTransform,
     DiscretizeColumnTransform,
+    NamedInjectTransform,
     OneHotColumnsTransform,
     PrintColumnsTransform,
 )
@@ -87,7 +89,7 @@ NON_FEATURE_COLUMNS = [
 ]
 
 
-class NoFeats(BaseFeatureTransformSet):
+class NoFeats(BaseFeatureEngineering):
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._config = config
@@ -97,7 +99,7 @@ class NoFeats(BaseFeatureTransformSet):
         )
 
     @property
-    def transform_set(self) -> list[BaseTransform | TransformFn]:
+    def preprocess_transform_set(self) -> list[Transform] | None:
         return [
             ColumnsDropTransform(columns=self._non_feature_columns),
             DiscretizeColumnTransform(
@@ -115,7 +117,7 @@ class NoFeats(BaseFeatureTransformSet):
         return "NoFeats()"
 
 
-class FeatureA_TransformSet(BaseFeatureTransformSet):
+class FeatureEngineering_A(BaseFeatureEngineering):
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._config = config
@@ -129,7 +131,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
         )
 
     @property
-    def transform_set(self) -> list[BaseTransform | TransformFn]:
+    def preprocess_transform_set(self) -> list[Transform] | None:
         return [
             PrintColumnsTransform("Original Columns"),
             lambda data: data.copy(),
@@ -137,6 +139,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
                 drop=True
             ),
             lambda data: data.iloc[0:10_000],
+            NamedInjectTransform(DD_ID),
             BucketSubscriptionCPUPercentTransform(self._config.dataset.target),
             OneHotColumnsTransform(
                 columns=[
@@ -153,7 +156,6 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
                 drop_original=True,
             ),
             PrintColumnsTransform("Final Columns"),
-            # lambda data: data.iloc[0:10_000],
         ]
 
     @property
@@ -161,7 +163,7 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
         return self._target_name
 
     def __repr__(self) -> str:
-        return "FeatureA_TransformSet()"
+        return "AzureVM_FeatureA()"
 
 
-__all__ = ["BucketSubscriptionCPUPercentTransform", "FeatureA_TransformSet"]
+__all__ = ["BucketSubscriptionCPUPercentTransform", "FeatureEngineering_A"]

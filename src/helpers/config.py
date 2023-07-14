@@ -69,6 +69,7 @@ class GeneralConfig(DynamicConfig):
     test_batch: int = 32
     wandb: str | None = None
     online: bool = False
+    train_ratio: float = 0.8
 
 
 class Config(GeneralConfig):

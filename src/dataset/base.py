@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from torch.utils.data import Dataset
 
@@ -9,10 +9,9 @@ from avalanche.benchmarks.utils.data import AvalancheDataset
 import numpy as np
 import pandas as pd
 
-from src.transforms import TAcceptableTransform, apply_transforms
+from src.transforms import BaseFeatureEngineering
 
 TDatasetSubset = Literal["training", "testing", "all"]
-TDataset = TypeVar("TDataset", bound="BaseDataset")
 # TProcessor = TypeVar("TProcessor", bound="BaseDatasetPreprocessor")
 TAvalancheDataset = TypeVar("TAvalancheDataset", bound=AvalancheDataset)
 
@@ -74,46 +73,57 @@ class BaseDataset(_BaseDataset):
         )
 
 
+TDataset = TypeVar("TDataset", bound=BaseDataset)
+
+
 @dataclass
 class BaseDatasetAccessor(Generic[TDataset]):
     train: TDataset
     test: TDataset
 
 
+TAccessor = TypeVar("TAccessor", bound=BaseDatasetAccessor)
 TGeneratorReturn = TypeVar("TGeneratorReturn")
 
 
-class BaseDatasetGenerator(Generic[TGeneratorReturn], metaclass=ABCMeta):
-    def __init__(
-        self,
-        target: str,
-        train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: TAcceptableTransform
-        | list[TAcceptableTransform]
-        | None = None,
-    ):
-        self.train_ratio = train_ratio
-        self._target = target
-        self._transform = transform
-
-    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
-        return apply_transforms(df, self._transform)
-
-    @property
-    @abstractmethod
-    def data(self) -> pd.DataFrame:
+class BaseDatasetPrototype(Generic[TDataset, TAccessor], metaclass=ABCMeta):
+    def create_accessor(self, train: Any, test: Any, **kwargs) -> TAccessor:
         raise NotImplementedError
 
+    def create_dataset(self, X: Any, y: Any, **kwargs) -> TDataset:
+        raise NotImplementedError
+
+
+TDatasetPrototype = TypeVar("TDatasetPrototype", bound=BaseDatasetPrototype)
+
+# TFeatureEngineering = TypeVar(
+#     "TFeatureEngineering", bound=BaseFeatureEngineering
+# )
+
+
+class BaseDatasetGenerator(
+    Generic[TDataset, TAccessor],
+    metaclass=ABCMeta,
+):
+    def __init__(
+        self,
+        prototype: BaseDatasetPrototype[TDataset, TAccessor],
+        target: str,
+        feature_engineering: BaseFeatureEngineering,
+        train_ratio: float,
+    ):
+        self.target = target
+        self.feature_engineering = feature_engineering
+        self._prototype = prototype
+        self.train_ratio = train_ratio
+
     @property
-    def target(self):
-        return self._target
+    def prototype(self) -> BaseDatasetPrototype[TDataset, TAccessor]:
+        return self._prototype
 
     @abstractmethod
-    def __call__(self, shuffle: bool = False) -> TGeneratorReturn:
+    def __call__(self, shuffle: bool = False) -> Any:
         pass
-
-    def generate(self, shuffle: bool = False) -> TGeneratorReturn:
-        return self.__call__(shuffle=shuffle)
 
 
 __all__ = [
@@ -121,7 +131,11 @@ __all__ = [
     "BaseDataset",
     "TDatasetSubset",
     "TDataset",
+    "TAccessor",
+    "TGeneratorReturn",
+    "TDatasetPrototype",
     "assert_dataset_subset",
     "BaseDatasetAccessor",
     "BaseDatasetGenerator",
+    "BaseDatasetPrototype",
 ]

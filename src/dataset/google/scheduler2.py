@@ -9,7 +9,7 @@ from src.dataset.base import (
     BaseDatasetAccessor,
     BaseDatasetGenerator,
 )
-from src.transforms import TAcceptableTransform
+from src.transforms import Transform
 from src.utils.general import read_dataframe
 from src.utils.general import split_dataset as split_dataset_fn
 
@@ -46,9 +46,7 @@ class BaseGoogleSchedulerDatasetGenerator(
         target: str = "util_cpu",
         n_labels: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: TAcceptableTransform
-        | list[TAcceptableTransform]
-        | None = None,
+        transform: Transform | list[Transform] | None = None,
     ):
         super(BaseGoogleSchedulerDatasetGenerator, self).__init__(
             target=target,
@@ -123,9 +121,7 @@ class GoogleSchedulerDatasetChunkGenerator(
         n_labels: int = 4,
         n_split: int = 4,
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: TAcceptableTransform
-        | list[TAcceptableTransform]
-        | None = None,
+        transform: Transform | list[Transform] | None = None,
     ):
         super(GoogleSchedulerDatasetChunkGenerator, self).__init__(
             file=file,
@@ -171,9 +167,7 @@ class GoogleSchedulerDatasetDistChunkGenerator(
         n_labels: int = 4,
         dist_col: str = "dist_id",
         train_ratio: float = BaseDataset.TRAIN_RATIO,
-        transform: TAcceptableTransform
-        | list[TAcceptableTransform]
-        | None = None,
+        transform: Transform | list[Transform] | None = None,
     ):
         super(GoogleSchedulerDatasetDistChunkGenerator, self).__init__(
             file=file,

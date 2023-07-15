@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import TypeVar
 
 from avalanche.benchmarks.utils import (
     AvalancheDataset,
@@ -6,6 +7,11 @@ from avalanche.benchmarks.utils import (
 )
 
 from src.dataset.base import BaseDatasetAccessor
+from src.transforms.base import BaseFeatureEngineering
+
+TFeatureEngineering = TypeVar(
+    "TFeatureEngineering", bound=BaseFeatureEngineering
+)
 
 
 class AvalancheClassificationDatasetAccessor(
@@ -20,9 +26,11 @@ def create_avalanche_classification_dataset(
     return AvalancheClassificationDatasetAccessor(
         train=make_classification_dataset(
             dataset.train,
+            task_labels=getattr(dataset.train, "tasks", None),
         ),
         test=make_classification_dataset(
             dataset.test,
+            task_labels=getattr(dataset.test, "tasks", None),
         ),
     )
 

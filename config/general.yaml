@@ -9,3 +9,4 @@ batch: 32
 test_batch: 32
 online: false
 model_name: "model"
+train_ratio: 0.7

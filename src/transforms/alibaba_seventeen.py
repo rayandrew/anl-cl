@@ -2,7 +2,7 @@ import pandas as pd
 
 from src.helpers.config import Config
 
-from .base import BaseFeatureTransformSet, BaseTransform, apply_transforms
+from .base import BaseFeatureEngineering, BaseTransform, Transform
 from .general import ColumnsDropTransform, DiscretizeColumnTransform
 
 
@@ -85,9 +85,10 @@ NON_FEATURE_COLUMNS = [
 ]
 
 
-class FeatureA_TransformSet(BaseFeatureTransformSet):
+class FeatureEngineering_A(BaseFeatureEngineering):
     def __init__(self, config: Config) -> None:
         super().__init__()
+        self._config = config
         self._target_name = f"bucket_{config.dataset.target}"
         self._non_feature_columns = list(
             filter(
@@ -95,13 +96,16 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
                 NON_FEATURE_COLUMNS,
             )
         )
-        self._transforms: list[BaseTransform] = [
+
+    @property
+    def preprocess_transform_set(self) -> list[Transform] | None:
+        return [
             CleanDataTransform(),
             ColumnsDropTransform(
                 columns=self._non_feature_columns + ["cpu_set"]
             ),
             DiscretizeColumnTransform(
-                column=config.dataset.target,
+                column=self._config.dataset.target,
                 new_column=self._target_name,
             ),
         ]
@@ -110,16 +114,10 @@ class FeatureA_TransformSet(BaseFeatureTransformSet):
     def target_name(self) -> str:
         return self._target_name
 
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        return apply_transforms(data, self._transforms)
-
-    def __repr__(self) -> str:
-        return "FeatureA_TransformSet()"
-
 
 __all__ = [
     "CleanDataTransform",
     "StrCountTransform",
     "NON_FEATURE_COLUMNS",
-    "FeatureA_TransformSet",
+    "FeatureEngineering_A",
 ]

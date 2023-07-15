@@ -4,6 +4,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from src.dataset.generator import SplitChunkGenerator
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import (
     AvalancheClassificationDatasetAccessor,
@@ -22,41 +23,63 @@ log = logging.getLogger(__name__)
 
 
 def get_dataset(config: Config, input_path: Path):
-    data_transformer = get_features(config)
+    feature_engineering = get_features(config)
     match config.dataset.name:
         case Dataset.ALIBABA:
             from src.dataset.alibaba.container_seventeen import (
-                AlibabaContainerDatasetChunkGenerator,
+                AlibabaContainerDataAccessor,
+                AlibabaContainerDataset,
+                AlibabaContainerDatasetPrototype,
             )
 
-            generator = AlibabaContainerDatasetChunkGenerator(
+            generator: SplitChunkGenerator[
+                AlibabaContainerDataset, AlibabaContainerDataAccessor
+            ] = SplitChunkGenerator(
                 file=input_path,
-                target=data_transformer.target_name,
+                prototype=AlibabaContainerDatasetPrototype(),
+                target=feature_engineering.target_name,
                 n_split=config.scenario.num_split,  # type: ignore
-                transform=data_transformer,
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
             )
         case Dataset.AZURE:
-            from src.dataset.azure.vmcpu import AzureVMDatasetChunkGenerator
-
-            generator = AzureVMDatasetChunkGenerator(
-                file=input_path,
-                target=data_transformer.target_name,
-                n_split=config.scenario.num_split,  # type: ignore
-                transform=data_transformer,
+            from src.dataset.azure.vmcpu import (
+                AzureVMDataAccessor,
+                AzureVMDataset,
+                AzureVMDatasetPrototype,
             )
-        case Dataset.GOOGLE:
-            from src.dataset.google.scheduler2 import GoogleSchedulerDatasetChunkGenerator
 
-            generator = GoogleSchedulerDatasetChunkGenerator(
-                file=input_path,
-                target=data_transformer.target_name,
-                n_labels=config.num_classes,
+            generator: SplitChunkGenerator[
+                AzureVMDataset, AzureVMDataAccessor
+            ] = SplitChunkGenerator(
+                data=input_path,
+                prototype=AzureVMDatasetPrototype(),
+                target=feature_engineering.target_name,
                 n_split=config.scenario.num_split,  # type: ignore
-                transform=data_transformer,
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
+            )
+        case "google":
+            from src.dataset.google.scheduler2 import (
+                GoogleSchedulerDataAccessor,
+                GoogleSchedulerDataset,
+                GoogleSchedulerDatasetPrototype,
+            )
+
+            generator: SplitChunkGenerator[
+                GoogleSchedulerDataset, GoogleSchedulerDataAccessor
+            ] = SplitChunkGenerator(
+                data=input_path,
+                prototype=GoogleSchedulerDatasetPrototype(),
+                target=feature_engineering.target_name,
+                n_split=config.scenario.num_split,  # type: ignore
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
             )
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
 
+    log.info("%s", feature_engineering)
     dataset = generator()
     if len(dataset) == 0:
         raise ValueError("Dataset is empty")

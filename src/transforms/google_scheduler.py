@@ -5,7 +5,7 @@ from sklearn.discriminant_analysis import StandardScaler
 
 from src.helpers.config import Config
 
-from .base import BaseTransform, TAcceptableTransform, apply_transforms
+from .base import BaseFeatureEngineering, BaseTransform, Transform
 from .general import ColumnsDropTransform
 
 
@@ -19,7 +19,6 @@ class CleanDataTransform(BaseTransform):
         data = data.dropna(subset=["util_cpu", "cpu_95"])
         data = data.sort_values(by=["start_time"])
         data = data.drop(columns=self.excludes)
-        data = data.head(200000)
         data = data.reset_index(drop=True)
         return data
 
@@ -218,8 +217,13 @@ ALL_FEATURE_COLUMNS = [
     "constraint_mapped",
 ]
 
+# GOOGLE_BASE_TRANSFORMS = [
+#     lambda data: data.sort_values(by=["start_time"]),
+#     lambda data: data.head(200000),
+# ]
 
-class Baseline_TransformSet(BaseTransform):
+
+class FeatureEngineering_Baseline(BaseFeatureEngineering):
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._target_name = f"bucket_{config.dataset.target}"
@@ -228,24 +232,24 @@ class Baseline_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[TAcceptableTransform] = [
+
+    @property
+    def preprocess_transform_set(self) -> list[Transform] | None:
+        return [
+            lambda data: data.sort_values(by=["start_time"]),
+            lambda data: data.head(200000),
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ColumnsDropTransform(columns=self._non_feature_columns),
+            lambda data: data.fillna(-1),
         ]
 
     @property
     def target_name(self) -> str:
         return self._target_name
 
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        return apply_transforms(data, self._transforms)
 
-    def __repr__(self) -> str:
-        return "Baseline_TransformSet()"
-
-#TODO TRANSFORM SETS
-class FeatureA_TransformSet(BaseTransform):
+class FeatureEngineering_A(BaseFeatureEngineering):
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._target_name = f"bucket_{config.dataset.target}"
@@ -254,37 +258,40 @@ class FeatureA_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[TAcceptableTransform] = [
+
+    @property
+    def preprocess_transform_set(self) -> list[Transform] | None:
+        def scaler_transform(data: pd.DataFrame) -> pd.DataFrame:
+            scaler = StandardScaler()
+            # Select the columns to be scaled (excluding "bucket_util_cpu")
+            columns_to_scale = [
+                col for col in data.columns if col != self._target_name
+            ]
+
+            # Scale the selected columns
+            data[columns_to_scale] = scaler.fit_transform(
+                data[columns_to_scale]
+            )
+            return data
+
+        return [
+            lambda data: data.sort_values(by=["start_time"]),
+            lambda data: data.head(200000),
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ThrottleHistoryTransform(colname="collection_logical_name_mapped"),
             ThrottleHistoryTransform(colname="constraint_mapped"),
             ColumnsDropTransform(columns=self._non_feature_columns),
+            scaler_transform,
+            lambda data: data.fillna(-1),
         ]
 
     @property
     def target_name(self) -> str:
         return self._target_name
 
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        print("disini jg")
-        data = apply_transforms(data, self._transforms)
-        print(data.columns)
-        scaler = StandardScaler()
-        # Select the columns to be scaled (excluding "bucket_util_cpu")
-        columns_to_scale = [
-            col for col in data.columns if col != self._target_name
-        ]
 
-        # Scale the selected columns
-        data[columns_to_scale] = scaler.fit_transform(data[columns_to_scale])
-        return data
-
-    def __repr__(self) -> str:
-        return "FeatureA_TransformSet()"
-
-
-class FeatureB_TransformSet(BaseTransform):
+class FeatureEngineering_B(BaseFeatureEngineering):
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._target_name = f"bucket_{config.dataset.target}"
@@ -293,25 +300,38 @@ class FeatureB_TransformSet(BaseTransform):
             for feature in ALL_FEATURE_COLUMNS
             if feature not in FEATURE_COLUMNS
         ]
-        self._transforms: list[TAcceptableTransform] = [
+
+    @property
+    def preprocess_transform_set(self) -> list[Transform] | None:
+        def scaler_transform(data: pd.DataFrame) -> pd.DataFrame:
+            scaler = StandardScaler()
+            # Select the columns to be scaled (excluding "bucket_util_cpu")
+            columns_to_scale = [
+                col for col in data.columns if col != self._target_name
+            ]
+
+            # Scale the selected columns
+            data[columns_to_scale] = scaler.fit_transform(
+                data[columns_to_scale]
+            )
+            return data
+        return [
+            lambda data: data.sort_values(by=["start_time"]),
+            lambda data: data.head(200000),
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ThrottleHistoryTransform(colname="collection_logical_name_mapped"),
-            ThrottleHistoryTransform(colname="scheduler_mapped"),
+            ThrottleHistoryTransform(colname="constraint_mapped"),
             DurationHistoryTransform(colname="collection_logical_name_mapped"),
-            DurationHistoryTransform(colname="scheduler_mapped"),
+            DurationHistoryTransform(colname="constraint_mapped"),
             ColumnsDropTransform(columns=self._non_feature_columns),
+            scaler_transform,
+            lambda data: data.fillna(-1),
         ]
 
     @property
     def target_name(self) -> str:
         return self._target_name
-
-    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
-        return apply_transforms(data, self._transforms)
-
-    def __repr__(self) -> str:
-        return "FeatureB_TransformSet()"
 
 
 __all__ = [
@@ -319,7 +339,7 @@ __all__ = [
     "CleanDataTransform",
     "DurationHistoryTransform",
     "ThrottleHistoryTransform",
-    "Baseline_TransformSet",
-    "FeatureA_TransformSet",
-    "FeatureB_TransformSet",
+    "FeatureEngineering_Baseline",
+    "FeatureEngineering_A",
+    "FeatureEngineering_B",
 ]

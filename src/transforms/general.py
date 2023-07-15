@@ -3,11 +3,15 @@ from typing import Callable, Literal
 import numpy.typing as npt
 import pandas as pd
 
-from src.transforms.base import BaseTransform, TransformFn
+from src.transforms.base import (
+    BaseFeatureEngineering,
+    Transform,
+    apply_transforms,
+)
 from src.utils.general import append_prev_feature, discretize_column
 from src.utils.logging import logging
 
-from .base import BaseFeatureTransformSet, BaseTransform
+from .base import BaseTransform
 
 log = logging.getLogger(__name__)
 
@@ -124,7 +128,7 @@ class OneHotColumnTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return f"OneHotColumnTransform(column={self.column})"
+        return f'OneHotColumnTransform(column="{self.column}")'
 
 
 class OneHotColumnsTransform(BaseTransform):
@@ -142,41 +146,7 @@ class OneHotColumnsTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return "OneHotColumnsTransform()"
-
-
-def add_transform_to_transform_set(
-    transform_set: BaseFeatureTransformSet,
-    transform: BaseTransform,
-    pos: int | Literal["start", "end"] = 0,
-):
-    class _AddTransformSet(BaseFeatureTransformSet):
-        def __init__(
-            self,
-        ):
-            super().__init__()
-
-        @property
-        def target_name(self) -> str:
-            return transform_set.target_name
-
-        @property
-        def transform_set(self) -> list[BaseTransform | TransformFn]:
-            if pos == "start":
-                return [transform] + transform_set.transform_set
-            elif pos == "end":
-                return transform_set.transform_set + [transform]
-            else:
-                transforms: list[
-                    BaseTransform | TransformFn
-                ] = transform_set.transform_set[:]
-                transforms.insert(pos, transform)
-                return transforms
-
-        def __repr__(self):
-            return transform_set.__repr__()
-
-    return _AddTransformSet()
+        return f"OneHotColumnsTransform(columns={self.columns})"
 
 
 class PassThroughTransform(BaseTransform):
@@ -203,7 +173,109 @@ class PrintColumnsTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return f"PrintColumnsTransform(identifier={self.identifier})"
+        return f'PrintColumnsTransform(identifier="{self.identifier}")'
+
+
+class NamedInjectTransform(BaseTransform):
+    def __init__(self, identifier: str) -> None:
+        super().__init__()
+        self.identifier = identifier
+        self._transform_fn: Transform | None = None
+
+    def set_transform_fn(self, transform_fn: Transform) -> None:
+        self._transform_fn = transform_fn
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        return apply_transforms(data, self._transform_fn)
+
+    def __repr__(self) -> str:
+        return f'NamedInjectTransform(identifier="{self.identifier}")'
+
+
+def add_transform_to_feature_engineering(
+    feature_engineering: BaseFeatureEngineering,
+    transform: Transform,
+    pos: int | Literal["start", "end"] | str = 0,
+    sections: list[Literal["preprocess", "chunk"]] = [],
+):
+    if len(sections) == 0:
+        raise ValueError("sections must be a non-empty list")
+
+    class _AddTransformSet(BaseFeatureEngineering):
+        def __init__(
+            self,
+        ):
+            super().__init__()
+
+        @property
+        def target_name(self) -> str:
+            return feature_engineering.target_name
+
+        @property
+        def preprocess_transform_set(self) -> list[Transform] | None:
+            preprocess_set = feature_engineering.preprocess_transform_set
+            if preprocess_set is None:
+                preprocess_set = []
+            else:
+                preprocess_set = preprocess_set[:]
+
+            if "preprocess" in sections:
+                if pos == "start":
+                    return [transform] + preprocess_set
+                elif pos == "end":
+                    return preprocess_set + [transform]
+                elif isinstance(pos, int):
+                    preprocess_set.insert(pos, transform)
+                    return preprocess_set
+                else:
+                    found = False
+                    for _transform in preprocess_set:
+                        if isinstance(_transform, NamedInjectTransform):
+                            if _transform.identifier == pos:
+                                _transform.set_transform_fn(transform)
+                                found = True
+
+                    if not found:
+                        log.warning(
+                            "No transform with identifier %s, skipping...", pos
+                        )
+                    return preprocess_set
+            return preprocess_set
+
+        @property
+        def chunk_transform_set(self) -> list[Transform] | None:
+            preprocess_set = feature_engineering.chunk_transform_set
+            if preprocess_set is None:
+                preprocess_set = []
+            else:
+                preprocess_set = preprocess_set[:]
+
+            if "chunk" in sections:
+                if pos == "start":
+                    return [transform] + preprocess_set
+                elif pos == "end":
+                    return preprocess_set + [transform]
+                elif isinstance(pos, int):
+                    preprocess_set.insert(pos, transform)
+                    return preprocess_set
+                else:
+                    found = False
+                    for _transform in preprocess_set:
+                        if isinstance(_transform, NamedInjectTransform):
+                            if _transform.identifier == pos:
+                                _transform.set_transform_fn(transform)
+                                found = True
+                    if not found:
+                        log.warning(
+                            "No transform with identifier %s, skipping...", pos
+                        )
+                    return preprocess_set
+            return preprocess_set
+
+        def __repr__(self):
+            return feature_engineering.__repr__()
+
+    return _AddTransformSet()
 
 
 __all__ = [
@@ -214,7 +286,8 @@ __all__ = [
     "ApplyFnOnColumnTransform",
     "OneHotColumnTransform",
     "OneHotColumnsTransform",
-    "add_transform_to_transform_set",
+    "add_transform_to_feature_engineering",
     "PassThroughTransform",
     "PrintColumnsTransform",
+    "NamedInjectTransform",
 ]

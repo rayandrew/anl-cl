@@ -5,19 +5,19 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pandas as pd
 
+from src.dataset.generator import DistributionColumnBasedGenerator
 from src.drift_detection.voting import get_offline_voting_drift_detector
 from src.helpers.config import Config, assert_config_params
 from src.helpers.dataset import create_avalanche_classification_datasets
-from src.helpers.definitions import Dataset, Snakemake
+from src.helpers.definitions import DD_DIST_COLUMN, DD_ID, Dataset, Snakemake
 from src.helpers.features import get_features
 from src.helpers.scenario import train_classification_scenario
-from src.transforms import add_transform_to_transform_set
+from src.transforms.general import add_transform_to_feature_engineering
 from src.utils.logging import logging, setup_logging
 
 if TYPE_CHECKING:
     snakemake: Snakemake = Snakemake()
 
-DIST_COLUMN = "dist_id"
 
 setup_logging(snakemake.log[0])
 log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def add_dist_label(data: pd.DataFrame, dist: Sequence[int], start_from=0):
         distributions[dist[i] : dist[i + 1]] = i + 1 + start_from
     distributions[dist[-1] :] = len(dist) + start_from
 
-    data[DIST_COLUMN] = pd.Series(distributions)
+    data[DD_DIST_COLUMN] = pd.Series(distributions)
     return data
 
 
@@ -59,48 +59,71 @@ def dd_transform(config: Config, target_name: str):
 
 
 def get_dataset(config: Config, input_path: Path):
-    data_transformer = get_features(config)
+    feature_engineering = get_features(config)
     dd_transformer = dd_transform(config, config.dataset.target)
-
-    data_transformer = add_transform_to_transform_set(
-        data_transformer, dd_transformer, pos=3
+    feature_engineering = add_transform_to_feature_engineering(
+        feature_engineering,
+        dd_transformer,
+        pos=DD_ID,
+        sections=["preprocess"],
     )
 
     match config.dataset.name:
         case Dataset.ALIBABA:
             from src.dataset.alibaba.container_seventeen import (
-                AlibabaContainerDatasetDistChunkGenerator,
+                AlibabaContainerDataAccessor,
+                AlibabaContainerDataset,
+                AlibabaContainerDatasetPrototype,
             )
 
-            generator = AlibabaContainerDatasetDistChunkGenerator(
-                file=input_path,
-                target=data_transformer.target_name,
-                dist_col=DIST_COLUMN,
-                transform=data_transformer,
+            generator: DistributionColumnBasedGenerator[
+                AlibabaContainerDataset, AlibabaContainerDataAccessor
+            ] = DistributionColumnBasedGenerator(
+                data=input_path,
+                prototype=AlibabaContainerDatasetPrototype(),
+                target=feature_engineering.target_name,
+                dist_col=DD_DIST_COLUMN,
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
             )
         case Dataset.AZURE:
-            from src.dataset.azure.vmcpu import AzureVMDatasetDistChunkGenerator
+            from src.dataset.azure.vmcpu import (
+                AzureVMDataAccessor,
+                AzureVMDataset,
+                AzureVMDatasetPrototype,
+            )
 
-            generator = AzureVMDatasetDistChunkGenerator(  # type: ignore
-                file=input_path,
-                target=data_transformer.target_name,
-                dist_col=DIST_COLUMN,
-                transform=data_transformer,
+            generator: DistributionColumnBasedGenerator[
+                AzureVMDataset, AzureVMDataAccessor
+            ] = DistributionColumnBasedGenerator(
+                data=input_path,
+                prototype=AzureVMDatasetPrototype(),
+                target=feature_engineering.target_name,
+                dist_col=DD_DIST_COLUMN,
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
             )
         case Dataset.GOOGLE:
             from src.dataset.google.scheduler2 import (
-                GoogleSchedulerDatasetDistChunkGenerator,
+                GoogleSchedulerDataAccessor,
+                GoogleSchedulerDataset,
+                GoogleSchedulerDatasetPrototype,
             )
 
-            generator = GoogleSchedulerDatasetDistChunkGenerator(
-                file=input_path,
-                target=data_transformer.target_name,
-                n_labels=config.num_classes,
-                transform=data_transformer,
+            generator: DistributionColumnBasedGenerator[
+                GoogleSchedulerDataset, GoogleSchedulerDataAccessor
+            ] = DistributionColumnBasedGenerator(
+                data=input_path,
+                prototype=GoogleSchedulerDatasetPrototype(),
+                target=feature_engineering.target_name,
+                dist_col=DD_DIST_COLUMN,
+                feature_engineering=feature_engineering,
+                train_ratio=config.train_ratio,
             )
-        
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
+
+    log.info("%s", feature_engineering)
 
     dataset = generator()
     if len(dataset) == 0:

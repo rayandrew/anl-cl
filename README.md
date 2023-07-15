@@ -68,6 +68,14 @@ PYTHONPATH=$PYTHONPATH:. snakemake \
                   ./config/dataset/azure/azure.yaml \
                   ./config/model/a.yaml \
                   ./config/strategies/no-retrain/no-retrain.yaml
+
+PYTHONPATH=$PYTHONPATH:. snakemake \
+    out/training/google/baseline/classification/batch/split-chunks/model-a/feature-b/no-retrain \
+    --configfiles ./config/general.yaml \
+                  ./config/scenario/split-chunks/split-chunks.yaml \
+                  ./config/dataset/google/google.yaml \
+                  ./config/model/a.yaml \
+                  ./config/strategies/no-retrain/no-retrain.yaml
 ```
 
 ### Evaluation

@@ -19,7 +19,6 @@ class CleanDataTransform(BaseTransform):
         data = data.dropna(subset=["util_cpu", "cpu_95"])
         data = data.sort_values(by=["start_time"])
         data = data.drop(columns=self.excludes)
-        data = data.head(200000)
         data = data.reset_index(drop=True)
         return data
 
@@ -304,16 +303,29 @@ class FeatureEngineering_B(BaseFeatureEngineering):
 
     @property
     def preprocess_transform_set(self) -> list[Transform] | None:
+        def scaler_transform(data: pd.DataFrame) -> pd.DataFrame:
+            scaler = StandardScaler()
+            # Select the columns to be scaled (excluding "bucket_util_cpu")
+            columns_to_scale = [
+                col for col in data.columns if col != self._target_name
+            ]
+
+            # Scale the selected columns
+            data[columns_to_scale] = scaler.fit_transform(
+                data[columns_to_scale]
+            )
+            return data
         return [
             lambda data: data.sort_values(by=["start_time"]),
             lambda data: data.head(200000),
             CleanDataTransform(),
             ClassifyThrottleTransform(new_column=self._target_name),
             ThrottleHistoryTransform(colname="collection_logical_name_mapped"),
-            ThrottleHistoryTransform(colname="scheduler_mapped"),
+            ThrottleHistoryTransform(colname="constraint_mapped"),
             DurationHistoryTransform(colname="collection_logical_name_mapped"),
-            DurationHistoryTransform(colname="scheduler_mapped"),
+            DurationHistoryTransform(colname="constraint_mapped"),
             ColumnsDropTransform(columns=self._non_feature_columns),
+            scaler_transform,
             lambda data: data.fillna(-1),
         ]
 

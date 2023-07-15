@@ -122,7 +122,7 @@ class BaseDatasetGenerator(
         return self._prototype
 
     @abstractmethod
-    def __call__(self, shuffle: bool = False) -> Any:
+    def __call__(self, shuffle: bool = True) -> Any:
         pass
 
 

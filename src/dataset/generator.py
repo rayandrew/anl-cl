@@ -63,7 +63,7 @@ class SplitChunkGenerator(
         )
         self.n_split = n_split
 
-    def __call__(self, shuffle: bool = False) -> list[TAccessor]:
+    def __call__(self, shuffle: bool = True) -> list[TAccessor]:
         data = self.feature_engineering.apply_preprocess_transform(self.data)
         size = len(data)
         split_size = size // self.n_split
@@ -122,7 +122,7 @@ class DistributionColumnBasedGenerator(
             sections=["chunk"],
         )
 
-    def __call__(self, shuffle: bool = False) -> list[TAccessor]:
+    def __call__(self, shuffle: bool = True) -> list[TAccessor]:
         subsets: list[TAccessor] = []
         data = self.feature_engineering.apply_preprocess_transform(self.data)
         grouped = data.groupby(self.dist_col)

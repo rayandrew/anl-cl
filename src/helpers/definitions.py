@@ -24,6 +24,8 @@ class Optimizer(StrEnum):
 class Scenario(StrEnum):
     SPLIT_CHUNKS = "split-chunks"
     DRIFT_DETECTION = "drift-detection"
+    NUM_ROWS = "num-rows"
+    TIME = "time"
 
 
 class Strategy(StrEnum):

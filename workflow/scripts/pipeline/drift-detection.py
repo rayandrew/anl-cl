@@ -120,6 +120,18 @@ def get_dataset(config: Config, input_path: Path):
                 feature_engineering=feature_engineering,
                 train_ratio=config.train_ratio,
             )
+        case Dataset.GOOGLE:
+            from src.dataset.google.scheduler2 import (
+                GoogleSchedulerDatasetDistChunkGenerator,
+            )
+
+            generator = GoogleSchedulerDatasetDistChunkGenerator(
+                file=input_path,
+                target=data_transformer.target_name,
+                n_labels=config.num_classes,
+                transform=data_transformer,
+            )
+        
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
 

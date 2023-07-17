@@ -26,9 +26,9 @@ def add_dist_label_row(data: pd.DataFrame, num_rows: int, start_from=0):
     distributions = np.zeros(len(data), dtype=int)
     print(data.columns)
     # Print the frequency of values
-    print("Bucket distribution: ")
-    frequency = data["bucket_util_cpu"].value_counts()
-    print(frequency)
+    # print("Bucket distribution: ")
+    # frequency = data["bucket_util_cpu"].value_counts()
+    # print(frequency)
 
     log.info(
         f"Number of distributions: {(len(data) + num_rows - 1) // num_rows}"

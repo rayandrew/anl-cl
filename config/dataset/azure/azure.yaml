@@ -2,4 +2,4 @@ dataset:
   name: azure
   target: p95maxcpu
   feature: feature-a
-  time_col: timestamp
+  time_column: timestamp

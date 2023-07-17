@@ -1,8 +1,10 @@
 # pyright: reportUndefinedVariable=false
-# noqa: F821
+# flake8: noqa: F821
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+import pandas as pd
 
 from src.dataset.generator import SplitChunkGenerator
 from src.helpers.config import Config, assert_config_params
@@ -13,6 +15,7 @@ from src.helpers.dataset import (
 from src.helpers.definitions import Dataset, Snakemake
 from src.helpers.features import get_features
 from src.helpers.scenario import train_classification_scenario
+from src.transforms.general import add_transform_to_feature_engineering
 from src.utils.logging import logging, setup_logging
 
 if TYPE_CHECKING:
@@ -47,6 +50,19 @@ def get_dataset(config: Config, input_path: Path):
                 AzureVMDataAccessor,
                 AzureVMDataset,
                 AzureVMDatasetPrototype,
+            )
+
+            def additional_preprocess(data: pd.DataFrame) -> pd.DataFrame:
+                data = data.copy()
+                # data = data.sort_values(by=["vmdeleted"]).reset_index(drop=True)
+                return data.iloc[0:10_000]
+
+            feature_engineering = add_transform_to_feature_engineering(
+                feature_engineering,
+                additional_preprocess,
+                pos="end",
+                # pos="start",
+                sections=["preprocess"],
             )
 
             generator: SplitChunkGenerator[

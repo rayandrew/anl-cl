@@ -1,3 +1,5 @@
+# flake8: noqa: E501
+
 import sys
 from pathlib import Path
 from typing import Any, Callable, Tuple
@@ -72,13 +74,13 @@ def train_classification_scenario(
 
     eval_plugin = EvaluationPlugin(
         *get_classification_default_metrics(
-            num_classes=config.num_classes,
+            num_classes=config.dataset.num_classes,
             tolerance=config.eval_tol,
         ),
         confusion_matrix_metrics(
             stream=True,
             wandb=wandb_logger is not None,
-            class_names=[str(i) for i in range(config.num_classes)],
+            class_names=[str(i) for i in range(config.dataset.num_classes)],
             save_image=True,
         ),
         loggers=loggers,
@@ -87,7 +89,7 @@ def train_classification_scenario(
     Model = get_model(config)
     model = Model(
         input_size=input_size,
-        num_classes=config.num_classes,
+        num_classes=config.dataset.num_classes,
         **config.model.dict(exclude={"name"}),
     )
 

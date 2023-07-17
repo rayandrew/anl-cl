@@ -26,6 +26,7 @@ class Scenario(StrEnum):
     DRIFT_DETECTION = "drift-detection"
     NUM_ROWS = "num-rows"
     TIME = "time"
+    EACH_DAY = "each-day"
 
 
 class Strategy(StrEnum):

@@ -3,3 +3,4 @@ dataset:
   target: p95maxcpu
   feature: feature-a
   time_col: timestamp
+  num_classes: 4

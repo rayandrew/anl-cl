@@ -2,7 +2,6 @@ base_path: "/lcrc/project/FastBayes/rayandrew/sched-cl"
 seed: 123
 num_workers: 4
 epochs: 4
-num_classes: 2
 optimizer: sgd
 eval_tol: 0
 batch: 32

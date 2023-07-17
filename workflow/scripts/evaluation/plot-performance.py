@@ -11,7 +11,7 @@ import seaborn as sns
 from src.helpers.definitions import Snakemake
 from src.utils.general import set_seed
 from src.utils.logging import logging, setup_logging
-from src.utils.summary import TrainingSummary, generate_summary
+from src.utils.summary import TaskSummary, TrainingSummary, generate_summary
 
 if TYPE_CHECKING:
     snakemake: Snakemake = Snakemake()
@@ -50,6 +50,7 @@ class Result:
     auroc: pd.DataFrame
     acc: pd.DataFrame
     forgetting: pd.DataFrame
+    task_summary: dict[str, dict[int, TaskSummary]]
     # label: str
     # f1: float
     # precision: float
@@ -69,8 +70,10 @@ def get_metrics(
     avg_aurocs: list[Tuple[str, float]] = []
     avg_accs: list[Tuple[str, float]] = []
     avg_forgettings: list[Tuple[str, float]] = []
+    task_summary: dict[str, dict[int, TaskSummary]] = {}
     for summary, label in zip(summaries, labels):
         log.info(f"Label: {label}, summaries: {len(summaries)}")
+
         for i in range(len(summary.avg_f1)):
             avg_f1s.append((label, np.mean(summary.avg_f1[i]).item()))
             avg_precisions.append(
@@ -81,6 +84,12 @@ def get_metrics(
             avg_accs.append((label, np.mean(summary.avg_acc[i]).item()))
             avg_forgettings.append((label, summary.ovr_avg_forgetting))
 
+        # if len(avg_accs) == 1:  # case of no-retrain
+        #     avg_accs = []
+        #     for i in range(len(summary.task_data)):
+        #         avg_accs.append((label, summary.task_data[i].acc[0]))
+        # log.info(f"Task: {i}, data={summary.task_data[i]}")
+
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=RESULT_COLUMNS),
         precision=pd.DataFrame(avg_precisions, columns=RESULT_COLUMNS),
@@ -88,6 +97,7 @@ def get_metrics(
         auroc=pd.DataFrame(avg_aurocs, columns=RESULT_COLUMNS),
         acc=pd.DataFrame(avg_accs, columns=RESULT_COLUMNS),
         forgetting=pd.DataFrame(avg_forgettings, columns=RESULT_COLUMNS),
+        task_summary=task_summary,
     )
 
 
@@ -204,6 +214,7 @@ def main():
             continue
 
         metric_name = metric.replace("avg_", "")
+        log.info("Plotting %s", metric_name)
 
         fig_bar_stddev = plot_bar(data=data, label=metric_name, get_last=False)
         fig_bar_stddev.savefig(output_folder / f"{metric}_bar_std.png", dpi=300)
@@ -213,6 +224,7 @@ def main():
         fig_bar_last.savefig(output_folder / f"{metric}_bar_last.png", dpi=300)
         plt.close(fig_bar_last)
 
+        # if len(data) > 1:
         fig_line = plot_line(data, metric_name)
         fig_line.savefig(output_folder / f"{metric}_line.png", dpi=300)
         plt.close(fig_line)

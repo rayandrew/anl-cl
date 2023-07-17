@@ -3,4 +3,5 @@ dataset:
   target: util_cpu
   time_col: start_time
   feature: feature-a
+  num_classes: 2
   

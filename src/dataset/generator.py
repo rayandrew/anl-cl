@@ -1,6 +1,6 @@
 from abc import ABCMeta
 from pathlib import Path
-from typing import Any, Generic
+from typing import Any, Generic, Literal
 
 import pandas as pd
 
@@ -103,6 +103,7 @@ class DistributionColumnBasedGenerator(
         target: str,
         feature_engineering: BaseFeatureEngineering,
         dist_col: str = "dist_id",
+        max_split: int | Literal["all"] = "all",
     ) -> None:
         DataFrameGenerator.__init__(self, data)
         BaseDatasetGenerator.__init__(
@@ -121,6 +122,7 @@ class DistributionColumnBasedGenerator(
             pos=0,
             sections=["chunk"],
         )
+        self.max_split = max_split
 
     def __call__(self, shuffle: bool = True) -> list[TAccessor]:
         subsets: list[TAccessor] = []
@@ -129,7 +131,10 @@ class DistributionColumnBasedGenerator(
 
         log.info(f"Number of groups: {len(grouped)}")
 
+        count = 0
         for _, group_data in grouped:
+            if self.max_split != "all" and count >= self.max_split:
+                break
             chunk_data = group_data.copy()
             chunk_data = self.feature_engineering.apply_chunk_transform(
                 chunk_data
@@ -143,6 +148,7 @@ class DistributionColumnBasedGenerator(
                     self.prototype.create_dataset(X_test, y_test),
                 )
             )
+            count += 1
 
         return subsets
 

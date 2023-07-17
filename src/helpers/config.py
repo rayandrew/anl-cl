@@ -35,6 +35,7 @@ class DatasetConfig(DynamicConfig):
     target: str
     feature: str
     time_col: str
+    num_classes: int
 
     @field_validator("feature")
     def check_feature_prefix(cls, v: str):
@@ -63,7 +64,6 @@ class GeneralConfig(DynamicConfig):
     seed: int = 0
     num_workers: int = 4
     epochs: int = 4
-    num_classes: int = 4
     eval_tol: int = 0
     optimizer: Optimizer = Optimizer.SGD
     batch: int = 32

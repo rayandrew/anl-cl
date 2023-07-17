@@ -6,10 +6,28 @@ from src.dataset.base import (
     BaseDatasetAccessor,
     BaseDatasetPrototype,
 )
+from src.utils.logging import logging
+
+log = logging.getLogger(__name__)
 
 
 class AzureVMDataset(BaseDataset):
-    pass
+    def __init__(
+        self,
+        features: Any,
+        targets: Any,
+        tasks: Any = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(
+            features=features,
+            targets=targets,
+            tasks=tasks,
+            **kwargs,
+        )
+
+    def __getitem__(self, index: int):
+        return super().__getitem__(index)
 
 
 @dataclass

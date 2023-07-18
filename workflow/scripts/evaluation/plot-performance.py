@@ -78,8 +78,14 @@ def get_metrics(
             )
             avg_recalls.append((label, np.mean(summary.avg_recall[i]).item()))
             avg_aurocs.append((label, np.mean(summary.avg_auroc[i]).item()))
-            avg_accs.append((label, np.mean(summary.avg_acc[i]).item()))
             avg_forgettings.append((label, summary.ovr_avg_forgetting))
+            # If not no retrain, use all chunk as ACC
+            if "no-retrain" not in str(label):
+                avg_accs.append((label, np.mean(summary.avg_acc[i]).item()))
+        # If no retrain, use just that chunk.
+        if "no-retrain" in str(label):
+            for key, task in summary.task_data.items():
+                avg_accs.append((label, task.acc[0]))
 
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=RESULT_COLUMNS),
@@ -144,10 +150,7 @@ def plot_line(data: pd.DataFrame, label_title: str):
 
     for label in unique_labels:
         values = data[data["label"] == label]["value"].tolist()
-        # Ignore if 1 chunk
-        if len(values) == 1:
-            continue
-        elif len(values) < max_length:
+        if len(values) < max_length:
             # Pad with None for consistency
             # if the plotted data has different chunks
             values.extend([None] * (max_length - len(values)))

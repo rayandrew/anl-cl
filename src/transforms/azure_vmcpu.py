@@ -202,16 +202,23 @@ class BucketSubscriptionCPUTransform(BaseTransform):
 
 
 class GroupByDayTransform(BaseTransform):
-    def __init__(self, sort=False) -> None:
+    def __init__(
+        self,
+        timestamp_col: str = "vmcreated",
+        day_col: str = "day",
+        sort: bool = False,
+    ) -> None:
         super().__init__()
+        self.timestamp_col = timestamp_col
+        self.day_col = day_col
         self.sort = sort
 
     def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
         data = data.copy()
-        data["day"] = np.floor(data["vmcreated"] / (24 * 60 * 60))
-        data["day"] = data["day"].astype(int)
+        data[self.day_col] = np.floor(data[self.timestamp_col] / (24 * 60 * 60))
+        data[self.day_col] = data[self.day_col].astype(int)
         if self.sort:
-            data = data.sort_values(by=["day"]).reset_index(drop=True)
+            data = data.sort_values(by=[self.day_col]).reset_index(drop=True)
         return data
 
     def __repr__(self) -> str:
@@ -353,16 +360,16 @@ class FeatureEngineering_B(BaseFeatureEngineering):
             PrintColumnsTransform("Original Columns"),
             # lambda data: data.copy(),
             NamedInjectTransform(DD_ID),
-            # BucketSubscriptionCPUPercentTransform_V2(
-            #     self._config.dataset.target,
-            #     n_bins=100,
-            #     drop_first=False,
-            # ),
-            BucketSubscriptionCPUTransform(
+            BucketSubscriptionCPUPercentTransform_V2(
                 self._config.dataset.target,
-                n_bins=self._config.dataset.num_classes,
+                n_bins=100,
                 drop_first=False,
             ),
+            # BucketSubscriptionCPUTransform(
+            #     self._config.dataset.target,
+            #     n_bins=self._config.dataset.num_classes,
+            #     drop_first=False,
+            # ),
             OneHotColumnsTransform(
                 columns=[
                     "vmcategory",
@@ -371,6 +378,7 @@ class FeatureEngineering_B(BaseFeatureEngineering):
                 ],
                 drop_first=True,
             ),
+            NamedInjectTransform("day"),
             ColumnsDropTransform(columns=self._non_feature_columns),
             DiscretizeColumnTransform(
                 column=self._config.dataset.target,

@@ -129,8 +129,6 @@ class DistributionColumnBasedGenerator(
         data = self.feature_engineering.apply_preprocess_transform(self.data)
         grouped = data.groupby(self.dist_col)
 
-        log.info(f"Number of groups: {len(grouped)}")
-
         count = 0
         for _, group_data in grouped:
             if self.max_split != "all" and count >= self.max_split:
@@ -149,6 +147,8 @@ class DistributionColumnBasedGenerator(
                 )
             )
             count += 1
+
+        log.info(f"Number of groups: {count}")
 
         return subsets
 

@@ -1,6 +1,6 @@
 dataset:
   name: azure
   target: p95maxcpu
-  feature: feature-a
-  time_col: timestamp
+  feature: feature-b
+  time_col: vmcreated
   num_classes: 4

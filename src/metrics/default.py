@@ -9,11 +9,14 @@ from avalanche.evaluation.metrics import (  # cpu_usage_metrics,; gpu_usage_metr
 
 from src.metrics.accuracy import accuracy_metrics_with_tolerance
 from src.metrics.class_accuracy import class_accuracy_metrics_with_tolerance
+from src.metrics.f1 import f1_metrics
 from src.metrics.forgetting import (
     bwt_metrics_with_tolerance,
     forgetting_metrics_with_tolerance,
 )
+from src.metrics.precision import precision_metrics
 from src.metrics.pytorch_metrics import AverageType
+from src.metrics.recall import recall_metrics
 from src.metrics.roc import auroc_metrics
 
 
@@ -59,18 +62,34 @@ def get_classification_default_metrics(
             task="multiclass",
             num_classes=num_classes,
             average=average,
-            # epoch=True,
+            epoch=False,
             experience=True,
-            # stream=True,
-        )
-        # classification_metrics(
-        #     num_classes=num_classes,
-        #     average=average,
-        #     auroc=True,
-        #     recall=True,
-        #     precision=True,
-        #     f1=True,
-        # ),
+            stream=True,
+        ),
+        f1_metrics(
+            task="multiclass",
+            num_classes=num_classes,
+            average=average,
+            epoch=False,
+            experience=True,
+            stream=True,
+        ),
+        precision_metrics(
+            task="multiclass",
+            num_classes=num_classes,
+            average=average,
+            epoch=False,
+            experience=True,
+            stream=True,
+        ),
+        recall_metrics(
+            task="multiclass",
+            num_classes=num_classes,
+            average=average,
+            epoch=False,
+            experience=True,
+            stream=True,
+        ),
     ]
 
 

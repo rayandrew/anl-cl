@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, List, Literal, Union
 
 import torch
 
-from avalanche.evaluation import GenericPluginMetric, Metric, PluginMetric
+from avalanche.evaluation import GenericPluginMetric, Metric
 from avalanche.evaluation.metrics.mean import Mean
 
 import torchmetrics as tm
@@ -16,9 +16,9 @@ from src.utils.logging import logging
 
 log = logging.getLogger(__name__)
 
-TAverage = Literal["macro", "weighted", "none"]
-# TResult = List[float] | float
-TResult = float
+TaskType = Literal["binary", "multiclass", "multilabel"]
+AverageType = Literal["micro", "macro", "weighted", "none"]
+ResultType = float
 
 
 def assert_classification_metric(
@@ -55,7 +55,7 @@ def convert_tensor_to_float_or_list(
         raise ValueError("Input is not a PyTorch tensor.")
 
 
-class BaseClassificationMetric(Metric[TResult]):
+class PyTorchMetric(Metric[ResultType]):
     """
     Computes Area Under the Receiver Operating Characteristic Curve (ROC AUC)
     for multiclass classification.
@@ -67,7 +67,7 @@ class BaseClassificationMetric(Metric[TResult]):
     ) -> None:
         self._metric = metric
         self._counter = 0
-        self._result: TResult = 0.0
+        self._result: ResultType = 0.0
         self._mean = Mean()
 
     @torch.no_grad()
@@ -94,19 +94,17 @@ class BaseClassificationMetric(Metric[TResult]):
                 self._mean.update(r)
         # log.info("_result: %s", result)
 
-    def result(self) -> TResult:
+    def result(self) -> ResultType:
         return self._mean.result()
 
     def reset(self) -> None:
         # log.info("Resetting metric: %s", self._metric)
         self._mean.reset()
-        # self._result: TResult = 0.0
+        # self._result: ResultType = 0.0
         self._counter = 0
 
 
-class ClassificationPluginMetric(
-    GenericPluginMetric[TResult, BaseClassificationMetric]
-):
+class PyTorchMetricPluginMetric(GenericPluginMetric[ResultType, PyTorchMetric]):
     """
     Base class for all accuracies plugin metrics
     """
@@ -120,8 +118,8 @@ class ClassificationPluginMetric(
         :param mode:
         :param split_by_task: whether to compute task-aware accuracy or not.
         """
-        super(ClassificationPluginMetric, self).__init__(
-            metric=BaseClassificationMetric(metric),
+        super(PyTorchMetricPluginMetric, self).__init__(
+            metric=PyTorchMetric(metric),
             reset_at=reset_at,
             emit_at=emit_at,
             mode=mode,
@@ -130,7 +128,7 @@ class ClassificationPluginMetric(
     def reset(self, strategy=None) -> None:
         self._metric.reset()
 
-    def result(self, strategy=None) -> TResult:
+    def result(self, strategy=None) -> ResultType:
         return self._metric.result()
 
     def update(self, strategy: "SupervisedTemplate"):
@@ -142,121 +140,10 @@ class ClassificationPluginMetric(
         )
 
 
-class AUROCMetrics(ClassificationPluginMetric):
-    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
-        metric = tm.AUROC(
-            num_classes=num_classes,
-            task="multiclass",
-            average=average,
-        )
-        super(AUROCMetrics, self).__init__(
-            metric,
-            reset_at="stream",
-            emit_at="stream",
-            mode="eval",
-        )
-
-    def __str__(self):
-        return "AUROC"
-
-
-class PrecisionMetrics(ClassificationPluginMetric):
-    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
-        """
-        Creates an instance of Accuracy metric
-        """
-        metric = tm.Precision(
-            task="multiclass",
-            num_classes=num_classes,
-            average=average,
-        )
-        super(PrecisionMetrics, self).__init__(
-            metric,
-            reset_at="stream",
-            emit_at="stream",
-            mode="eval",
-        )
-
-    def __str__(self):
-        return "Precision_"
-
-
-class RecallMetrics(ClassificationPluginMetric):
-    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
-        """
-        Creates an instance of Accuracy metric
-        """
-        metric = tm.Recall(
-            task="multiclass",
-            num_classes=num_classes,
-            average=average,
-        )
-        super(RecallMetrics, self).__init__(
-            metric,
-            reset_at="stream",
-            emit_at="stream",
-            mode="eval",
-        )
-
-    def __str__(self):
-        return "Recall"
-
-
-class F1Metrics(ClassificationPluginMetric):
-    def __init__(self, num_classes: int = 10, average: TAverage = "macro"):
-        """
-        Creates an instance of Accuracy metric
-        """
-        metric = tm.F1Score(
-            task="multiclass",
-            num_classes=num_classes,
-            average=average,
-        )
-        super(F1Metrics, self).__init__(
-            metric,
-            reset_at="stream",
-            emit_at="stream",
-            mode="eval",
-        )
-
-    def __str__(self):
-        return "F1"
-
-
-def classification_metrics(
-    *,
-    num_classes: int = 10,
-    average: TAverage = "macro",
-    # roc=False,
-    auroc=False,
-    recall=False,
-    precision=False,
-    f1=False,
-) -> List[PluginMetric]:
-    metrics = []
-
-    if auroc:
-        metrics.append(AUROCMetrics(num_classes=num_classes, average=average))
-
-    if recall:
-        metrics.append(RecallMetrics(num_classes=num_classes, average=average))
-
-    if f1:
-        metrics.append(F1Metrics(num_classes=num_classes, average=average))
-
-    if precision:
-        metrics.append(
-            PrecisionMetrics(num_classes=num_classes, average=average)
-        )
-
-    return metrics
-
-
 __all__ = [
-    "classification_metrics",
-    "AUROCMetrics",
-    "PrecisionMetrics",
-    "RecallMetrics",
-    "F1Metrics",
-    "TAverage",
+    "PyTorchMetric",
+    "PyTorchMetricPluginMetric",
+    "AverageType",
+    "TaskType",
+    "ResultType",
 ]

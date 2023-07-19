@@ -55,13 +55,14 @@ def get_dataset(config: Config, input_path: Path):
             def additional_preprocess(data: pd.DataFrame) -> pd.DataFrame:
                 data = data.copy()
                 # data = data.sort_values(by=["vmdeleted"]).reset_index(drop=True)
-                return data.iloc[0:10_000]
+                # return data.iloc[0:10_000]
+                return data.iloc[0:1_000]
 
             feature_engineering = add_transform_to_feature_engineering(
                 feature_engineering,
                 additional_preprocess,
-                pos="end",
-                # pos="start",
+                # pos="end",
+                pos="start",
                 sections=["preprocess"],
             )
 

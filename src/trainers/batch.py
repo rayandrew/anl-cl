@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 
 from avalanche.benchmarks.scenarios import GenericCLScenario
 from avalanche.training.templates import SupervisedTemplate
@@ -18,6 +18,7 @@ class BatchNoRetrainTrainer(BaseTrainer):
         self.num_workers = num_workers
 
     def train(self) -> Dict[int, Dict[str, float]]:
+        len(self.benchmark.train_stream)
         assert (
             len(self.benchmark.train_stream) > 1
         ), "BatchNoRetrainTrainer requires at least 2 experiences"

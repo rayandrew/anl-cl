@@ -1,38 +1,29 @@
-from avalanche.evaluation.metrics import (
-    # cpu_usage_metrics,
-    # gpu_usage_metrics,
-    loss_metrics,
-    # ram_usage_metrics,
-    # timing_metrics,
+# flake8: noqa: E501
+from avalanche.evaluation.metrics import (  # cpu_usage_metrics,; gpu_usage_metrics,; ram_usage_metrics,; timing_metrics,
     accuracy_metrics,
+    bwt_metrics,
     class_accuracy_metrics,
     forgetting_metrics,
-    bwt_metrics,
+    loss_metrics,
 )
 
 from src.metrics.accuracy import accuracy_metrics_with_tolerance
-from src.metrics.class_accuracy import (
-    class_accuracy_metrics_with_tolerance,
-)
-from src.metrics.classification import (
-    TAverage,
-    classification_metrics,
-)
+from src.metrics.class_accuracy import class_accuracy_metrics_with_tolerance
 from src.metrics.forgetting import (
     bwt_metrics_with_tolerance,
     forgetting_metrics_with_tolerance,
 )
+from src.metrics.pytorch_metrics import AverageType
+from src.metrics.roc import auroc_metrics
 
 
 def get_classification_default_metrics(
     num_classes: int = 10,
-    average: TAverage = "macro",
+    average: AverageType = "macro",
     tolerance: int = 1,
 ):
     return [
-        loss_metrics(
-            minibatch=True, epoch=True, experience=True, stream=True
-        ),
+        loss_metrics(minibatch=True, epoch=True, experience=True, stream=True),
         accuracy_metrics_with_tolerance(
             tolerance=1,
             minibatch=True,
@@ -64,14 +55,22 @@ def get_classification_default_metrics(
         )
         if tolerance > 0
         else class_accuracy_metrics(experience=True, stream=True),
-        classification_metrics(
+        auroc_metrics(
+            task="multiclass",
             num_classes=num_classes,
             average=average,
-            auroc=True,
-            recall=True,
-            precision=True,
-            f1=True,
-        ),
+            # epoch=True,
+            experience=True,
+            # stream=True,
+        )
+        # classification_metrics(
+        #     num_classes=num_classes,
+        #     average=average,
+        #     auroc=True,
+        #     recall=True,
+        #     precision=True,
+        #     f1=True,
+        # ),
     ]
 
 

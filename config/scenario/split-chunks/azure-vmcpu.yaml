@@ -1,3 +1,4 @@
 scenario: 
   name: split-chunks
-  num_split: 12
+  # num_split: 12
+  num_split: 2

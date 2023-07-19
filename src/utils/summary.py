@@ -1,3 +1,4 @@
+# flake8: noqa: E501
 import json
 from collections import defaultdict
 from collections.abc import Sequence
@@ -110,10 +111,7 @@ def generate_summary(
                 summary.avg_recall.append(val)
             elif "AUROC/eval_phase/test_stream" in key:
                 summary.avg_auroc.append(val)
-            elif (
-                "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000"
-                in key
-            ) or (
+            elif ("Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000" in key) or (
                 "Top1_Acc_Exp/eval_phase/test_stream/Task000" in key
             ):
                 task_id = key.replace(
@@ -131,8 +129,7 @@ def generate_summary(
                 "ExperienceForgetting_Tol/eval_phase/test_stream/Task000/"
                 in key
             ) or (
-                "ExperienceForgetting/eval_phase/test_stream/Task000/"
-                in key
+                "ExperienceForgetting/eval_phase/test_stream/Task000/" in key
             ):
                 task_id = key.replace(
                     "ExperienceForgetting_Tol/eval_phase/test_stream/Task000/Exp",
@@ -146,11 +143,8 @@ def generate_summary(
                 summary.task_data[task_id].set_task_id(task_id)
                 summary.task_data[task_id].forgetting.append(val)
             elif (
-                "ExperienceBWT_Tol/eval_phase/test_stream/Task000/"
-                in key
-            ) or (
-                "ExperienceBWT/eval_phase/test_stream/Task000/" in key
-            ):
+                "ExperienceBWT_Tol/eval_phase/test_stream/Task000/" in key
+            ) or ("ExperienceBWT/eval_phase/test_stream/Task000/" in key):
                 task_id = key.replace(
                     "ExperienceBWT_Tol/eval_phase/test_stream/Task000/Exp",
                     "",
@@ -180,8 +174,10 @@ def generate_summary_table(res: TrainingSummary):
         raise ValueError("No tasks found in the results.")
 
     table = Texttable()
-    table.set_cols_align(["c", "c", "c", "c", "c", "c", "c", "c"])
-    table.set_cols_valign(["m", "m", "m", "m", "m", "m", "m", "m"])
+    table.set_cols_align(["c", "c", "c", "c"])
+    table.set_cols_valign(["m", "m", "m", "m"])
+    # table.set_cols_align(["c", "c", "c", "c", "c", "c", "c", "c"])
+    # table.set_cols_valign(["m", "m", "m", "m", "m", "m", "m", "m"])
 
     for task in range(res.n_tasks):
         table.add_rows(
@@ -191,20 +187,14 @@ def generate_summary_table(res: TrainingSummary):
                     "Avg Test Acc",
                     "Avg Forgetting",
                     "Avg BWT",
-                    "Avg F1",
-                    "Avg Precision",
-                    "Avg Recall",
-                    "Avg AUROC",
+                    # "Avg AUROC",
                 ],
                 [
                     task,
                     res.avg_acc[task],
                     res.avg_forgetting[task],
                     res.avg_bwt[task],
-                    res.avg_f1[task],
-                    res.avg_precision[task],
-                    res.avg_recall[task],
-                    res.avg_auroc[task],
+                    # res.avg_auroc[task],
                 ],
             ]
         )

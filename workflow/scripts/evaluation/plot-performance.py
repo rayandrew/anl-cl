@@ -11,7 +11,7 @@ import seaborn as sns
 from src.helpers.definitions import Snakemake
 from src.utils.general import set_seed
 from src.utils.logging import logging, setup_logging
-from src.utils.summary import TaskSummary, TrainingSummary, generate_summary
+from src.utils.summary import TrainingSummary, generate_summary
 
 if TYPE_CHECKING:
     snakemake: Snakemake = Snakemake()
@@ -50,7 +50,8 @@ class Result:
     auroc: pd.DataFrame
     acc: pd.DataFrame
     forgetting: pd.DataFrame
-    task_summary: dict[str, dict[int, TaskSummary]]
+    last_acc: pd.DataFrame
+    # task_summary: dict[str, dict[int, TaskSummary]]
     # label: str
     # f1: float
     # precision: float
@@ -59,6 +60,43 @@ class Result:
 
 
 RESULT_COLUMNS = ["label", "value"]
+
+
+LABELS = {
+    "f1": "F1",
+    "precision": "PRECISION",
+    "recall": "RECALL",
+    "auroc": "AUROC",
+    "acc": "ACCURACY",
+    "forgetting": "FORGETTING",
+    "last_acc": "Last Model ACCURACY",
+}
+
+PATH_LABELS = {
+    "drift-detection": "DD",
+    "feature": "FEAT",
+    "model": "MODEL",
+    "no-retrain": "NR",
+    "from-scratch": "FS",
+}
+
+
+def get_label(label: str):
+    # log.info(f"get_label: {label}")
+    for key in LABELS.keys():
+        # log.info(f"key: {key}")
+        if label in key:
+            # log.info(f"label {label} in key: {key}")
+            return LABELS[key]
+    return "unknown"
+
+
+def change_path_label(label: str):
+    label_temp = label
+    for key in PATH_LABELS.keys():
+        if key in label_temp:
+            label_temp = label_temp.replace(key, PATH_LABELS[key])
+    return label_temp
 
 
 def get_metrics(
@@ -70,19 +108,35 @@ def get_metrics(
     avg_aurocs: list[Tuple[str, float]] = []
     avg_accs: list[Tuple[str, float]] = []
     avg_forgettings: list[Tuple[str, float]] = []
-    task_summary: dict[str, dict[int, TaskSummary]] = {}
+    last_accs: list[Tuple[str, float]] = []
     for summary, label in zip(summaries, labels):
         log.info(f"Label: {label}, summaries: {len(summaries)}")
 
-        for i in range(len(summary.avg_f1)):
-            avg_f1s.append((label, np.mean(summary.avg_f1[i]).item()))
+        label_path = change_path_label(label)
+
+        for i in range(len(summary.avg_acc)):
+            avg_f1s.append((label_path, np.mean(summary.avg_f1[i]).item()))
             avg_precisions.append(
-                (label, np.mean(summary.avg_precision[i]).item())
+                (label_path, np.mean(summary.avg_precision[i]).item())
             )
-            avg_recalls.append((label, np.mean(summary.avg_recall[i]).item()))
-            avg_aurocs.append((label, np.mean(summary.avg_auroc[i]).item()))
-            avg_accs.append((label, np.mean(summary.avg_acc[i]).item()))
-            avg_forgettings.append((label, summary.ovr_avg_forgetting))
+            avg_recalls.append(
+                (label_path, np.mean(summary.avg_recall[i]).item())
+            )
+            avg_aurocs.append(
+                (label_path, np.mean(summary.avg_auroc[i]).item())
+            )
+            avg_forgettings.append((label_path, summary.ovr_avg_forgetting))
+            # If not no retrain, use all chunk as ACC
+            if "no-retrain" not in str(label_path):
+                avg_accs.append(
+                    (label_path, np.mean(summary.avg_acc[i]).item())
+                )
+        # If no retrain, use just that chunk.
+        # if "no-retrain" in str(label):
+        #     for key, task in summary.task_data.items():
+        #         avg_accs.append((label, task.acc[0]))
+        for key, task in summary.task_data.items():
+            last_accs.append((label_path, task.acc[-1]))
 
         # if len(avg_accs) == 1:  # case of no-retrain
         #     avg_accs = []
@@ -97,12 +151,12 @@ def get_metrics(
         auroc=pd.DataFrame(avg_aurocs, columns=RESULT_COLUMNS),
         acc=pd.DataFrame(avg_accs, columns=RESULT_COLUMNS),
         forgetting=pd.DataFrame(avg_forgettings, columns=RESULT_COLUMNS),
-        task_summary=task_summary,
+        last_acc=pd.DataFrame(last_accs, columns=RESULT_COLUMNS),
     )
 
 
 def plot_bar(data: pd.DataFrame, label: str, get_last: bool = False):
-    label = label.upper()
+    # label = label.upper()
     fig, ax = plt.subplots(figsize=(0.15 * len(data) + 2, 5))
     if get_last:
         temp_data = (
@@ -129,8 +183,12 @@ def plot_bar(data: pd.DataFrame, label: str, get_last: bool = False):
             .index,
         )
     # sns.barplot(x="label", y="value", data=df, ax=ax)
-    ax.set_ylabel(label)
-    ax.set_title(label)
+    label_title = get_label(label)
+    if "acc" in label:
+        ax.set_ylabel("ACCURACY")
+    else:
+        ax.set_ylabel(label_title)
+    ax.set_title(label_title)
     ax.set_xticklabels(
         ax.get_xticklabels(),
         rotation=30,
@@ -142,7 +200,7 @@ def plot_bar(data: pd.DataFrame, label: str, get_last: bool = False):
     return fig
 
 
-def plot_line(data: pd.DataFrame, label_title: str):
+def plot_line(data: pd.DataFrame, label: str):
     # Create figure and axis objects
     fig, ax = plt.subplots(figsize=(15, 5))
 
@@ -152,30 +210,31 @@ def plot_line(data: pd.DataFrame, label_title: str):
 
     max_length = data.groupby("label")["value"].transform("count").max()
 
-    for label in unique_labels:
-        values = data[data["label"] == label]["value"].tolist()
-        # Ignore if 1 chunk
-        if len(values) == 1:
-            continue
-        elif len(values) < max_length:
+    for _label in unique_labels:
+        values = data[data["label"] == _label]["value"].tolist()
+        if len(values) < max_length:
             # Pad with None for consistency
             # if the plotted data has different chunks
             values.extend([None] * (max_length - len(values)))
-        results[label] = values
+        results[_label] = values
 
     # Plot the data
     results.plot(ax=ax, marker="o", linestyle="-")
     # legend = plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.xlabel("Chunk")
-    plt.ylabel("Value")
-    plt.title(label_title.upper())  # Add title to the plot
-    plt.xticks(range(len(results)))  # Make x-values discrete
+    ax.set_xlabel("Chunk")
+    label_title = get_label(label)
+    if "acc" in label:
+        ax.set_ylabel("ACCURACY")
+    else:
+        ax.set_ylabel(label_title)
+    ax.set_title(label_title)  # Add title to the plot
+    ax.set_xticks(range(len(results)))  # Make x-values discrete
     ax.set_xticklabels(
         results.index
     )  # Set x-tick labels based on DataFrame index
 
     # Adjust the layout to make room for the legend
-    plt.subplots_adjust(right=0.8)
+    fig.subplots_adjust(right=0.8)
 
     fig.tight_layout()
     return fig
@@ -225,7 +284,7 @@ def main():
         plt.close(fig_bar_last)
 
         # if len(data) > 1:
-        fig_line = plot_line(data, metric_name)
+        fig_line = plot_line(data, label=metric_name)
         fig_line.savefig(output_folder / f"{metric}_line.png", dpi=300)
         plt.close(fig_line)
 

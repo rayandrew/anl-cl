@@ -1,7 +1,6 @@
 dataset: 
   name: google
   target: util_cpu
-  time_col: start_time
-  feature: feature-a
   num_classes: 2
-  
+  time_column : start_time
+  feature: feature-b

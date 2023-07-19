@@ -49,9 +49,13 @@ def dd_transform(config: Config, target_name: str):
     dd = get_offline_voting_drift_detector(
         **dd_params,
     )
+    config = config
 
     def transform(data: pd.DataFrame) -> pd.DataFrame:
-        change_list = dd.predict(data[target_name].values)
+        if config.dataset.name == Dataset.GOOGLE:
+            change_list = dd.predict(data["bucket_util_cpu"].values)
+        else:
+            change_list = dd.predict(data[target_name].values)
         data = add_dist_label(data, change_list)
         return data
 

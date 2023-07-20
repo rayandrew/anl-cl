@@ -1,7 +1,8 @@
+# flake8: noqa: E501
 from collections.abc import MutableSequence, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,7 +35,6 @@ def label_from_path(path: Path, sep: str = "_"):
     path_str = str(path)
     path_str = path_str.replace("/train_results.json", "")
     paths = path_str.split("/")
-    # return sep.join(paths[-3:])  # training_scenario_strategy
     return sep.join(paths[6:])  # training_scenario_strategy
 
 
@@ -51,6 +51,11 @@ class Result:
     acc: pd.DataFrame
     forgetting: pd.DataFrame
     last_acc: pd.DataFrame
+    last_auroc: pd.DataFrame
+    last_forgetting: pd.DataFrame
+    last_f1: pd.DataFrame
+    last_recall: pd.DataFrame
+    last_precision: pd.DataFrame
     # task_summary: dict[str, dict[int, TaskSummary]]
     # label: str
     # f1: float
@@ -70,6 +75,11 @@ LABELS = {
     "acc": "ACCURACY",
     "forgetting": "FORGETTING",
     "last_acc": "Last Model ACCURACY",
+    "last_auroc": "Last Model AUROC",
+    "last_f1": "Last Model F1",
+    "last_recall": "Last Model RECALL",
+    "last_precision": "Last Model PRECISION",
+    "last_forgetting": "Last Model FORGETTING",
 }
 
 PATH_LABELS = {
@@ -108,7 +118,14 @@ def get_metrics(
     avg_aurocs: list[Tuple[str, float]] = []
     avg_accs: list[Tuple[str, float]] = []
     avg_forgettings: list[Tuple[str, float]] = []
-    last_accs: list[Tuple[str, float]] = []
+
+    last_accs: List[Tuple[str, float]] = []
+    last_aurocs: List[Tuple[str, float]] = []
+    last_f1s: List[Tuple[str, float]] = []
+    last_forgettings: List[Tuple[str, float]] = []
+    last_recalls: List[Tuple[str, float]] = []
+    last_precisions: List[Tuple[str, float]] = []
+
     for summary, label in zip(summaries, labels):
         log.info(f"Label: {label}, summaries: {len(summaries)}")
 
@@ -126,23 +143,25 @@ def get_metrics(
                 (label_path, np.mean(summary.avg_auroc[i]).item())
             )
             avg_forgettings.append((label_path, summary.ovr_avg_forgetting))
-            # If not no retrain, use all chunk as ACC
-            if "no-retrain" not in str(label_path):
-                avg_accs.append(
-                    (label_path, np.mean(summary.avg_acc[i]).item())
-                )
-        # If no retrain, use just that chunk.
-        # if "no-retrain" in str(label):
-        #     for key, task in summary.task_data.items():
-        #         avg_accs.append((label, task.acc[0]))
-        for key, task in summary.task_data.items():
-            last_accs.append((label_path, task.acc[-1]))
-
-        # if len(avg_accs) == 1:  # case of no-retrain
-        #     avg_accs = []
-        #     for i in range(len(summary.task_data)):
-        #         avg_accs.append((label, summary.task_data[i].acc[0]))
-        # log.info(f"Task: {i}, data={summary.task_data[i]}")
+            avg_accs.append((label_path, np.mean(summary.avg_acc[i]).item()))
+        # If from scratch, get last_acc when retraining, eval AT that chunk.
+        if "FS" in label_path:
+            for idx, (key, task) in enumerate(summary.task_data.items()):
+                last_accs.append((label_path, task.acc[idx]))
+                last_aurocs.append((label_path, task.auroc[idx]))
+                last_f1s.append((label_path, task.f1[idx]))
+                # last_forgettings.append((label_path, task.forgetting[-1]))
+                last_recalls.append((label_path, task.recall[idx]))
+                last_precisions.append((label_path, task.precision[idx]))
+        else:
+            # Get Last Model
+            for key, task in summary.task_data.items():
+                last_accs.append((label_path, task.acc[-1]))
+                last_aurocs.append((label_path, task.auroc[-1]))
+                last_f1s.append((label_path, task.f1[-1]))
+                # last_forgettings.append((label_path, task.forgetting[-1]))
+                last_recalls.append((label_path, task.recall[-1]))
+                last_precisions.append((label_path, task.precision[-1]))
 
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=RESULT_COLUMNS),
@@ -152,6 +171,11 @@ def get_metrics(
         acc=pd.DataFrame(avg_accs, columns=RESULT_COLUMNS),
         forgetting=pd.DataFrame(avg_forgettings, columns=RESULT_COLUMNS),
         last_acc=pd.DataFrame(last_accs, columns=RESULT_COLUMNS),
+        last_auroc=pd.DataFrame(last_aurocs, columns=RESULT_COLUMNS),
+        last_f1=pd.DataFrame(last_f1s, columns=RESULT_COLUMNS),
+        last_recall=pd.DataFrame(last_recalls, columns=RESULT_COLUMNS),
+        last_precision=pd.DataFrame(last_precisions, columns=RESULT_COLUMNS),
+        last_forgetting=pd.DataFrame(last_forgettings, columns=RESULT_COLUMNS),
     )
 
 
@@ -201,7 +225,6 @@ def plot_bar(data: pd.DataFrame, label: str, get_last: bool = False):
 
 
 def plot_line(data: pd.DataFrame, label: str):
-    # Create figure and axis objects
     fig, ax = plt.subplots(figsize=(15, 5))
 
     # Transforming the DataFrame
@@ -223,24 +246,20 @@ def plot_line(data: pd.DataFrame, label: str):
     # legend = plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     ax.set_xlabel("Chunk")
     label_title = get_label(label)
+
     if "acc" in label:
         ax.set_ylabel("ACCURACY")
     else:
         ax.set_ylabel(label_title)
-    ax.set_title(label_title)  # Add title to the plot
-    ax.set_xticks(range(len(results)))  # Make x-values discrete
-    ax.set_xticklabels(
-        results.index
-    )  # Set x-tick labels based on DataFrame index
 
-    # Adjust the layout to make room for the legend
+    ax.set_title(label_title)
+    ax.set_xticks(range(len(results)))
+    ax.set_xticklabels(results.index)
+
     fig.subplots_adjust(right=0.8)
 
     fig.tight_layout()
     return fig
-
-
-# GET_LAST_ONLY = ["accuracy", "forgetting"]
 
 
 def main():
@@ -265,9 +284,6 @@ def main():
 
     for metric in result.__annotations__.keys():
         data: pd.DataFrame = getattr(result, metric)
-        # data = data.sort_values(by=["value"], ascending=False).reset_index(
-        #     drop=True
-        # )
 
         if len(data) == 0:
             continue
@@ -275,15 +291,19 @@ def main():
         metric_name = metric.replace("avg_", "")
         log.info("Plotting %s", metric_name)
 
-        fig_bar_stddev = plot_bar(data=data, label=metric_name, get_last=False)
-        fig_bar_stddev.savefig(output_folder / f"{metric}_bar_std.png", dpi=300)
-        plt.close(fig_bar_stddev)
+        if "last" not in metric_name:
+            fig_bar_stddev = plot_bar(
+                data=data, label=metric_name, get_last=False
+            )
+            fig_bar_stddev.savefig(
+                output_folder / f"{metric}_bar_std.png", dpi=300
+            )
+            plt.close(fig_bar_stddev)
 
-        fig_bar_last = plot_bar(data=data, label=metric_name, get_last=True)
-        fig_bar_last.savefig(output_folder / f"{metric}_bar_last.png", dpi=300)
-        plt.close(fig_bar_last)
+        # fig_bar_last = plot_bar(data=data, label=metric_name, get_last=True)
+        # fig_bar_last.savefig(output_folder / f"{metric}_bar_last.png", dpi=300)
+        # plt.close(fig_bar_last)
 
-        # if len(data) > 1:
         fig_line = plot_line(data, label=metric_name)
         fig_line.savefig(output_folder / f"{metric}_line.png", dpi=300)
         plt.close(fig_line)

@@ -56,7 +56,7 @@ class Result:
     last_f1: pd.DataFrame
     last_recall: pd.DataFrame
     last_precision: pd.DataFrame
-    class_accuracy:pd.DataFrame
+    class_accuracy: pd.DataFrame
     # task_summary: dict[str, dict[int, TaskSummary]]
     # label: str
     # f1: float
@@ -81,7 +81,7 @@ LABELS = {
     "last_recall": "Last Model RECALL",
     "last_precision": "Last Model PRECISION",
     "last_forgetting": "Last Model FORGETTING",
-    "class_acc": "Classification Accuracy"
+    "class_acc": "Classification Accuracy",
 }
 
 PATH_LABELS = {
@@ -128,7 +128,7 @@ def get_metrics(
     last_forgettings: List[Tuple[str, float]] = []
     last_recalls: List[Tuple[str, float]] = []
     last_precisions: List[Tuple[str, float]] = []
-    avg_class_acc_data : List[Tuple[str, float]]= []
+    avg_class_acc_data: List[Tuple[str, float]] = []
 
     for summary, label in zip(summaries, labels):
         log.info(f"Label: {label}, summaries: {len(summaries)}")
@@ -136,7 +136,9 @@ def get_metrics(
         label_path = change_path_label(label)
         for class_id, acc_values in summary.avg_class_acc.items():
             class_label = f"{label_path}_Class_{class_id}"
-            avg_class_acc_data.extend([(class_label, value) for value in acc_values])
+            avg_class_acc_data.extend(
+                [(class_label, value) for value in acc_values]
+            )
 
         for i in range(len(summary.avg_acc)):
             avg_f1s.append((label_path, np.mean(summary.avg_f1[i]).item()))
@@ -161,7 +163,7 @@ def get_metrics(
                     last_f1s.append((label_path, task.f1[idx]))
                     # last_forgettings.append((label_path, task.forgetting[-1]))
                     last_recalls.append((label_path, task.recall[idx]))
-                    last_precisions.append((label_path, task.precision[idx]))   
+                    last_precisions.append((label_path, task.precision[idx]))
         else:
             # Get Last Model
             for key, task in summary.task_data.items():
@@ -171,8 +173,8 @@ def get_metrics(
                     last_f1s.append((label_path, task.f1[-1]))
                     # last_forgettings.append((label_path, task.forgetting[-1]))
                     last_recalls.append((label_path, task.recall[-1]))
-                    last_precisions.append((label_path, task.precision[-1]))            
-    
+                    last_precisions.append((label_path, task.precision[-1]))
+
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=RESULT_COLUMNS),
         precision=pd.DataFrame(avg_precisions, columns=RESULT_COLUMNS),
@@ -186,7 +188,7 @@ def get_metrics(
         last_recall=pd.DataFrame(last_recalls, columns=RESULT_COLUMNS),
         last_precision=pd.DataFrame(last_precisions, columns=RESULT_COLUMNS),
         last_forgetting=pd.DataFrame(last_forgettings, columns=RESULT_COLUMNS),
-        class_accuracy= pd.DataFrame(avg_class_acc_data, columns = RESULT_COLUMNS)
+        class_accuracy=pd.DataFrame(avg_class_acc_data, columns=RESULT_COLUMNS),
     )
 
 
@@ -243,7 +245,6 @@ def plot_line(data: pd.DataFrame, label: str):
     results = pd.DataFrame()
 
     max_length = data.groupby("label")["value"].transform("count").max()
-    print(max_length)
 
     for _label in unique_labels:
         values = data[data["label"] == _label]["value"].tolist()
@@ -299,17 +300,18 @@ def main():
 
         if len(data) == 0:
             continue
-        print(data)
         metric_name = metric.replace("avg_", "")
         log.info("Plotting %s", metric_name)
 
         fig_bar_stddev = plot_bar(data=data, label=metric_name, get_last=False)
         fig_bar_stddev.savefig(output_folder / f"{metric}_bar_std.png", dpi=300)
         plt.close(fig_bar_stddev)
-        
+
         if "last" not in metric_name:
             fig_bar_last = plot_bar(data=data, label=metric_name, get_last=True)
-            fig_bar_last.savefig(output_folder / f"{metric}_bar_last.png", dpi=300)
+            fig_bar_last.savefig(
+                output_folder / f"{metric}_bar_last.png", dpi=300
+            )
             plt.close(fig_bar_last)
 
         fig_line = plot_line(data, label=metric_name)

@@ -119,6 +119,7 @@ def get_metrics(
     avg_accs: list[Tuple[str, float]] = []
     avg_forgettings: list[Tuple[str, float]] = []
 
+    # last model metrics
     last_accs: List[Tuple[str, float]] = []
     last_aurocs: List[Tuple[str, float]] = []
     last_f1s: List[Tuple[str, float]] = []

@@ -546,7 +546,7 @@ class FeatureEngineering_C(BaseFeatureEngineering):
             PrintColumnsTransform("Original Columns"),
             lambda data: clean_df(data),
             lambda data: ceil_percent(data),
-            lambda data: group_by_deployment(data),
+            # lambda data: group_by_deployment(data),
             DiscretizeColumnTransform(
                 column=self._config.dataset.target,
                 new_column=self.target_name,
@@ -579,6 +579,7 @@ class FeatureEngineering_C(BaseFeatureEngineering):
             # NamedInjectTransform("day"),
             # scaler_transform,
             PrintColumnsTransform("Final Columns"),
+            lambda data: data.iloc[0:300_000],
         ]
 
     @property

@@ -201,6 +201,93 @@ class BucketSubscriptionCPUTransform(BaseTransform):
             )"""
 
 
+class HistoricalBucketCPUTransform(BaseTransform):
+    def __init__(
+        self,
+        target_name: str,
+        n_bins: int | None = 4,
+    ):
+        self.target_name = target_name
+        self.n_bins = n_bins if n_bins is not None else 4
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Convert an iterable of indices to one-hot encoded labels."""
+        data = data.copy()
+        targets = np.array(data[self.target_name].values).reshape(-1)
+        ohe = np.eye(self.n_bins)[targets]
+        percent_columns = [
+            f"{self.target_name}_{i}" for i in range(0, self.n_bins)
+        ]
+        percent_df = pd.DataFrame(
+            ohe,
+            columns=percent_columns,
+        )
+        data = pd.concat([data, percent_df], axis=1)
+        data[percent_columns] = data[percent_columns].astype(int)
+        data[percent_columns] = data[percent_columns].cumsum()
+        data[f"{self.target_name}_total"] = data[percent_columns].sum(axis=1)
+        data[percent_columns] = data[percent_columns].div(
+            data[f"{self.target_name}_total"], axis=0
+        )
+        data = data.drop(columns=[f"{self.target_name}_total"])
+        return data
+
+    def __repr__(self) -> str:
+        return f"""HistoricalBucketCPUTransform(
+                target_name="{self.target_name}",
+                n_bins={self.n_bins},
+            )"""
+
+
+class HistoricalBucketCPUEachSubscriptionTransform(BaseTransform):
+    def __init__(
+        self,
+        target_name: str,
+        n_bins: int | None = 4,
+    ):
+        self.target_name = target_name
+        self.n_bins = n_bins if n_bins is not None else 4
+
+    def custom_apply_fn(self, percent_columns: list[str]):
+        def fun(df: pd.DataFrame) -> pd.DataFrame:
+            df[percent_columns] = df[percent_columns].cumsum()
+            df["percent_total"] = df[percent_columns].sum(axis=1)
+            df[percent_columns] = df[percent_columns].div(
+                df["percent_total"], axis=0
+            )
+            df = df.drop(columns=["percent_total"])
+            return df
+
+        return fun
+
+    def __call__(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Convert an iterable of indices to one-hot encoded labels."""
+        data = data.copy()
+        targets = np.array(data[self.target_name].values).reshape(-1)
+        ohe = np.eye(self.n_bins)[targets]
+        percent_columns = [
+            f"{self.target_name}_{i}" for i in range(0, self.n_bins)
+        ]
+        percent_df = pd.DataFrame(
+            ohe,
+            columns=percent_columns,
+        )
+        data = pd.concat([data, percent_df], axis=1)
+        data[percent_columns] = data[percent_columns].astype(int)
+        data = (
+            data.groupby(by=["subscriptionid"])
+            .apply(self.custom_apply_fn(percent_columns))
+            .reset_index(drop=True)
+        )
+        return data
+
+    def __repr__(self) -> str:
+        return f"""HistoricalBucketCPUEachSubscriptionTransform(
+                target_name="{self.target_name}",
+                n_bins={self.n_bins},
+            )"""
+
+
 class GroupByDayTransform(BaseTransform):
     def __init__(
         self,
@@ -395,10 +482,115 @@ class FeatureEngineering_B(BaseFeatureEngineering):
         return self._target_name
 
 
+class FeatureEngineering_C(BaseFeatureEngineering):
+    def __init__(self, config: Config) -> None:
+        super().__init__()
+        self._config = config
+        self._target_name = f"bucket_{config.dataset.target}"
+        self._non_feature_columns = list(
+            filter(
+                # lambda x: x != config.dataset.target and x != "DIST_COL",
+                lambda x: x != config.dataset.target,
+                NON_FEATURE_COLUMNS,
+            )
+        )
+
+    @property
+    def preprocess_transform_set(self) -> list[Transform] | None:
+        def scaler_transform(data: pd.DataFrame) -> pd.DataFrame:
+            scaler = StandardScaler()
+            # Select the columns to be scaled (excluding "bucket_util_cpu")
+            columns_to_scale = [
+                col for col in data.columns if col != self.target_name
+            ]
+
+            # Scale the selected columns
+            data[columns_to_scale] = scaler.fit_transform(
+                data[columns_to_scale]
+            )
+            return data
+
+        def ceil_percent(data: pd.DataFrame) -> pd.DataFrame:
+            data[self.target_name] = data[self._config.dataset.target].apply(
+                np.ceil
+            )
+            data = data.astype({self.target_name: int})
+            return data
+
+        def clean_df(data: pd.DataFrame) -> pd.DataFrame:
+            df = data.copy()
+            first_bucket = df[df.p95maxcpu <= 20]
+            second_bucket = df[(df.p95maxcpu > 27) & (df.p95maxcpu <= 47)]
+            third_bucket = df[(df.p95maxcpu >= 50) & (df.p95maxcpu <= 73)]
+            fourth_bucket = df[df.p95maxcpu >= 78]
+            # display(fourth_bucket)
+            return pd.concat(
+                [first_bucket, second_bucket, third_bucket, fourth_bucket]
+            ).reset_index(drop=True)
+
+        def group_by_deployment(data: pd.DataFrame) -> pd.DataFrame:
+            dfs = []
+            count = 0
+            grouped_df = data.groupby(by=["deploymentid"])
+            for i, g in grouped_df:
+                if count == 100:
+                    break
+                if len(g) < 50:
+                    continue
+                test_df = g.copy().reset_index(drop=True)
+                dfs.append(test_df)
+                count += 1
+            return pd.concat(dfs).reset_index(drop=True)
+
+        return [
+            PrintColumnsTransform("Original Columns"),
+            lambda data: clean_df(data),
+            lambda data: ceil_percent(data),
+            lambda data: group_by_deployment(data),
+            DiscretizeColumnTransform(
+                column=self._config.dataset.target,
+                new_column=self.target_name,
+                n_bins=self._config.dataset.num_classes,
+                drop_original=True,
+            ),
+            # lambda data: data.copy(),
+            NamedInjectTransform(DD_ID),
+            HistoricalBucketCPUEachSubscriptionTransform(
+                self.target_name,
+                n_bins=4,
+            ),
+            # BucketSubscriptionCPUTransform(
+            #     self._config.dataset.target,
+            #     n_bins=self._config.dataset.num_classes,
+            #     drop_first=False,
+            # ),
+            OneHotColumnsTransform(
+                columns=[
+                    "vmcategory",
+                    "vmcorecountbucket",
+                    "vmmemorybucket",
+                ],
+                drop_first=True,
+            ),
+            lambda data: data.sort_values(
+                by=["vmcreated", "vmdeleted", "deploymentid"]
+            ).reset_index(drop=True),
+            ColumnsDropTransform(columns=self._non_feature_columns),
+            # NamedInjectTransform("day"),
+            # scaler_transform,
+            PrintColumnsTransform("Final Columns"),
+        ]
+
+    @property
+    def target_name(self) -> str:
+        return self._target_name
+
+
 __all__ = [
     "BucketSubscriptionCPUPercentTransform_V1",
     "BucketSubscriptionCPUPercentTransform_V2",
     "GroupByDayTransform",
     "FeatureEngineering_A",
     "FeatureEngineering_B",
+    "FeatureEngineering_C",
 ]

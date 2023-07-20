@@ -27,6 +27,12 @@ def get_features(config: Config) -> BaseFeatureEngineering:
             )
 
             return AzureFeatureEngineering_B(config)
+        elif feature == "feature-c":
+            from src.transforms.azure_vmcpu import (
+                FeatureEngineering_C as AzureFeatureEngineering_C,
+            )
+
+            return AzureFeatureEngineering_C(config)
         else:
             raise ValueError(f"[AZURE] Unknown feature: {feature}")
     elif dataset_name == Dataset.GOOGLE:

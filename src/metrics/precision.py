@@ -55,7 +55,7 @@ class ExperiencePrecision(PyTorchMetricPluginMetric):
         )
 
     def __str__(self):
-        return "Top1_Precision_Experience"
+        return "Top1_Precision_Exp"
 
 
 class StreamPrecision(PyTorchMetricPluginMetric):

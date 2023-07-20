@@ -49,7 +49,7 @@ class ExperienceAUROC(PyTorchMetricPluginMetric):
         )
 
     def __str__(self):
-        return "Top1_AUROC_Experience"
+        return "Top1_AUROC_Exp"
 
 
 class StreamAUROC(PyTorchMetricPluginMetric):

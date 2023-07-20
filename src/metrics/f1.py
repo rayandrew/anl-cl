@@ -55,7 +55,7 @@ class ExperienceF1(PyTorchMetricPluginMetric):
         )
 
     def __str__(self):
-        return "Top1_F1_Experience"
+        return "Top1_F1_Exp"
 
 
 class StreamF1(PyTorchMetricPluginMetric):

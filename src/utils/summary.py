@@ -21,7 +21,7 @@ class TaskSummary:
     f1: list[float] = field(default_factory=list)
     recall: list[float] = field(default_factory=list)
     precision: list[float] = field(default_factory=list)
-    
+
     def set_task_id(self, task_id: int) -> None:
         if self.task_id == -1:
             self.task_id = task_id
@@ -48,6 +48,8 @@ class TrainingSummary:
     avg_precision: list[float] = field(default_factory=list)
     avg_recall: list[float] = field(default_factory=list)
     avg_auroc: list[float] = field(default_factory=list)
+    avg_class_acc: Dict[str, list[float]] = field(default_factory=lambda: defaultdict(list))
+
 
 
 def generate_summary(
@@ -119,6 +121,12 @@ def generate_summary(
             elif ("AUROC/eval_phase/test_stream" in key or 
                   "Top1_AUROC_Stream/eval_phase/test_stream" in key):
                 summary.avg_auroc.append(val)
+            elif("Top1_ClassAcc_Stream/eval_phase/test_stream/Task000" in key):
+                class_id = key.replace(
+                    "Top1_ClassAcc_Stream/eval_phase/test_stream/Task000/",
+                    "",
+                )
+                summary.avg_class_acc[class_id].append(val)
             elif ("Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/" in key) or (
                 "Top1_Acc_Exp/eval_phase/test_stream/Task000/" in key
             ):
@@ -196,7 +204,6 @@ def generate_summary(
                 task_id = int(task_id)
                 summary.task_data[task_id].set_task_id(task_id)
                 summary.task_data[task_id].bwt.append(val)
-
     summary.ovr_avg_acc = sum(summary.avg_acc) / len(summary.avg_acc)
     summary.ovr_avg_forgetting = sum(summary.avg_forgetting) / len(
         summary.avg_forgetting

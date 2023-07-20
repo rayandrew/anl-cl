@@ -48,8 +48,9 @@ class TrainingSummary:
     avg_precision: list[float] = field(default_factory=list)
     avg_recall: list[float] = field(default_factory=list)
     avg_auroc: list[float] = field(default_factory=list)
-    avg_class_acc: Dict[str, list[float]] = field(default_factory=lambda: defaultdict(list))
-
+    avg_class_acc: Dict[str, list[float]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
 
 
 def generate_summary(
@@ -109,26 +110,32 @@ def generate_summary(
                 or "StreamBWT/eval_phase/test_stream" in key
             ):
                 summary.avg_bwt.append(val)
-            elif ("F1/eval_phase/test_stream" in key
-            or "Top1_F1_Stream/eval_phase/test_stream" in key):
+            elif (
+                "F1/eval_phase/test_stream" in key
+                or "Top1_F1_Stream/eval_phase/test_stream" in key
+            ):
                 summary.avg_f1.append(val)
-            elif ("Top1_Precision_Stream/eval_phase/test_stream" in key
-            or "Precision_/eval_phase/test_stream" in key):
+            elif (
+                "Top1_Precision_Stream/eval_phase/test_stream" in key
+                or "Precision_/eval_phase/test_stream" in key
+            ):
                 summary.avg_precision.append(val)
-            elif ("Recall/eval_phase/test_stream" in key or 
-                  "Top1_Recall_Stream/eval_phase/test_stream" in key):
+            elif (
+                "Recall/eval_phase/test_stream" in key
+                or "Top1_Recall_Stream/eval_phase/test_stream" in key
+            ):
                 summary.avg_recall.append(val)
-            elif ("AUROC/eval_phase/test_stream" in key or 
-                  "Top1_AUROC_Stream/eval_phase/test_stream" in key):
+            elif (
+                "AUROC/eval_phase/test_stream" in key
+                or "Top1_AUROC_Stream/eval_phase/test_stream" in key
+            ):
                 summary.avg_auroc.append(val)
-            elif("Top1_ClassAcc_Stream/eval_phase/test_stream/Task000" in key):
+            elif "Top1_ClassAcc_Stream/eval_phase/test_stream/Task000" in key:
                 class_id = key.replace(
                     "Top1_ClassAcc_Stream/eval_phase/test_stream/Task000/",
                     "",
                 )
                 summary.avg_class_acc[class_id].append(val)
-            elif ("Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/" in key) or (
-                "Top1_Acc_Exp/eval_phase/test_stream/Task000/" in key
             elif (
                 "F1/eval_phase/test_stream" in key
                 or "Top1_F1_Stream/eval_phase/test_stream" in key

@@ -17,7 +17,11 @@ class TaskSummary:
     acc: list[float] = field(default_factory=list)
     forgetting: list[float] = field(default_factory=list)
     bwt: list[float] = field(default_factory=list)
-
+    auroc: list[float] = field(default_factory=list)
+    f1: list[float] = field(default_factory=list)
+    recall: list[float] = field(default_factory=list)
+    precision: list[float] = field(default_factory=list)
+    
     def set_task_id(self, task_id: int) -> None:
         if self.task_id == -1:
             self.task_id = task_id
@@ -103,16 +107,20 @@ def generate_summary(
                 or "StreamBWT/eval_phase/test_stream" in key
             ):
                 summary.avg_bwt.append(val)
-            elif "F1/eval_phase/test_stream" in key:
+            elif ("F1/eval_phase/test_stream" in key
+            or "Top1_F1_Stream/eval_phase/test_stream" in key):
                 summary.avg_f1.append(val)
-            elif "Precision_/eval_phase/test_stream" in key:
+            elif ("Top1_Precision_Stream/eval_phase/test_stream" in key
+            or "Precision_/eval_phase/test_stream" in key):
                 summary.avg_precision.append(val)
-            elif "Recall/eval_phase/test_stream" in key:
+            elif ("Recall/eval_phase/test_stream" in key or 
+                  "Top1_Recall_Stream/eval_phase/test_stream" in key):
                 summary.avg_recall.append(val)
-            elif "AUROC/eval_phase/test_stream" in key:
+            elif ("AUROC/eval_phase/test_stream" in key or 
+                  "Top1_AUROC_Stream/eval_phase/test_stream" in key):
                 summary.avg_auroc.append(val)
-            elif ("Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000" in key) or (
-                "Top1_Acc_Exp/eval_phase/test_stream/Task000" in key
+            elif ("Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/" in key) or (
+                "Top1_Acc_Exp/eval_phase/test_stream/Task000/" in key
             ):
                 task_id = key.replace(
                     "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/Exp",
@@ -125,6 +133,38 @@ def generate_summary(
                 task_id = int(task_id)
                 summary.task_data[task_id].set_task_id(task_id)
                 summary.task_data[task_id].acc.append(val)
+            elif ("Top1_AUROC_Experience/eval_phase/test_stream/Task000/") in key:
+                task_id = key.replace(
+                    "Top1_AUROC_Experience/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].auroc.append(val)
+            elif ("Top1_F1_Experience/eval_phase/test_stream/Task000/") in key:
+                task_id = key.replace(
+                    "Top1_F1_Experience/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].f1.append(val)
+            elif ("Top1_Precision_Experience/eval_phase/test_stream/Task000/") in key:
+                task_id = key.replace(
+                    "Top1_Precision_Experience/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].precision.append(val)
+            elif ("Top1_Recall_Experience/eval_phase/test_stream/Task000/") in key:
+                task_id = key.replace(
+                    "Top1_Recall_Experience/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].recall.append(val)
             elif (
                 "ExperienceForgetting_Tol/eval_phase/test_stream/Task000/"
                 in key

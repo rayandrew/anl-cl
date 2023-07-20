@@ -1,4 +1,4 @@
-# flake8: noqa: E501
+import json
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -8,11 +8,10 @@ import pandas as pd
 
 from src.dataset.generator import DistributionColumnBasedGenerator
 from src.drift_detection.voting import get_offline_voting_drift_detector
-from src.helpers.config import Config, assert_config_params
+from src.helpers.config import Config, DDOnlyConfig
 from src.helpers.dataset import create_avalanche_classification_datasets
 from src.helpers.definitions import DD_DIST_COLUMN, DD_ID, Dataset, Snakemake
 from src.helpers.features import get_features
-from src.helpers.scenario import train_classification_scenario
 from src.transforms.general import add_transform_to_feature_engineering
 from src.utils.logging import logging, setup_logging
 
@@ -63,7 +62,7 @@ def dd_transform(config: Config, target_name: str):
     return transform
 
 
-def get_dataset(config: Config, input_path: Path):
+def get_dataset(config: Any, input_path: Path):
     feature_engineering = get_features(config)
     dd_transformer = dd_transform(config, config.dataset.target)
     feature_engineering = add_transform_to_feature_engineering(
@@ -97,17 +96,6 @@ def get_dataset(config: Config, input_path: Path):
                 AzureVMDataset,
                 AzureVMDatasetPrototype,
             )
-
-            # def additional_preprocess(data: pd.DataFrame) -> pd.DataFrame:
-            #     data = data.copy()
-            #     data = data.sort_values(by=["vmdeleted"]).reset_index(drop=True)
-            #     return data.iloc[0:10_000]
-            # feature_engineering = add_transform_to_feature_engineering(
-            #     feature_engineering,
-            #     additional_preprocess,
-            #     pos="start",
-            #     sections=["preprocess"],
-            # )
 
             generator: DistributionColumnBasedGenerator[
                 AzureVMDataset, AzureVMDataAccessor
@@ -150,36 +138,27 @@ def get_dataset(config: Config, input_path: Path):
     )
 
 
-def assert_training(config: Config):
-    assert (
-        config.drift_detection is not None
-    ), "Drift detection must be specified in config"
-
-
-def get_benchmark(dataset: Sequence[Any]):
-    from avalanche.benchmarks.generators import dataset_benchmark
-
-    train_subsets = [subset.train for subset in dataset]
-    test_subsets = [subset.test for subset in dataset]
-    benchmark = dataset_benchmark(train_subsets, test_subsets)
-    return benchmark
-
-
 def main():
-    params = snakemake.params
+    # params = snakemake.params
     config = snakemake.config
-    config = Config(**config)
-    assert_config_params(config, params)
+    config = DDOnlyConfig(**config)
 
     log.info("Config: %s", config)
 
-    train_classification_scenario(
-        config=config,
-        snakemake=snakemake,
-        log=log,
-        get_dataset=get_dataset,
-        get_benchmark=get_benchmark,
-    )
+    input_path = Path(str(snakemake.input))
+    dataset, input_size = get_dataset(config, input_path)
+    log.info("Input size %d", input_size)
+    log.info("Drift detected %d", len(dataset))
+
+    info: dict[str, Any] = {
+        "input_size": input_size,
+        "drift_detected": len(dataset),
+        "dd_name": config.drift_detection.name,
+    }
+    output_path = Path(str(snakemake.output))
+    output_path.mkdir(parents=True, exist_ok=True)
+    with open(output_path / "results.json", "w") as f:
+        json.dump(info, f)
 
 
 if __name__ == "__main__":

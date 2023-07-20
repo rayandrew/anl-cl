@@ -533,7 +533,7 @@ class FeatureEngineering_C(BaseFeatureEngineering):
             count = 0
             grouped_df = data.groupby(by=["deploymentid"])
             for i, g in grouped_df:
-                if count == 100:
+                if count == 1000:
                     break
                 if len(g) < 50:
                     continue
@@ -546,7 +546,13 @@ class FeatureEngineering_C(BaseFeatureEngineering):
             PrintColumnsTransform("Original Columns"),
             lambda data: clean_df(data),
             lambda data: ceil_percent(data),
-            # lambda data: group_by_deployment(data),
+            lambda data: group_by_deployment(data),
+            lambda data: data.copy()
+            .sort_values(
+                by=["vmcreated", "vmdeleted", "deploymentid", "subscriptionid"]
+            )
+            .reset_index(drop=True),
+            NamedInjectTransform(DD_ID),
             DiscretizeColumnTransform(
                 column=self._config.dataset.target,
                 new_column=self.target_name,
@@ -554,7 +560,6 @@ class FeatureEngineering_C(BaseFeatureEngineering):
                 drop_original=True,
             ),
             # lambda data: data.copy(),
-            NamedInjectTransform(DD_ID),
             HistoricalBucketCPUEachSubscriptionTransform(
                 self.target_name,
                 n_bins=4,
@@ -572,14 +577,11 @@ class FeatureEngineering_C(BaseFeatureEngineering):
                 ],
                 drop_first=True,
             ),
-            lambda data: data.sort_values(
-                by=["vmcreated", "vmdeleted", "deploymentid"]
-            ).reset_index(drop=True),
             ColumnsDropTransform(columns=self._non_feature_columns),
             # NamedInjectTransform("day"),
             # scaler_transform,
             PrintColumnsTransform("Final Columns"),
-            lambda data: data.iloc[0:300_000],
+            # lambda data: data.iloc[0:300_000],
         ]
 
     @property

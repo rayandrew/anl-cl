@@ -82,6 +82,11 @@ class Config(GeneralConfig):
     drift_detection: DriftDetectionConfig | None = None
 
 
+class DDOnlyConfig(GeneralConfig):
+    dataset: DatasetConfig
+    drift_detection: DriftDetectionConfig
+
+
 def assert_config_params(config: Config, params: Any):
     assert Dataset(params.dataset) == config.dataset.name, (
         f"Dataset mismatch: got {params.dataset} instead of "
@@ -113,6 +118,7 @@ def assert_config_params(config: Config, params: Any):
 __all__ = [
     "DynamicConfig",
     "Config",
+    "DDOnlyConfig",
     "GeneralConfig",
     "ModelConfig",
     "ScenarioConfig",

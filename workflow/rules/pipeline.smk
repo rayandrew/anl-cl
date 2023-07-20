@@ -45,6 +45,19 @@ rule:
     script: "../scripts/pipeline/{wildcards.scenario}.py"
 
 rule:
+    name: f"dd_only"
+    input:
+        "raw_data/{dataset}/{filename}.parquet",
+    output:
+        directory("out/dd-only/{dataset}/{filename}"),
+    params:
+        dataset="{dataset}",
+        filename="{filename}",
+    log:
+        "logs/dd-only/{dataset}/{filename}.log",
+    script: "../scripts/pipeline/dd-only.py"
+
+rule:
     name: f"eval_compare_stategies_features_models_scenarios"
     input:
         "out/training/{dataset}/{filename}/{task}/{training}",

@@ -5,7 +5,7 @@ from snakemake.io import InputFiles, Log, OutputFiles, Params, Wildcards
 
 from src.utils.ds import StrEnum
 
-DD_ID = "end"
+DD_ID = "drift-detection"
 DD_DIST_COLUMN = "dist_id"
 
 

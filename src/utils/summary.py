@@ -19,8 +19,8 @@ class TaskSummary:
     bwt: list[float] = field(default_factory=list)
     auroc: list[float] = field(default_factory=list)
     f1: list[float] = field(default_factory=list)
-    recall: list[float] = field(default_factory=list)
     precision: list[float] = field(default_factory=list)
+    recall: list[float] = field(default_factory=list)
 
     def set_task_id(self, task_id: int) -> None:
         if self.task_id == -1:
@@ -129,7 +129,29 @@ def generate_summary(
                 summary.avg_class_acc[class_id].append(val)
             elif ("Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/" in key) or (
                 "Top1_Acc_Exp/eval_phase/test_stream/Task000/" in key
+            elif (
+                "F1/eval_phase/test_stream" in key
+                or "Top1_F1_Stream/eval_phase/test_stream" in key
             ):
+                summary.avg_f1.append(val)
+            elif (
+                "Top1_Precision_Stream/eval_phase/test_stream" in key
+                or "Precision_/eval_phase/test_stream" in key
+            ):
+                summary.avg_precision.append(val)
+            elif (
+                "Recall/eval_phase/test_stream" in key
+                or "Top1_Recall_Stream/eval_phase/test_stream" in key
+            ):
+                summary.avg_recall.append(val)
+            elif (
+                "AUROC/eval_phase/test_stream" in key
+                or "Top1_AUROC_Stream/eval_phase/test_stream" in key
+            ):
+                summary.avg_auroc.append(val)
+            elif (
+                "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/" in key
+            ) or ("Top1_Acc_Exp/eval_phase/test_stream/Task000/" in key):
                 task_id = key.replace(
                     "Top1_Acc_Exp_Tol/eval_phase/test_stream/Task000/Exp",
                     "",
@@ -141,7 +163,9 @@ def generate_summary(
                 task_id = int(task_id)
                 summary.task_data[task_id].set_task_id(task_id)
                 summary.task_data[task_id].acc.append(val)
-            elif ("Top1_AUROC_Experience/eval_phase/test_stream/Task000/") in key:
+            elif (
+                "Top1_AUROC_Experience/eval_phase/test_stream/Task000/"
+            ) in key:
                 task_id = key.replace(
                     "Top1_AUROC_Experience/eval_phase/test_stream/Task000/Exp",
                     "",
@@ -157,7 +181,9 @@ def generate_summary(
                 task_id = int(task_id)
                 summary.task_data[task_id].set_task_id(task_id)
                 summary.task_data[task_id].f1.append(val)
-            elif ("Top1_Precision_Experience/eval_phase/test_stream/Task000/") in key:
+            elif (
+                "Top1_Precision_Experience/eval_phase/test_stream/Task000/"
+            ) in key:
                 task_id = key.replace(
                     "Top1_Precision_Experience/eval_phase/test_stream/Task000/Exp",
                     "",
@@ -165,7 +191,9 @@ def generate_summary(
                 task_id = int(task_id)
                 summary.task_data[task_id].set_task_id(task_id)
                 summary.task_data[task_id].precision.append(val)
-            elif ("Top1_Recall_Experience/eval_phase/test_stream/Task000/") in key:
+            elif (
+                "Top1_Recall_Experience/eval_phase/test_stream/Task000/"
+            ) in key:
                 task_id = key.replace(
                     "Top1_Recall_Experience/eval_phase/test_stream/Task000/Exp",
                     "",
@@ -204,6 +232,39 @@ def generate_summary(
                 task_id = int(task_id)
                 summary.task_data[task_id].set_task_id(task_id)
                 summary.task_data[task_id].bwt.append(val)
+            elif "Top1_F1_Exp/eval_phase/test_stream/Task000/Exp" in key:
+                task_id = key.replace(
+                    "Top1_F1_Exp/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].f1.append(val)
+            elif "Top1_Precision_Exp/eval_phase/test_stream/Task000/Exp" in key:
+                task_id = key.replace(
+                    "Top1_Precision_Exp/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].precision.append(val)
+            elif "Top1_Recall_Exp/eval_phase/test_stream/Task000/Exp" in key:
+                task_id = key.replace(
+                    "Top1_Recall_Exp/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].recall.append(val)
+            elif "Top1_AUROC_Exp/eval_phase/test_stream/Task000/Exp" in key:
+                task_id = key.replace(
+                    "Top1_AUROC_Exp/eval_phase/test_stream/Task000/Exp",
+                    "",
+                )
+                task_id = int(task_id)
+                summary.task_data[task_id].set_task_id(task_id)
+                summary.task_data[task_id].auroc.append(val)
+
     summary.ovr_avg_acc = sum(summary.avg_acc) / len(summary.avg_acc)
     summary.ovr_avg_forgetting = sum(summary.avg_forgetting) / len(
         summary.avg_forgetting
@@ -221,10 +282,10 @@ def generate_summary_table(res: TrainingSummary):
         raise ValueError("No tasks found in the results.")
 
     table = Texttable()
-    table.set_cols_align(["c", "c", "c", "c"])
-    table.set_cols_valign(["m", "m", "m", "m"])
-    # table.set_cols_align(["c", "c", "c", "c", "c", "c", "c", "c"])
-    # table.set_cols_valign(["m", "m", "m", "m", "m", "m", "m", "m"])
+    # table.set_cols_align(["c", "c", "c", "c"])
+    # table.set_cols_valign(["m", "m", "m", "m"])
+    table.set_cols_align(["c", "c", "c", "c", "c", "c", "c", "c"])
+    table.set_cols_valign(["m", "m", "m", "m", "m", "m", "m", "m"])
 
     for task in range(res.n_tasks):
         table.add_rows(
@@ -234,14 +295,20 @@ def generate_summary_table(res: TrainingSummary):
                     "Avg Test Acc",
                     "Avg Forgetting",
                     "Avg BWT",
-                    # "Avg AUROC",
+                    "Avg F1",
+                    "Avg Precision",
+                    "Avg Recall",
+                    "Avg AUROC",
                 ],
                 [
                     task,
                     res.avg_acc[task],
                     res.avg_forgetting[task],
                     res.avg_bwt[task],
-                    # res.avg_auroc[task],
+                    res.avg_f1[task],
+                    res.avg_precision[task],
+                    res.avg_recall[task],
+                    res.avg_auroc[task],
                 ],
             ]
         )
@@ -251,8 +318,8 @@ def generate_summary_table(res: TrainingSummary):
 
 def generate_task_table(res: TaskSummary):
     table = Texttable()
-    table.set_cols_align(["c", "c", "c"])
-    table.set_cols_valign(["m", "m", "m"])
+    table.set_cols_align(["c", "c", "c", "c", "c", "c", "c"])
+    table.set_cols_valign(["m", "m", "m", "m", "m", "m", "m"])
 
     task_id = res.task_id
 
@@ -265,19 +332,19 @@ def generate_task_table(res: TaskSummary):
                         "Acc",
                         "Forgetting",
                         "BWT",
-                        # "F1",
-                        # "Precision",
-                        # "Recall",
-                        # "AUROC",
+                        "F1",
+                        "Precision",
+                        "Recall",
+                        "AUROC",
                     ],
                     [
                         res.acc[task],
                         res.forgetting[task - task_id - 1],
                         res.bwt[task - task_id - 1],
-                        # res.f1[task - task_id - 1],
-                        # res.precision[task - task_id - 1],
-                        # res.recall[task - task_id - 1],
-                        # res.auroc[task - task_id - 1],
+                        res.f1[task - task_id - 1],
+                        res.precision[task - task_id - 1],
+                        res.recall[task - task_id - 1],
+                        res.auroc[task - task_id - 1],
                     ],
                 ]
             )
@@ -289,19 +356,19 @@ def generate_task_table(res: TaskSummary):
                     "Acc",
                     "Forgetting",
                     "BWT",
-                    # "F1",
-                    # "Precision",
-                    # "Recall",
-                    # "AUROC",
+                    "F1",
+                    "Precision",
+                    "Recall",
+                    "AUROC",
                 ],
                 [
                     res.acc[task],
                     "N/A",
                     "N/A",
-                    # "N/A",
-                    # "N/A",
-                    # "N/A",
-                    # "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
                 ],
             ]
         )

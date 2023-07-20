@@ -1,7 +1,8 @@
+# flake8: noqa: E501
 from collections.abc import MutableSequence, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -122,12 +123,11 @@ def get_metrics(
 
     last_accs: List[Tuple[str, float]] = []
     last_aurocs: List[Tuple[str, float]] = []
-    last_f1s: List[Tuple[str, float]] =[]
-    last_forgettings: List[Tuple[str, float]] =[]
-    last_recalls: List[Tuple[str, float]] =[]
+    last_f1s: List[Tuple[str, float]] = []
+    last_forgettings: List[Tuple[str, float]] = []
+    last_recalls: List[Tuple[str, float]] = []
     last_precisions: List[Tuple[str, float]] = []
     avg_class_acc_data : List[Tuple[str, float]]= []
-
 
     for summary, label in zip(summaries, labels):
         log.info(f"Label: {label}, summaries: {len(summaries)}")
@@ -149,9 +149,7 @@ def get_metrics(
                 (label_path, np.mean(summary.avg_auroc[i]).item())
             )
             avg_forgettings.append((label_path, summary.ovr_avg_forgetting))
-            avg_accs.append(
-                (label_path, np.mean(summary.avg_acc[i]).item())
-            )
+            avg_accs.append((label_path, np.mean(summary.avg_acc[i]).item()))
         # If from scratch, get last_acc when retraining, eval AT that chunk.
         if "FS" in label_path:
             for idx, (key, task) in enumerate(summary.task_data.items()):
@@ -164,7 +162,7 @@ def get_metrics(
                     last_recalls.append((label_path, task.recall[idx]))
                     last_precisions.append((label_path, task.precision[idx]))   
         else:
-        # Get Last Model
+            # Get Last Model
             for key, task in summary.task_data.items():
                 last_accs.append((label_path, task.acc[-1]))
                 if len(task.auroc) != 0:
@@ -189,6 +187,7 @@ def get_metrics(
         last_forgetting=pd.DataFrame(last_forgettings, columns=RESULT_COLUMNS),
         class_accuracy= pd.DataFrame(avg_class_acc_data, columns = RESULT_COLUMNS)
     )
+
 
 def plot_bar(data: pd.DataFrame, label: str, get_last: bool = False):
     # label = label.upper()
@@ -264,17 +263,14 @@ def plot_line(data: pd.DataFrame, label: str):
     else:
         ax.set_ylabel(label_title)
 
-    ax.set_title(label_title)  
-    ax.set_xticks(range(len(results)))  
-    ax.set_xticklabels(
-        results.index
-    ) 
+    ax.set_title(label_title)
+    ax.set_xticks(range(len(results)))
+    ax.set_xticklabels(results.index)
 
     fig.subplots_adjust(right=0.8)
 
     fig.tight_layout()
     return fig
-
 
 
 def main():

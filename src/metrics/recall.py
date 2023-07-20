@@ -55,7 +55,7 @@ class ExperienceRecall(PyTorchMetricPluginMetric):
         )
 
     def __str__(self):
-        return "Top1_Recall_Experience"
+        return "Top1_Recall_Exp"
 
 
 class StreamRecall(PyTorchMetricPluginMetric):

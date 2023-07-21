@@ -1,4 +1,5 @@
 drift_detection:
   name: voting
   threshold: 80
-  window_size: 100
+  # window_size: 200
+  window_size: 175

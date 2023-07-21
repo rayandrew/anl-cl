@@ -4,6 +4,9 @@ from avalanche.benchmarks.scenarios import GenericCLScenario
 from avalanche.training.templates import SupervisedTemplate
 
 from src.trainers.base import BaseTrainer
+from src.utils.logging import logging
+
+log = logging.getLogger(__name__)
 
 
 class BatchNoRetrainTrainer(BaseTrainer):
@@ -23,12 +26,14 @@ class BatchNoRetrainTrainer(BaseTrainer):
             len(self.benchmark.train_stream) > 1
         ), "BatchNoRetrainTrainer requires at least 2 experiences"
 
+        log.info("Training on first experience only")
         first_experience = self.benchmark.train_stream[0]
         results = {}
         self.strategy.train(
             first_experience,
             num_workers=self.num_workers,
         )
+        log.info("Evaluation on all experiences")
         result = self.strategy.eval(self.benchmark.test_stream)
         results[0] = result
         return results
@@ -38,9 +43,16 @@ class BatchSimpleRetrainTrainer(BatchNoRetrainTrainer):
     def train(self) -> Dict[int, Dict[str, float]]:
         results = {}
         for experience in self.benchmark.train_stream:
+            log.info(
+                "Training on experience: %s", experience.current_experience
+            )
             self.strategy.train(
                 experience,
                 num_workers=self.num_workers,
+            )
+            log.info(
+                "Evaluating model after experience: %s",
+                experience.current_experience,
             )
             result = self.strategy.eval(self.benchmark.test_stream)
             results[experience.current_experience] = result

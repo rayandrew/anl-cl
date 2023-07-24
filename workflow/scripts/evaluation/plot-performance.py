@@ -56,6 +56,12 @@ class Result:
     last_f1: pd.DataFrame
     last_recall: pd.DataFrame
     last_precision: pd.DataFrame
+    chunk_acc: pd.DataFrame
+    chunk_auroc: pd.DataFrame
+    chunk_forgetting: pd.DataFrame
+    chunk_f1: pd.DataFrame
+    chunk_recall: pd.DataFrame
+    chunk_precision: pd.DataFrame
     class_accuracy: pd.DataFrame
     # task_summary: dict[str, dict[int, TaskSummary]]
     # label: str
@@ -68,6 +74,7 @@ class Result:
 RESULT_COLUMNS = ["label", "value"]
 
 
+# Updated LABELS dictionary
 LABELS = {
     "f1": "F1",
     "precision": "PRECISION",
@@ -81,8 +88,15 @@ LABELS = {
     "last_recall": "Last Model RECALL",
     "last_precision": "Last Model PRECISION",
     "last_forgetting": "Last Model FORGETTING",
-    "class_acc": "Classification Accuracy",
+    "chunk_acc": "Model ACCURACY evaluated on Chunk N only",
+    "chunk_auroc": "Model AUROC evaluated on Chunk N only",
+    "chunk_f1": "Model F1 evaluated on Chunk N only only",
+    "chunk_recall": "Model RECALL evaluated on Chunk N only",
+    "chunk_precision": "Model PRECISION evaluated on Chunk N only",
+    "chunk_forgetting": "Model FORGETTING evaluated on Chunk N only",
+    "class_accuracy": "Classification Accuracy",
 }
+
 
 PATH_LABELS = {
     "drift-detection": "DD",
@@ -128,7 +142,15 @@ def get_metrics(
     last_forgettings: List[Tuple[str, float]] = []
     last_recalls: List[Tuple[str, float]] = []
     last_precisions: List[Tuple[str, float]] = []
-    avg_class_acc_data: List[Tuple[str, float]] = []
+
+    chunk_accs: List[Tuple[str, float]] = []
+    chunk_aurocs: List[Tuple[str, float]] = []
+    chunk_f1s: List[Tuple[str, float]] = []
+    chunk_forgettings: List[Tuple[str, float]] = []
+    chunk_recalls: List[Tuple[str, float]] = []
+    chunk_precisions: List[Tuple[str, float]] = []
+
+    avg_class_acc_data: List[tuple[str, float, int, str]] = []
 
     for summary, label in zip(summaries, labels):
         log.info(f"Label: {label}, summaries: {len(summaries)}")
@@ -137,7 +159,10 @@ def get_metrics(
         for class_id, acc_values in summary.avg_class_acc.items():
             class_label = f"{label_path}_Class_{class_id}"
             avg_class_acc_data.extend(
-                [(class_label, value) for value in acc_values]
+                [
+                    (class_label, idx, value, class_id)
+                    for value, idx in enumerate(acc_values)
+                ]
             )
 
         for i in range(len(summary.avg_acc)):
@@ -153,27 +178,28 @@ def get_metrics(
             )
             avg_forgettings.append((label_path, summary.ovr_avg_forgetting))
             avg_accs.append((label_path, np.mean(summary.avg_acc[i]).item()))
-        # If from scratch, get last_acc when retraining, eval AT that chunk.
-        if "FS" in label_path:
+
+        # Return evaluations only at chunk being trained on.
+        if "NR" not in label_path:
             for idx, (key, task) in enumerate(summary.task_data.items()):
-                last_accs.append((label_path, task.acc[idx]))
+                chunk_accs.append((label_path, task.acc[idx]))
                 # See if new version, aka with auroc or not
                 if len(task.auroc) != 0:
-                    last_aurocs.append((label_path, task.auroc[idx]))
-                    last_f1s.append((label_path, task.f1[idx]))
-                    # last_forgettings.append((label_path, task.forgetting[-1]))
-                    last_recalls.append((label_path, task.recall[idx]))
-                    last_precisions.append((label_path, task.precision[idx]))
-        else:
-            # Get Last Model
-            for key, task in summary.task_data.items():
-                last_accs.append((label_path, task.acc[-1]))
-                if len(task.auroc) != 0:
-                    last_aurocs.append((label_path, task.auroc[-1]))
-                    last_f1s.append((label_path, task.f1[-1]))
-                    # last_forgettings.append((label_path, task.forgetting[-1]))
-                    last_recalls.append((label_path, task.recall[-1]))
-                    last_precisions.append((label_path, task.precision[-1]))
+                    chunk_aurocs.append((label_path, task.auroc[idx]))
+                    chunk_f1s.append((label_path, task.f1[idx]))
+                    # chunk_forgettings.append((label_path, task.forgetting[-1]))
+                    chunk_recalls.append((label_path, task.recall[idx]))
+                    chunk_precisions.append((label_path, task.precision[idx]))
+
+        # Get Last Model
+        for key, task in summary.task_data.items():
+            last_accs.append((label_path, task.acc[-1]))
+            if len(task.auroc) != 0:
+                last_aurocs.append((label_path, task.auroc[-1]))
+                last_f1s.append((label_path, task.f1[-1]))
+                # last_forgettings.append((label_path, task.forgetting[-1]))
+                last_recalls.append((label_path, task.recall[-1]))
+                last_precisions.append((label_path, task.precision[-1]))
 
     return Result(
         f1=pd.DataFrame(avg_f1s, columns=RESULT_COLUMNS),
@@ -188,7 +214,17 @@ def get_metrics(
         last_recall=pd.DataFrame(last_recalls, columns=RESULT_COLUMNS),
         last_precision=pd.DataFrame(last_precisions, columns=RESULT_COLUMNS),
         last_forgetting=pd.DataFrame(last_forgettings, columns=RESULT_COLUMNS),
-        class_accuracy=pd.DataFrame(avg_class_acc_data, columns=RESULT_COLUMNS),
+        chunk_acc=pd.DataFrame(chunk_accs, columns=RESULT_COLUMNS),
+        chunk_auroc=pd.DataFrame(chunk_aurocs, columns=RESULT_COLUMNS),
+        chunk_f1=pd.DataFrame(chunk_f1s, columns=RESULT_COLUMNS),
+        chunk_recall=pd.DataFrame(chunk_recalls, columns=RESULT_COLUMNS),
+        chunk_precision=pd.DataFrame(chunk_precisions, columns=RESULT_COLUMNS),
+        chunk_forgetting=pd.DataFrame(
+            chunk_forgettings, columns=RESULT_COLUMNS
+        ),
+        class_accuracy=pd.DataFrame(
+            avg_class_acc_data, columns=(RESULT_COLUMNS + ["chunk", "class"])
+        ),
     )
 
 
@@ -275,6 +311,43 @@ def plot_line(data: pd.DataFrame, label: str):
     return fig
 
 
+def plot_class_bar(data, task):
+    plt.figure(figsize=(10, 6))
+    plt.title(f"Bar Plot for Chunk {task}", fontsize=16)
+
+    # Filter the data for the current task
+    task_data = data[data["chunk"] == task]
+    task_data["label"] = task_data["label"].apply(
+        lambda label: label.split("_Class")[0].strip()
+    )
+
+    # Check if the filtered data is empty
+    if task_data.empty:
+        print(f"Warning: Data for task {task} is empty. Skipping plot.")
+        return None
+
+    # Create the figure and axis objects
+    fig, ax = plt.subplots()
+
+    # Use the order parameter to sort the x-axis labels in alphabetical order
+    sns.barplot(
+        data=task_data,
+        x="label",
+        y="value",
+        hue="class",
+        order=sorted(task_data["label"].unique()),
+        ax=ax,
+    )
+    plt.xlabel("Label", fontsize=14)
+    plt.ylabel("Value", fontsize=14)
+    plt.xticks(rotation=45, ha="right")
+
+    # Ensure tight layout
+    plt.tight_layout()
+
+    return fig
+
+
 def main():
     config = snakemake.config
 
@@ -283,6 +356,8 @@ def main():
     input_paths = Path(str(snakemake.input)).glob("**/train_results.json")
     output_folder = Path(str(snakemake.output))
     output_folder.mkdir(parents=True, exist_ok=True)
+    class_metrics_folder = output_folder / "class_metrics"
+    class_metrics_folder.mkdir(parents=True, exist_ok=True)
 
     labels = []
     summaries = []
@@ -317,6 +392,21 @@ def main():
         fig_line = plot_line(data, label=metric_name)
         fig_line.savefig(output_folder / f"{metric}_line.png", dpi=300)
         plt.close(fig_line)
+
+        if "class_accuracy" in metric_name:
+            num_tasks = data["chunk"].nunique()
+            # Create a bar plot for each Chunk and save it as an image
+            for task in range(0, num_tasks):
+                fig = plot_class_bar(data, task)
+                if fig is not None:
+                    # Save the figure as an image in the specified output folder
+                    fig.savefig(
+                        class_metrics_folder
+                        / f"classification_accuracy_bar_chunk_{task}.png",
+                        dpi=300,
+                    )
+                    # Close the figure to release resources
+                    plt.close(fig)
 
         data.to_csv(output_folder / f"{metric}.csv", index=False)
 
